@@ -62,7 +62,7 @@ export function configFactory(outPath: string): UserConfigFnObject {
             cacheDir: '../../.vite',
             base: process.env.BUILD_ENV == 'github-actions' ? '/Stapxs-QQ-Lite-2.0/' : './',
             server: {
-                port: 8080,
+                port: parseInt(process.env.VITE_PORT || '8080'),
                 proxy: {
                     '/api': {
                         target: 'http://localhost:3000',

@@ -119,6 +119,7 @@ input {
     padding-top: 90px;
     z-index: 1;
     flex: 1;
+    touch-action: pan-y;
 }
 .chat-pan > div.chat > div:last-child {
     height: calc(100% - var(--safe-area-bottom));
