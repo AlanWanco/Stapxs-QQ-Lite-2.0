@@ -66,6 +66,7 @@ jobs:
     build-ios:
         name: 构建 iOS
         needs: init
+        continue-on-error: true
         uses: ./.github/workflows/build-ios.yml
         with:
             version: ${{ needs.init.outputs.version }}
@@ -74,6 +75,7 @@ jobs:
     release:
         name: 发布构建结果
         runs-on: ubuntu-latest
+        if: always()
         needs:
             - init
             - build-root-web
@@ -82,10 +84,15 @@ jobs:
             - build-android
             - build-ios
         steps:
+            # 只有在 init 成功时才执行发布
+            - name: Check Init Success
+              if: needs.init.result != 'success'
+              run: exit 1
             # 下载构建结果
             - name: Download Artifacts
               id: download-artifact
               uses: actions/download-artifact@v4
+              continue-on-error: true
               with:
                   path: artifacts
                   pattern: ${{ needs.init.outputs.version }}-*
