@@ -62,7 +62,7 @@ export class Connector {
         if (!backend.isWeb()) {
             logger.add(LogType.WS, '使用后端连接模式')
             backend.call('Onebot', 'onebot:connect', false,
-                backend.isDesktop() ?  { address: address, token: token, } : { url: `${address}?access_token=${token}` })
+                backend.isDesktop() ?  { address: address, token: token, } : { url: `${address}?access_token=${token ? encodeURIComponent(token) : ''}` })
             return
         }
 
@@ -76,7 +76,7 @@ export class Connector {
                 return
             }
             logger.add(LogType.WS, '使用 SSE 连接模式')
-            const sse = new EventSource(`${import.meta.env.VITE_APP_SSE_EVENT_ADDRESS}?access_token=${token}`)
+            const sse = new EventSource(`${import.meta.env.VITE_APP_SSE_EVENT_ADDRESS}?access_token=${token ? encodeURIComponent(token) : ''}`)
             sse.onopen = () => {
                 login.creating = false
                 this.onopen(address, token)
@@ -103,18 +103,18 @@ export class Connector {
                 return
             }
 
-            let url = `ws://${address}?access_token=${token}`
+            let url = `ws://${address}?access_token=${token ? encodeURIComponent(token) : ''}`
             if (address.startsWith('ws://') || address.startsWith('wss://')) {
-                url = `${address}?access_token=${token}`
+                url = `${address}?access_token=${token ? encodeURIComponent(token) : ''}`
             } else if (wss == undefined) {
                 // 判断连接类型
                 if (document.location.protocol == 'https:') {
                     // 判断连接 URL 的协议，https 优先尝试 wss
                     runtimeData.tags.connectSsl = true
-                    url = `wss://${address}?access_token=${token}`
+                    url = `wss://${address}?access_token=${token ? encodeURIComponent(token) : ''}`
                 }
             } else {
-                url = `wss://${address}?access_token=${token}`
+                url = `wss://${address}?access_token=${token ? encodeURIComponent(token) : ''}`
             }
 
             if (!websocket) {

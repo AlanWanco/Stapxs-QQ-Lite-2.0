@@ -566,7 +566,7 @@ export default defineComponent({
                 loginInfo.address = 'ws://' + this.tags.quickLoginSelect
             }
             // https://github.com/Stapxs/Stapxs-QQ-Lite-2.0/issues/312
-            Connector.create(loginInfo.address, encodeURIComponent(loginInfo.token))
+            Connector.create(loginInfo.address, loginInfo.token)
         },
         selectQuickLogin(address: string) {
             this.tags.quickLoginSelect = address
