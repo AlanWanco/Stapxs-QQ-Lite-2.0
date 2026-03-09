@@ -25,6 +25,28 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+
+    def keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+    def keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+    def keystorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+    def keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+
+    if (keystorePath && keyAlias && keystorePassword && keyPassword) {
+        signingConfigs {
+            release {
+                storeFile file(keystorePath)
+                storePassword keystorePassword
+                keyAlias keyAlias
+                keyPassword keyPassword
+            }
+        }
+
+        buildTypes {
+            release {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
 }
 
 repositories {

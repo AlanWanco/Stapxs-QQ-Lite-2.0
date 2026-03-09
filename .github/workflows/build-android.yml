@@ -41,14 +41,14 @@ jobs:
             - name: 更新依赖
               run: yarn
             
-            - name: 构建 Android 应用（生成未签名产物）
+            - name: 构建 Android 应用（Gradle Release）
               run: |
                 set -euo pipefail
                 # 1. 构建前端并同步到 Android 工程
                 yarn build
                 yarn capacitor sync android
 
-                # 2. 使用 Gradle 直接生成 release 产物（避免 capacitor build 强制签名校验）
+                # 2. 使用 Gradle 直接生成 release 产物
                 chmod +x src/mobile/android/gradlew
 
                 # 增加重试逻辑，防止仓库网络抖动导致依赖下载失败
@@ -64,72 +64,29 @@ jobs:
                   sleep 10
                 done
               env:
-                  # 这里不需要传密码，因为我们要手动签名 APK
-                  KEYSTORE_PASSWORD: ""
-                  KEYSTORE_ALIAS_PASSWORD: ""
-
-            - name: 优化、对齐并手动签名 APK
-              run: |
-                set -euo pipefail
-
-                # 寻找工具路径
-                ZIPALIGN=$(find "$ANDROID_HOME/build-tools" -name zipalign | sort -r | head -n 1)
-                APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -r | head -n 1)
-
-                if [ -z "$ZIPALIGN" ] || [ -z "$APKSIGNER" ]; then
-                  echo "zipalign/apksigner not found under $ANDROID_HOME/build-tools"
-                  exit 1
-                fi
-                
-                # 优先使用 unsigned APK，避免二次处理已签名包
-                APK_DIR="src/mobile/android/app/build/outputs/apk/release"
-                UNSIGNED_APK=""
-
-                if [ -f "$APK_DIR/app-release-unsigned.apk" ]; then
-                  UNSIGNED_APK="$APK_DIR/app-release-unsigned.apk"
-                else
-                  CANDIDATES=$(find "$APK_DIR" -name "*-unsigned.apk" | sort)
-                  if [ -n "$CANDIDATES" ]; then
-                    UNSIGNED_APK=$(printf '%s\n' "$CANDIDATES" | head -n 1)
-                  fi
-                fi
-
-                if [ -z "$UNSIGNED_APK" ] || [ ! -f "$UNSIGNED_APK" ]; then
-                  echo "Unsigned APK not found in $APK_DIR"
-                  ls -R "$APK_DIR" || true
-                  exit 1
-                fi
-
-                ALIGNED_APK="src/mobile/android/app/build/outputs/apk/release/app-aligned.apk"
-                FINAL_APK="src/mobile/android/app/build/outputs/apk/release/app-release-signed.apk"
-                
-                echo "使用 APK: $UNSIGNED_APK"
-                echo "1. 正在对齐 APK..."
-                "$ZIPALIGN" -v -p 4 "$UNSIGNED_APK" "$ALIGNED_APK"
-                
-                echo "2. 正在使用 apksigner 进行 V2 签名..."
-                "$APKSIGNER" sign --ks src/mobile/_signing/stapxs_qq.keystore \
-                  --ks-pass pass:${{ secrets.KEYSTORE_PASSWORD }} \
-                  --ks-key-alias stapxs_qq_key \
-                  --key-pass pass:${{ secrets.KEYSTORE_ALIAS_PASSWORD }} \
-                  --out "$FINAL_APK" "$ALIGNED_APK"
-                
-                echo "3. 验证签名..."
-                "$APKSIGNER" verify --verbose "$FINAL_APK"
+                  ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/src/mobile/_signing/stapxs_qq.keystore
+                  ANDROID_KEY_ALIAS: stapxs_qq_key
+                  ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+                  ANDROID_KEY_PASSWORD: ${{ secrets.KEYSTORE_ALIAS_PASSWORD }}
 
             - name: 准备产物
               run: |
                   set -euo pipefail
                   mkdir -p upload
                   VERSION=${{ inputs.version }}
-                  # 优先取对齐后的已签名包
-                  if [ -f src/mobile/android/app/build/outputs/apk/release/app-release-signed.apk ]; then
-                    cp src/mobile/android/app/build/outputs/apk/release/app-release-signed.apk "upload/Stapxs.QQ.Lite-${VERSION}.apk"
-                  else
-                    cp src/mobile/android/app/build/outputs/apk/release/app-release.apk "upload/Stapxs.QQ.Lite-${VERSION}.apk" || \
-                    cp src/mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk "upload/Stapxs.QQ.Lite-${VERSION}-unsigned.apk"
+                  APK_PATH="src/mobile/android/app/build/outputs/apk/release/app-release.apk"
+                  if [ ! -f "$APK_PATH" ]; then
+                    echo "Signed APK not found: $APK_PATH"
+                    ls -R src/mobile/android/app/build/outputs/apk/release || true
+                    exit 1
                   fi
-                  cp src/mobile/android/app/build/outputs/bundle/release/*.aab "upload/Stapxs.QQ.Lite-${VERSION}.aab" || true
+
+                  cp "$APK_PATH" "upload/Stapxs.QQ.Lite-${VERSION}.apk"
+
+                  AAB_PATH=$(find src/mobile/android/app/build/outputs/bundle/release -name "*.aab" | head -n 1)
+                  if [ -n "$AAB_PATH" ] && [ -f "$AAB_PATH" ]; then
+                    cp "$AAB_PATH" "upload/Stapxs.QQ.Lite-${VERSION}.aab"
+                  fi
 
             - name: 上传构建产物
               uses: actions/upload-artifact@v4
