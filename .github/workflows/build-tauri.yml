@@ -65,9 +65,7 @@ jobs:
               run: yarn build:tauri -t aarch64-unknown-linux-gnu -b appimage,deb
             - name: 构建 Tauri 应用
               if: matrix.os == 'macos-latest'
-              run: |
-                  rustup target add x86_64-apple-darwin
-                  yarn build:tauri -t x86_64-apple-darwin -b dmg
+              run: yarn build:tauri -b dmg
 
             - name: 准备产物目录
               if: matrix.os != 'windows-2022'
