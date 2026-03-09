@@ -47,6 +47,24 @@ jobs:
                   KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
                   KEYSTORE_ALIAS_PASSWORD: ${{ secrets.KEYSTORE_ALIAS_PASSWORD }}
 
+            - name: 优化与对齐 APK (Zipalign)
+              run: |
+                # 寻找 zipalign 工具
+                ZIPALIGN=$(find $ANDROID_HOME/build-tools -name zipalign | sort -r | head -n 1)
+                APK_PATH="src/mobile/android/app/build/outputs/apk/release/app-release-signed.apk"
+                if [ ! -f "$APK_PATH" ]; then
+                  APK_PATH="src/mobile/android/app/build/outputs/apk/release/app-release.apk"
+                fi
+                
+                if [ -f "$APK_PATH" ]; then
+                  echo "对齐 APK: $APK_PATH"
+                  $ZIPALIGN -p -v 4 "$APK_PATH" "src/mobile/android/app/build/outputs/apk/release/app-aligned.apk"
+                  # 覆盖原文件以便后续重命名逻辑一致
+                  mv "src/mobile/android/app/build/outputs/apk/release/app-aligned.apk" "$APK_PATH"
+                else
+                  echo "未找到 APK 文件进行对齐"
+                fi
+
             - name: 准备产物
               run: |
                   mkdir -p upload

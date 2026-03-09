@@ -13,9 +13,10 @@ jobs:
         runs-on: ${{ matrix.os }}
         strategy:
             matrix:
-                os: [windows-2022, ubuntu-22.04, ubuntu-22.04-arm]
+                os: [windows-2022, ubuntu-22.04, ubuntu-22.04-arm, macos-latest]
 
         steps:
+            # ... (安装依赖步骤保持不变)
             - name: 安装构建依赖
               if: matrix.os == 'ubuntu-22.04' || matrix.os == 'ubuntu-22.04-arm'
               run: |
@@ -62,6 +63,9 @@ jobs:
             - name: 构建 Tauri 应用
               if: matrix.os == 'ubuntu-22.04-arm'
               run: yarn build:tauri -t aarch64-unknown-linux-gnu -b appimage,deb
+            - name: 构建 Tauri 应用
+              if: matrix.os == 'macos-latest'
+              run: yarn build:tauri -t x86_64-apple-darwin -b dmg
 
             - name: 准备产物目录
               if: matrix.os != 'windows-2022'
@@ -84,5 +88,5 @@ jobs:
             - name: 上传构建产物
               uses: actions/upload-artifact@v4
               with:
-                  name: ${{ inputs.version }}-${{ matrix.os }}
+                  name: tauri-${{ inputs.version }}-${{ matrix.os }}
                   path: upload/

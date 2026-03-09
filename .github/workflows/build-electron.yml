@@ -13,7 +13,7 @@ jobs:
         runs-on: ${{ matrix.os }}
         strategy:
             matrix:
-                os: [windows-2022, ubuntu-latest]
+                os: [windows-2022, ubuntu-latest, macos-latest]
 
         steps:
             - name: 安装构建依赖
@@ -36,12 +36,6 @@ jobs:
               run: yarn
 
             - name: 构建 Electron 应用
-              if: matrix.os == 'windows-2022'
-              run: yarn build:electron
-              env:
-                  GH_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-            - name: 构建 Electron 应用
-              if: matrix.os == 'ubuntu-latest'
               run: yarn build:electron
               env:
                   GH_TOKEN: ${{ secrets.ACCESS_TOKEN }}
@@ -49,5 +43,11 @@ jobs:
             - name: 上传构建产物
               uses: actions/upload-artifact@v4
               with:
-                  name: ${{ inputs.version }}-${{ matrix.os }}
-                  path: dist_electron
+                  name: electron-${{ inputs.version }}-${{ matrix.os }}
+                  path: |
+                      dist_electron/*.exe
+                      dist_electron/*.deb
+                      dist_electron/*.AppImage
+                      dist_electron/*.dmg
+                      dist_electron/*.pacman
+                      dist_electron/*.zip
