@@ -22,7 +22,6 @@
   </p>
 </p>
 
-![view](README/view.png)
 
 ## ☕️ 赞助项目
 <p align="center">
