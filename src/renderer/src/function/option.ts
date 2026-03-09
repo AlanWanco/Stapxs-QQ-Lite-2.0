@@ -465,11 +465,11 @@ export async function load(): Promise<{ [key: string]: any }> {
         const str = localStorage.getItem('options')
         if (str != null) {
             const list = str.split('&')
-            for (let i = 0; i <= list.length; i++) {
+            for (let i = 0; i < list.length; i++) {
                 if (list[i] !== undefined) {
-                    const opt: string[] = list[i].split(':')
-                    if (opt.length === 2) {
-                        data[opt[0]] = opt[1]
+                    const indexOfColon = list[i].indexOf(':')
+                    if (indexOfColon !== -1) {
+                        data[list[i].substring(0, indexOfColon)] = list[i].substring(indexOfColon + 1)
                     }
                 }
             }
@@ -588,12 +588,13 @@ export function getRaw(name: string) {
         const str = localStorage.getItem('options')
         if (str != null) {
             const list = str.split('&')
-            for (let i = 0; i <= list.length; i++) {
+            for (let i = 0; i < list.length; i++) {
                 if (list[i] !== undefined) {
-                    const opt: string[] = list[i].split(':')
-                    if (opt.length === 2) {
-                        if (name == opt[0]) {
-                            return Promise.resolve(opt[1])
+                    const indexOfColon = list[i].indexOf(':')
+                    if (indexOfColon !== -1) {
+                        const optName = list[i].substring(0, indexOfColon)
+                        if (name == optName) {
+                            return Promise.resolve(list[i].substring(indexOfColon + 1))
                         }
                     }
                 }

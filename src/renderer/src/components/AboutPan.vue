@@ -137,32 +137,36 @@
             window.onload = async () => {
                 this.trueLang = getTrueLang()
             }
-            const superThanks = ['doodlehuang']
-            // 加载贡献者信息
-            if(import.meta.env.VITE_APP_REPO_NAME) {
-                fetch(`https://api.github.com/repos/${import.meta.env.VITE_APP_REPO_NAME}/contributors`)
-                    .then((response) => response.json())
-                    .then((data: { [key: string]: string }[]) => {
-                        for (let i = 0; i < data.length; i++) {
-                            this.constList.push({
-                                url: data[i].avatar_url,
-                                link: data[i].html_url,
-                                title: data[i].login,
-                                contributions: Number(data[i].contributions),
-                                isMe: data[i].login == 'Stapxs',
-                                isSuperThakns: superThanks.includes(data[i].login),
-                            })
-                        }
-                    })
-            }
-            // 加载赞助者信息
-            if(import.meta.env.VITE_APP_SPONSORS_DATA_API) {
-                fetch(import.meta.env.VITE_APP_SPONSORS_DATA_API)
-                    .then((response) => response.json())
-                    .then((data: { [key: string]: string }) => {
-                        this.sponsorList = data.list as any
-                    })
-            }
+            
+            // 延迟加载贡献者和赞助者信息，避免阻塞启动时的主题切换等渲染操作
+            setTimeout(() => {
+                const superThanks = ['doodlehuang']
+                // 加载贡献者信息
+                if(import.meta.env.VITE_APP_REPO_NAME) {
+                    fetch(`https://api.github.com/repos/${import.meta.env.VITE_APP_REPO_NAME}/contributors`)
+                        .then((response) => response.json())
+                        .then((data: { [key: string]: string }[]) => {
+                            for (let i = 0; i < data.length; i++) {
+                                this.constList.push({
+                                    url: data[i].avatar_url,
+                                    link: data[i].html_url,
+                                    title: data[i].login,
+                                    contributions: Number(data[i].contributions),
+                                    isMe: data[i].login == 'Stapxs',
+                                    isSuperThakns: superThanks.includes(data[i].login),
+                                })
+                            }
+                        })
+                }
+                // 加载赞助者信息
+                if(import.meta.env.VITE_APP_SPONSORS_DATA_API) {
+                    fetch(import.meta.env.VITE_APP_SPONSORS_DATA_API)
+                        .then((response) => response.json())
+                        .then((data: { [key: string]: string }) => {
+                            this.sponsorList = data.list as any
+                        })
+                }
+            }, 3000)
         },
         methods: {
             dependencies() {

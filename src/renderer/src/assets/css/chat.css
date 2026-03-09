@@ -473,6 +473,7 @@ input {
     margin: 0 10px 10px 10px;
     overflow-y: scroll;
     flex: 1;
+    touch-action: pan-y;
 }
 .merge-pan .loading {
     transform: translateY(50%);

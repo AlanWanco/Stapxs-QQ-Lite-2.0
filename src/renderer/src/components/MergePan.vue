@@ -24,7 +24,9 @@
                         :key="'delete-' + msgIndex.message_id"
                         :data="{ sub_type: 'delete' }" />
                     <!-- 合并转发消息忽略是不是自己的判定 -->
-                    <MsgBody :data="msgIndex" :type="'merge'" />
+                    <MsgBody :data="msgIndex" :type="'merge'" 
+                        :image-list-header="runtimeData.mergeMessageImgList"
+                        @show-menu="(event, data) => runtimeData.tags.openMenu(event, data)" />
                 </template>
             </TransitionGroup>
         </div>
@@ -45,6 +47,7 @@
     export default defineComponent({
         name: 'MergePan',
         components: { NoticeBody, MsgBody },
+        inject: ['viewer'],
         data() {
             const stack = runtimeData.mergeMsgStack
             const nowData: Ref<MergeStackData|undefined> = ref()

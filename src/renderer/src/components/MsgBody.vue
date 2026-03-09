@@ -721,16 +721,11 @@ function getUserById(id: number): IUser | undefined {
 
                 const logger = new Logger()
                 text = ViewFuns.parseText(text)
-                // 防止大量的重复字符
-                const filtedText = text.replace(/(.)(\1{10,})/g, '$1<span style="opacity:0.7;margin-right:10px;">...</span>')
-                if(filtedText != text) {
-                    const style = 'display:block;margin-top:10px;opacity:0.7;cursor:pointer;'
-                    text = filtedText + '<a style="' + style +'" data-raw="' + text + '" onclick="this.parentNode.innerText = this.dataset.raw;return false;">' + this.$t('显示原始消息') + '</a>'
-                }
                 // 链接判定
                 const reg = /(http|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-.,@?^=%&:/~+#]*[\w\-@?^=%&/~+#])?/gi
-                text = text.replaceAll(reg, '<a href="" data-link="$&" onclick="return false">$&</a>')
                 const linkList = text.match(reg)
+                text = text.replaceAll(reg, '<a href="" data-link="$&" onclick="return false">$&</a>')
+                
                 if (linkList !== null && !this.gotLink) {
                     queueMicrotask(async() => {
                         this.gotLink = true
