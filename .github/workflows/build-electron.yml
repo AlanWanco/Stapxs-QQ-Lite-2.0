@@ -40,14 +40,19 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
+            - name: 准备产物目录
+              shell: bash
+              run: |
+                mkdir -p upload
+                cp dist_electron/*.exe upload/ || true
+                cp dist_electron/*.deb upload/ || true
+                cp dist_electron/*.AppImage upload/ || true
+                cp dist_electron/*.dmg upload/ || true
+                cp dist_electron/*.pacman upload/ || true
+                cp dist_electron/*.zip upload/ || true
+
             - name: 上传构建产物
               uses: actions/upload-artifact@v4
               with:
-                  name: electron-${{ inputs.version }}-${{ matrix.os }}
-                  path: |
-                      dist_electron/*.exe
-                      dist_electron/*.deb
-                      dist_electron/*.AppImage
-                      dist_electron/*.dmg
-                      dist_electron/*.pacman
-                      dist_electron/*.zip
+                  name: ${{ inputs.version }}-electron-${{ matrix.os }}
+                  path: upload/

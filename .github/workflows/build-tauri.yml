@@ -88,5 +88,5 @@ jobs:
             - name: 上传构建产物
               uses: actions/upload-artifact@v4
               with:
-                  name: tauri-${{ inputs.version }}-${{ matrix.os }}
+                  name: ${{ inputs.version }}-tauri-${{ matrix.os }}
                   path: upload/
