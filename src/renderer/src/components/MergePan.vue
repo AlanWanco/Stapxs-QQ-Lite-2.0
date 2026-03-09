@@ -26,7 +26,7 @@
                     <!-- 合并转发消息忽略是不是自己的判定 -->
                     <MsgBody :data="msgIndex" :type="'merge'" 
                         :image-list-header="runtimeData.mergeMessageImgList"
-                        @show-menu="(event, data) => runtimeData.tags.openMenu(event, data)" />
+                        @show-menu="(event, data) => $emit('showMenu', event, data)" />
                 </template>
             </TransitionGroup>
         </div>
@@ -43,10 +43,12 @@
     import { runtimeData } from '@renderer/function/msg';
     import { type MergeStackData } from '@renderer/function/elements/information';
     import { isDeleteMsg, isShowTime } from '@renderer/function/utils/msgUtil';
+    import { Img } from '@renderer/function/model/img';
 
     export default defineComponent({
         name: 'MergePan',
         components: { NoticeBody, MsgBody },
+        emits: ['showMenu'],
         inject: ['viewer'],
         data() {
             const stack = runtimeData.mergeMsgStack
@@ -76,7 +78,8 @@
                 () => this.nowData?.imageList,
                 () => {
                     if(runtimeData.mergeMsgStack.length === 0 || this.nowData?.imageList === undefined) return
-                    runtimeData.mergeMessageImgList = this.nowData.imageList
+                    const srcList = this.nowData.imageList.map((item: any) => item.img_url)
+                    runtimeData.mergeMessageImgList = Img.fromList(srcList)
                 }
             )
         },

@@ -474,7 +474,7 @@ function getUserById(id: number): IUser | undefined {
         name: 'MsgBody',
         inject: ['viewer'],
         props: ['data', 'type', 'selected', 'imageListHeader'],
-        emits: ['scrollToMsg', 'imageLoaded', 'sendPoke'],
+        emits: ['scrollToMsg', 'imageLoaded', 'sendPoke', 'showMenu', 'leftMove', 'rightMove'],
         data() {
             return {
                 Emoji,

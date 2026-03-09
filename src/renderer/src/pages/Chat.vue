@@ -404,7 +404,7 @@
             <div />
         </div>
         <!-- 合并转发消息预览器 -->
-        <MergePan ref="mergePan" />
+        <MergePan ref="mergePan" @show-menu="showMsgMeun" />
         <!-- 消息右击菜单 -->
         <Teleport to="body">
             <div :class="'msg-menu' + (['linux', 'win32'].includes(backend.platform ?? '') ? ' withBar' : '')">
