@@ -37,3 +37,4 @@ jobs:
               with:
                   name: ${{ inputs.version }}-web
                   path: Stapxs.QQ.Lite-${{ inputs.version }}-web.zip
+                  if-no-files-found: error

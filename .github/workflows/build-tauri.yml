@@ -66,6 +66,15 @@ jobs:
             - name: 构建 Tauri 应用
               if: matrix.os == 'macos-latest'
               run: yarn build:tauri -b dmg
+              env:
+                  CSC_IDENTITY_AUTO_DISCOVERY: "false"
+                  CSC_NAME: ""
+                  APPLE_SIGNING_IDENTITY: ""
+                  APPLE_CERTIFICATE: ""
+                  APPLE_CERTIFICATE_PASSWORD: ""
+                  APPLE_ID: ""
+                  APPLE_PASSWORD: ""
+                  APPLE_TEAM_ID: ""
 
             - name: 准备产物目录
               if: matrix.os != 'windows-2022'
@@ -90,3 +99,4 @@ jobs:
               with:
                   name: ${{ inputs.version }}-tauri-${{ matrix.os }}
                   path: upload/
+                  if-no-files-found: error

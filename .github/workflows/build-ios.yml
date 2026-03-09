@@ -41,3 +41,4 @@ jobs:
               with:
                   name: ${{ inputs.version }}-ios
                   path: dist_capacitor/*.ipa
+                  if-no-files-found: error

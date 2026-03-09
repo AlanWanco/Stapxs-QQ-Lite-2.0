@@ -56,3 +56,4 @@ jobs:
               with:
                   name: ${{ inputs.version }}-electron-${{ matrix.os }}
                   path: upload/
+                  if-no-files-found: error

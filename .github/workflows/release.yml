@@ -66,7 +66,7 @@ jobs:
     release:
         name: 发布构建结果
         runs-on: ubuntu-latest
-        if: always()
+        if: ${{ needs.init.result == 'success' && needs.build-root-web.result == 'success' && needs.build-electron.result == 'success' && needs.build-tauri.result == 'success' && needs.build-android.result == 'success' && needs.build-ios.result == 'success' }}
         needs:
             - init
             - build-root-web
@@ -75,19 +75,14 @@ jobs:
             - build-android
             - build-ios
         steps:
-            # 只有在 init 成功时才执行发布
-            - name: Check Init Success
-              if: needs.init.result != 'success'
-              run: exit 1
             # 下载构建结果
             - name: Download Artifacts
               id: download-artifact
               uses: actions/download-artifact@v4
-              continue-on-error: true
               with:
                   path: artifacts
                   pattern: ${{ needs.init.outputs.version }}-*
-                  merge-multiple: true
+                  merge-multiple: false
             - name: Artifacts List
               run: ls -R artifacts
             # 发布构建结果
