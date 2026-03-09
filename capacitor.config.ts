@@ -15,8 +15,8 @@ const config: CapacitorConfig = {
     android: {
         path: 'src/mobile/android',
         buildOptions: {
-            keystorePath: resolve(__dirname, 'src/mobile/_signing/ssteam'),
-            keystoreAlias: 'key-ssteam',
+            keystorePath: resolve(__dirname, 'src/mobile/_signing/stapxs_qq.keystore'),
+            keystoreAlias: 'stapxs_qq_key',
             keystorePassword: process.env.KEYSTORE_PASSWORD || '',
             keystoreAliasPassword: process.env.KEYSTORE_ALIAS_PASSWORD || '',
             releaseType: 'APK'
