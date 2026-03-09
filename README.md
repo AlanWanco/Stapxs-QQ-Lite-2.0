@@ -23,13 +23,6 @@
 </p>
 
 
-## ☕️ 赞助项目
-<p align="center">
-    <a href="https://www.ifdian.net/a/stapxs" target="_blank">
-    <img src="README/sponsor.png" width="600">
-    </a>
-</p>
-
 ## 社区版本
 以下是一些社区支持的版本，非常推荐大家试用：
 - [Stapxs QQ Lite X](https://github.com/Chzxxuanzheng/Stapxs-QQ-Lite-X)：扩展了更多功能的社区版本，支持更多接近原版 QQ 的功能
