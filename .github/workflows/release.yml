@@ -24,28 +24,21 @@ jobs:
               run: echo VERSION=$(node -p "require('./package.json').version") >> $GITHUB_OUTPUT
 
     # ========================= 构建 Web 版本 =========================
-
     build-root-web:
-        name: 构建 Web 版本
         needs: init
-
         uses: ./.github/workflows/build-web.yml
         with:
             version: ${{ needs.init.outputs.version }}
 
     # ========================= 构建 Electron 版本 =========================
     build-electron:
-        name: 构建 Electron
         needs: init
-
         uses: ./.github/workflows/build-electron.yml
         with:
             version: ${{ needs.init.outputs.version }}
 
     # ========================= 构建 Tauri 版本 =========================
-
     build-tauri:
-        name: 构建 Tauri
         needs: init
         uses: ./.github/workflows/build-tauri.yml
         with:
@@ -53,7 +46,6 @@ jobs:
 
     # ========================= 构建 Android 版本 =========================
     build-android:
-        name: 构建 Android
         needs: init
         uses: ./.github/workflows/build-android.yml
         with:
@@ -64,9 +56,7 @@ jobs:
 
     # ========================= 构建 iOS 版本 =========================
     build-ios:
-        name: 构建 iOS
         needs: init
-        continue-on-error: true
         uses: ./.github/workflows/build-ios.yml
         with:
             version: ${{ needs.init.outputs.version }}
