@@ -41,23 +41,30 @@ jobs:
             - name: 更新依赖
               run: yarn
             
-            - name: 构建 Android 应用
+            - name: 构建 Android 应用（生成未签名产物）
               run: |
                 set -euo pipefail
-                # 1. 构建未签名版本，增加重试以降低临时网络故障影响
+                # 1. 构建前端并同步到 Android 工程
+                yarn build
+                yarn capacitor sync android
+
+                # 2. 使用 Gradle 直接生成 release 产物（避免 capacitor build 强制签名校验）
+                chmod +x src/mobile/android/gradlew
+
+                # 增加重试逻辑，防止仓库网络抖动导致依赖下载失败
                 for i in 1 2 3; do
-                  if yarn build:android; then
+                  if (cd src/mobile/android && ./gradlew --no-daemon assembleRelease bundleRelease); then
                     break
                   fi
                   if [ "$i" -eq 3 ]; then
-                    echo "Android build failed after 3 attempts"
+                    echo "Gradle build failed after 3 attempts"
                     exit 1
                   fi
-                  echo "构建失败，10 秒后重试（$i/3）..."
+                  echo "Gradle 构建失败，10 秒后重试（$i/3）..."
                   sleep 10
                 done
               env:
-                  # 这里不需要传密码，因为我们要手动签名
+                  # 这里不需要传密码，因为我们要手动签名 APK
                   KEYSTORE_PASSWORD: ""
                   KEYSTORE_ALIAS_PASSWORD: ""
 
