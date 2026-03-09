@@ -68,8 +68,15 @@ jobs:
             - name: 准备产物
               run: |
                   mkdir -p upload
-                  cp src/mobile/android/app/build/outputs/apk/release/*.apk upload/ || true
-                  cp src/mobile/android/app/build/outputs/bundle/release/*.aab upload/ || true
+                  VERSION=${{ inputs.version }}
+                  # 优先取对齐后的已签名包
+                  if [ -f src/mobile/android/app/build/outputs/apk/release/app-release-signed.apk ]; then
+                    cp src/mobile/android/app/build/outputs/apk/release/app-release-signed.apk "upload/Stapxs.QQ.Lite-${VERSION}.apk"
+                  else
+                    cp src/mobile/android/app/build/outputs/apk/release/app-release.apk "upload/Stapxs.QQ.Lite-${VERSION}.apk" || \
+                    cp src/mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk "upload/Stapxs.QQ.Lite-${VERSION}-unsigned.apk"
+                  fi
+                  cp src/mobile/android/app/build/outputs/bundle/release/*.aab "upload/Stapxs.QQ.Lite-${VERSION}.aab" || true
 
             - name: 上传构建产物
               uses: actions/upload-artifact@v4
