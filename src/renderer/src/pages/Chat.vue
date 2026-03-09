@@ -109,7 +109,8 @@
                         <NoticeBody v-else-if="msgIndex.post_type === 'notice'"
                             :id="uuid()"
                             :key="'notice-' + index"
-                            :data="msgIndex" />
+                            :data="msgIndex"
+                            @reedit="reedit" />
                     </template>
                 </TransitionGroup>
             </template>
@@ -368,15 +369,15 @@
                             v-model="msg"
                             type="text"
                             autocomplete="off"
-                            :disabled="runtimeData.tags.openSideBar || chat.info.me_info.shut_up_timestamp > 0"
+                            :disabled="runtimeData.tags.openSideBar || chat.info.me_info?.shut_up_timestamp > 0"
                             :placeholder="
-                                chat.info.me_info.shut_up_timestamp > 0
+                                chat.info.me_info?.shut_up_timestamp > 0
                                     ? $t('已被禁言至：{time}', {
                                         time: Intl.DateTimeFormat(
                                             trueLang, getTimeConfig(
-                                                new Date(chat.info.me_info.shut_up_timestamp * 1000),
+                                                new Date((chat.info.me_info?.shut_up_timestamp ?? 0) * 1000),
                                             ),
-                                        ).format(new Date(chat.info.me_infotimestamp * 1000)),
+                                        ).format(new Date((chat.info.me_info?.shut_up_timestamp ?? 0) * 1000)),
                                     }) : ''"
                             @paste="addImg"
                             @keyup="mainKeyUp"
@@ -1264,7 +1265,7 @@ import { Img } from '@renderer/function/model/img'
                 ) {
                     runtimeData.chatInfo.info.group_members.forEach(
                         (item: any) => {
-                            if (item.user_id == data.sender.user_id) {
+                            if (item.user_id == data.sender?.user_id) {
                                 selectUserType = item.role
                             }
                         },
@@ -1292,36 +1293,36 @@ import { Img } from '@renderer/function/model/img'
                         this.tags.menuDisplay.remove = true
                         if (
                             runtimeData.chatInfo.show.type != 'group' ||
-                            data.sender.user_id === runtimeData.loginInfo.uin ||
-                            runtimeData.chatInfo.info.me_info.role === 'member' ||
+                            data.sender?.user_id === runtimeData.loginInfo.uin ||
+                            runtimeData.chatInfo.info.me_info?.role === 'member' ||
                             selectUserType == 'owner' ||
-                            (selectUserType == 'admin' && runtimeData.chatInfo.info.me_info.role != 'owner')
+                            (selectUserType == 'admin' && runtimeData.chatInfo.info.me_info?.role != 'owner')
                         ) {
                             // 自己、私聊或者没有权限的时候不显示移除
                             this.tags.menuDisplay.remove = false
                         }
-                        if (data.sender.user_id === runtimeData.loginInfo.uin) {
+                        if (data.sender?.user_id === runtimeData.loginInfo.uin) {
                             // 自己不显示提及
                             this.tags.menuDisplay.at = false
                         }
                         // 群成员设置
                         if(runtimeData.chatInfo.show.type == 'group' &&
-                        runtimeData.chatInfo.info.me_info.role != 'member') {
+                        runtimeData.chatInfo.info.me_info?.role != 'member') {
                             this.tags.menuDisplay.config = true
                         }
                     } else {
                         // 检查消息，确认菜单显示状态
                         if (
-                            data.sender.user_id === runtimeData.loginInfo.uin ||
-                            runtimeData.chatInfo.info.me_info.role ===
+                            data.sender?.user_id === runtimeData.loginInfo.uin ||
+                            runtimeData.chatInfo.info.me_info?.role ===
                                 'admin' ||
-                            runtimeData.chatInfo.info.me_info.role === 'owner'
+                            runtimeData.chatInfo.info.me_info?.role === 'owner'
                         ) {
                             // 自己的消息、管理员和群主会显示撤回
                             this.tags.menuDisplay.revoke = true
                         }
                         // 重新编辑判定
-                        this.tags.menuDisplay.reedit = this.tags.menuDisplay.revoke && data.sender.user_id === runtimeData.loginInfo.uin
+                        this.tags.menuDisplay.reedit = this.tags.menuDisplay.revoke && data.sender?.user_id === runtimeData.loginInfo.uin
                         if (data.revoke === true) {
                             // 已被撤回的自己的消息只显示复制
                             this.tags.menuDisplay.relpy = false
