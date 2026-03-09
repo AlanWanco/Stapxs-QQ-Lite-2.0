@@ -1,0 +1,43 @@
+name: 构建 iOS
+
+on:
+    workflow_call:
+        inputs:
+            version:
+                description: "应用版本"
+                required: true
+                type: string
+
+jobs:
+    build:
+        runs-on: macos-latest
+
+        steps:
+            - name: 拉取代码
+              uses: actions/checkout@v4
+              with:
+                  submodules: recursive
+            
+            - name: 启用 Corepack
+              run: corepack enable
+            
+            - name: 设置 Nodejs
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20.x
+                  cache: 'yarn'
+            
+            - name: 更新依赖
+              run: yarn
+            
+            - name: 构建 iOS 应用
+              run: |
+                  yarn build:ios
+              env:
+                  VERSION: ${{ inputs.version }}
+
+            - name: 上传构建产物
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ${{ inputs.version }}-ios
+                  path: dist_capacitor/*.ipa
