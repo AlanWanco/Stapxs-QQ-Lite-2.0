@@ -42,7 +42,6 @@
             "../../build/icon-client-others.ico"
         ],
         "macOS": {
-            "signingIdentity": "NL8AW5AD94",
             "dmg": {
                 "appPosition": {
                     "x": 112,
