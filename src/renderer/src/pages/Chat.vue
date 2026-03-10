@@ -1391,8 +1391,9 @@ import { Img } from '@renderer/function/model/img'
                         }
                     }
                     // 鼠标位置
-                    const pointX = event.x
-                    const pointY = event.y
+                    const scale = runtimeData.sysConfig.custom_scale || 1
+                    const pointX = event.x / scale
+                    const pointY = event.y / scale
                     // 移动菜单位置
                     menu.style.position = 'fixed'
                     menu.style.left = pointX + 'px'
