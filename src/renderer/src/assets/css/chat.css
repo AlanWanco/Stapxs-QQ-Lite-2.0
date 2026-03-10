@@ -966,7 +966,7 @@ input {
 }
 .bulletins > div.base > div.body > span > a:before {
     text-align: center;
-    content: '🔗';
+    content: '';
     color: transparent;
     text-shadow: 0 0 0 var(--color-font-1);
 }

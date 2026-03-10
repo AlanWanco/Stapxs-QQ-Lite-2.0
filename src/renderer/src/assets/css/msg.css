@@ -103,7 +103,7 @@
 }
 .message-body a:link:before {
     text-align: center;
-    content: '🔗';
+    content: '';
     color: transparent;
     text-shadow: 0 0 0 var(--color-font-1);
 }
@@ -173,7 +173,7 @@
 
 .message-mine a:link:before {
     text-align: center;
-    content: '🔗';
+    content: '';
     color: transparent;
     text-shadow: 0 0 0 var(--color-font-1-r);
 }
