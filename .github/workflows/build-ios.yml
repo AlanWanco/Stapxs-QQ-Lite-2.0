@@ -7,6 +7,10 @@ on:
                 description: "应用版本"
                 required: true
                 type: string
+            git_hash:
+                description: "Git 哈希"
+                required: true
+                type: string
 
 jobs:
     build:
@@ -35,10 +39,11 @@ jobs:
                   yarn build:ios
               env:
                   VERSION: ${{ inputs.version }}
+                  GIT_HASH: ${{ inputs.git_hash }}
 
             - name: 上传构建产物
               uses: actions/upload-artifact@v4
               with:
-                  name: ${{ inputs.version }}-ios
+                  name: ${{ inputs.version }}-${{ inputs.git_hash }}-ios
                   path: dist_capacitor/*.ipa
                   if-no-files-found: error

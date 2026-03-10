@@ -7,6 +7,10 @@ on:
                 description: "应用版本"
                 required: true
                 type: string
+            git_hash:
+                description: "Git 哈希"
+                required: true
+                type: string
 
 jobs:
     build:
@@ -31,10 +35,11 @@ jobs:
             - name: 压缩构建产物
               env:
                   VERSION: ${{ inputs.version }}
-              run: zip -r "Stapxs.QQ.Lite-${VERSION}-web.zip" dist
+                  GIT_HASH: ${{ inputs.git_hash }}
+              run: zip -r "Stapxs.QQ.Lite-${VERSION}-${GIT_HASH}-web.zip" dist
             - name: 上传构建产物
               uses: actions/upload-artifact@v4
               with:
-                  name: ${{ inputs.version }}-web
-                  path: Stapxs.QQ.Lite-${{ inputs.version }}-web.zip
+                  name: ${{ inputs.version }}-${{ inputs.git_hash }}-web
+                  path: Stapxs.QQ.Lite-${{ inputs.version }}-${{ inputs.git_hash }}-web.zip
                   if-no-files-found: error
