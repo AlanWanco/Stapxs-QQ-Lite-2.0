@@ -9,6 +9,13 @@ body {
     height: 100%;
     padding: 0;
     margin: 0;
+    /* 界面缩放 */
+    transform-origin: top left;
+    transform: scale(var(--scale-custom, 1));
+    width: calc(100% / var(--scale-custom, 1));
+    height: calc(100% / var(--scale-custom, 1));
+    /* 字体缩放 */
+    font-size: calc(16px * var(--scale-font, 1));
 }
 input::placeholder {
     color: var(--color-font-2);
