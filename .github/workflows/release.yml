@@ -80,7 +80,7 @@ jobs:
               uses: actions/download-artifact@v4
               with:
                   path: artifacts
-                  pattern: v${{ needs.init.outputs.version }}-*
+                  pattern: Stapxs-QQ-Lite-v${{ needs.init.outputs.version }}-*
                   merge-multiple: false
             - name: Artifacts List
               run: ls -R artifacts
