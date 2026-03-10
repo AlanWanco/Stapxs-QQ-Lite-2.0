@@ -44,6 +44,6 @@ jobs:
             - name: 上传构建产物
               uses: actions/upload-artifact@v4
               with:
-                  name: Stapxs-QQ-Lite-v${{ inputs.version }}-stable-${{ inputs.git_hash }}-ios
+                  name: Stapxs-QQ-Lite-v${{ inputs.version }}-ios
                   path: dist_capacitor/*.ipa
                   if-no-files-found: error

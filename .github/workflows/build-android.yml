@@ -78,7 +78,6 @@ jobs:
                   set -euo pipefail
                   mkdir -p upload
                   VERSION=${{ inputs.version }}
-                  GIT_HASH=${{ inputs.git_hash }}
                   APK_PATH="src/mobile/android/app/build/outputs/apk/release/app-release.apk"
                   if [ ! -f "$APK_PATH" ]; then
                     echo "Signed APK not found: $APK_PATH"
@@ -86,16 +85,16 @@ jobs:
                     exit 1
                   fi
                   
-                  cp "$APK_PATH" "upload/Stapxs-QQ-Lite-v${VERSION}-stable-${GIT_HASH}-android.apk"
+                  cp "$APK_PATH" "upload/Stapxs-QQ-Lite-v${VERSION}-android.apk"
                   
                   AAB_PATH=$(find src/mobile/android/app/build/outputs/bundle/release -name "*.aab" | head -n 1)
                   if [ -n "$AAB_PATH" ] && [ -f "$AAB_PATH" ]; then
-                    cp "$AAB_PATH" "upload/Stapxs-QQ-Lite-v${VERSION}-stable-${GIT_HASH}-android.aab"
+                    cp "$AAB_PATH" "upload/Stapxs-QQ-Lite-v${VERSION}-android.aab"
                   fi
             
             - name: 上传构建产物
               uses: actions/upload-artifact@v4
               with:
-                  name: Stapxs-QQ-Lite-v${{ inputs.version }}-stable-${{ inputs.git_hash }}-android
+                  name: Stapxs-QQ-Lite-v${{ inputs.version }}-android
                   path: upload/
                   if-no-files-found: error

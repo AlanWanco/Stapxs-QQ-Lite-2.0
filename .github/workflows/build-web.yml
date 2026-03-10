@@ -35,11 +35,10 @@ jobs:
             - name: 压缩构建产物
               env:
                   VERSION: ${{ inputs.version }}
-                  GIT_HASH: ${{ inputs.git_hash }}
-              run: zip -r "Stapxs-QQ-Lite-v${VERSION}-stable-${GIT_HASH}-web.zip" dist
+              run: zip -r "Stapxs-QQ-Lite-v${VERSION}-web.zip" dist
             - name: 上传构建产物
               uses: actions/upload-artifact@v4
               with:
-                  name: Stapxs-QQ-Lite-v${{ inputs.version }}-stable-${{ inputs.git_hash }}-web
-                  path: Stapxs-QQ-Lite-v${{ inputs.version }}-stable-${{ inputs.git_hash }}-web.zip
+                  name: Stapxs-QQ-Lite-v${{ inputs.version }}-web
+                  path: Stapxs-QQ-Lite-v${{ inputs.version }}-web.zip
                   if-no-files-found: error
