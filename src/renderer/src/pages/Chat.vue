@@ -1394,8 +1394,11 @@ import { Img } from '@renderer/function/model/img'
                     const pointX = event.x
                     const pointY = event.y
                     // 移动菜单位置
-                    menu.style.marginLeft = pointX + 'px'
-                    menu.style.marginTop = pointY + 'px'
+                    menu.style.position = 'fixed'
+                    menu.style.left = pointX + 'px'
+                    menu.style.top = pointY + 'px'
+                    menu.style.marginLeft = '0px'
+                    menu.style.marginTop = '0px'
                     // 出界判定
                     let menuWidth = menu.clientWidth
                     if (this.tags.menuDisplay.showRespond) {
@@ -1405,7 +1408,7 @@ import { Img } from '@renderer/function/model/img'
                     }
                     const maxWidth = window.innerWidth
                     if (pointX + menuWidth > maxWidth + 27) {
-                        menu.style.marginLeft = maxWidth + 7 - menuWidth + 'px'
+                        menu.style.left = maxWidth + 7 - menuWidth + 'px'
                     }
                     // 显示菜单
                     this.tags.showMsgMenu = true
@@ -1416,7 +1419,7 @@ import { Img } from '@renderer/function/model/img'
                         const bodyHeight = document.body.clientHeight
                         if (pointY + menuHeight > bodyHeight - 20) {
                             menu.classList.add('topOut')
-                            menu.style.marginTop =
+                            menu.style.top =
                                 bodyHeight - menuHeight - 10 + 'px'
                         }
                     }, 100)
