@@ -13,7 +13,7 @@ VERSION=$(node -p "require('./package.json').version")
 GIT_HASH=$(git rev-parse --short=6 HEAD)
 
 # 4. 拼接完整标签名称 (v3.3.5-dev-abc123)
-TAG="v${VERSION}-dev-${GIT_HASH}"
+TAG="v${VERSION}-${GIT_HASH}"
 
 echo "🚀 即将创建并推送标签: $TAG"
 
