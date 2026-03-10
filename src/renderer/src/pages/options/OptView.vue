@@ -1,10 +1,3 @@
-<!--
- * @FileDescription: 设置页面（界面子页面）
- * @Author: Stapxs
- * @Date: 2022/09/26
- * @Version: 1.0
--->
-
 <template>
     <div class="opt-page">
         <div class="ss-card">
@@ -213,13 +206,14 @@
                     <font-awesome-icon :icon="['fas', 'expand']" />
                     <div>
                         <span>{{ $t('界面缩放') }}</span>
-                        <span>{{ $t('调整界面整体大小') }}</span>
+                        <span>{{ $t('调整界面整体大小') }}<br>{{ $t('不建议缩放到 70% 以下或 130% 以上') }}</span>
                     </div>
                     <div class="ss-range">
                         <input v-model="runtimeData.sysConfig.custom_scale"
                             :style="`background-size: ${(runtimeData.sysConfig.custom_scale - 0.5) * 100}% 100%;`"
                             type="range" min="0.5" max="1.5" step="0.05" name="custom_scale" @input="save">
                         <span>{{ Math.round(runtimeData.sysConfig.custom_scale * 100) }}%</span>
+                        <button class="ss-button" style="width: 60px; font-size: 0.8rem; margin-left: 10px;" @click="runtimeData.sysConfig.custom_scale = 1.0;save({target:{name:'custom_scale'}} as any)">{{ $t('重置') }}</button>
                     </div>
                 </div>
                 <div class="opt-item">
@@ -234,6 +228,7 @@
                             :style="`background-size: ${(runtimeData.sysConfig.font_scale - 0.5) * 100}% 100%;`"
                             type="range" min="0.5" max="1.5" step="0.05" name="font_scale" @input="save">
                         <span>{{ Math.round(runtimeData.sysConfig.font_scale * 100) }}%</span>
+                        <button class="ss-button" style="width: 60px; font-size: 0.8rem; margin-left: 10px;" @click="runtimeData.sysConfig.font_scale = 1.0;save({target:{name:'font_scale'}} as any)">{{ $t('重置') }}</button>
                     </div>
                 </div>
             </template>
@@ -685,7 +680,6 @@
              */
             glassEffectToggle(event: Event) {
                 const sender = event.target as HTMLInputElement
-
                 if (sender.checked) {
                     const popInfo = {
                         title: this.$t('提醒'),
