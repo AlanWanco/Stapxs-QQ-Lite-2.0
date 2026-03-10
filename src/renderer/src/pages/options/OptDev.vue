@@ -150,6 +150,19 @@
                     {{ $t('清除') }}
                 </button>
             </div>
+            <div v-if="customCssLoaded" class="opt-item">
+                <font-awesome-icon :icon="['fas', 'rotate']" />
+                <div>
+                    <span>{{ $t('重载自定义样式') }}</span>
+                    <span>{{ $t('立即重新加载当前注入的样式') }}</span>
+                </div>
+                <button
+                    style="width: 100px; font-size: 0.8rem"
+                    class="ss-button"
+                    @click="reloadCustomCss">
+                    {{ $t('重载') }}
+                </button>
+            </div>
         </div>
         <div class="ss-card">
             <header>{{ $t('调试') }}</header>
@@ -808,6 +821,22 @@
                     ],
                 }
                 runtimeData.popBoxList.push(popInfo)
+            },
+            reloadCustomCss() {
+                const css = get('custom_css');
+                if (css) {
+                    runAS('custom_css', css);
+                    this.updateCustomCssStatus();
+                    new PopInfo().add(
+                        PopType.INFO,
+                        app.config.globalProperties.$t('已重载自定义样式'),
+                    );
+                } else {
+                    new PopInfo().add(
+                        PopType.ERR,
+                        app.config.globalProperties.$t('未找到自定义样式'),
+                    );
+                }
             },
             clearCustomCss() {
                 const popInfo = {
