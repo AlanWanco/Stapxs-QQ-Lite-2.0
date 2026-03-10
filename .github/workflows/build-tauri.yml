@@ -69,12 +69,7 @@ jobs:
               env:
                   CSC_IDENTITY_AUTO_DISCOVERY: "false"
                   CSC_NAME: ""
-                  APPLE_SIGNING_IDENTITY: ""
-                  APPLE_CERTIFICATE: ""
-                  APPLE_CERTIFICATE_PASSWORD: ""
-                  APPLE_ID: ""
-                  APPLE_PASSWORD: ""
-                  APPLE_TEAM_ID: ""
+                  APPLE_SIGNING_IDENTITY: "-"
 
             - name: 准备产物目录
               if: matrix.os != 'windows-2022'
