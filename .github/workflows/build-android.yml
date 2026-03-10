@@ -7,6 +7,10 @@ on:
                 description: "应用版本"
                 required: true
                 type: string
+            git_hash:
+                description: "Git 哈希"
+                required: true
+                type: string
         secrets:
             KEYSTORE_PASSWORD:
                 required: true
@@ -47,10 +51,10 @@ jobs:
                 # 1. 构建前端并同步到 Android 工程
                 yarn build
                 yarn capacitor sync android
-
+                
                 # 2. 使用 Gradle 直接生成 release 产物
                 chmod +x src/mobile/android/gradlew
-
+                
                 # 增加重试逻辑，防止仓库网络抖动导致依赖下载失败
                 for i in 1 2 3; do
                   if (cd src/mobile/android && ./gradlew --no-daemon assembleRelease bundleRelease); then
@@ -68,29 +72,30 @@ jobs:
                   ANDROID_KEY_ALIAS: stapxs_qq_key
                   ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
                   ANDROID_KEY_PASSWORD: ${{ secrets.KEYSTORE_ALIAS_PASSWORD }}
-
+            
             - name: 准备产物
               run: |
                   set -euo pipefail
                   mkdir -p upload
                   VERSION=${{ inputs.version }}
+                  GIT_HASH=${{ inputs.git_hash }}
                   APK_PATH="src/mobile/android/app/build/outputs/apk/release/app-release.apk"
                   if [ ! -f "$APK_PATH" ]; then
                     echo "Signed APK not found: $APK_PATH"
                     ls -R src/mobile/android/app/build/outputs/apk/release || true
                     exit 1
                   fi
-
-                  cp "$APK_PATH" "upload/Stapxs.QQ.Lite-${VERSION}.apk"
-
+                  
+                  cp "$APK_PATH" "upload/Stapxs.QQ.Lite-${VERSION}-${GIT_HASH}.apk"
+                  
                   AAB_PATH=$(find src/mobile/android/app/build/outputs/bundle/release -name "*.aab" | head -n 1)
                   if [ -n "$AAB_PATH" ] && [ -f "$AAB_PATH" ]; then
-                    cp "$AAB_PATH" "upload/Stapxs.QQ.Lite-${VERSION}.aab"
+                    cp "$AAB_PATH" "upload/Stapxs.QQ.Lite-${VERSION}-${GIT_HASH}.aab"
                   fi
-
+            
             - name: 上传构建产物
               uses: actions/upload-artifact@v4
               with:
-                  name: ${{ inputs.version }}-android
+                  name: ${{ inputs.version }}-${{ inputs.git_hash }}-android
                   path: upload/
                   if-no-files-found: error

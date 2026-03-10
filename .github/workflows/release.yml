@@ -12,6 +12,7 @@ jobs:
         runs-on: ubuntu-latest
         outputs:
             version: ${{ steps.step_init.outputs.VERSION }}
+            git_hash: ${{ steps.step_hash.outputs.HASH }}
         steps:
             # 拉取代码
             - name: Checkout
@@ -22,6 +23,9 @@ jobs:
             - name: Init Env
               id: step_init
               run: echo VERSION=$(node -p "require('./package.json').version") >> $GITHUB_OUTPUT
+            - name: Get Git Hash
+              id: step_hash
+              run: echo HASH=$(git rev-parse --short=6 HEAD) >> $GITHUB_OUTPUT
 
     # ========================= 构建 Web 版本 =========================
     build-root-web:
@@ -29,6 +33,7 @@ jobs:
         uses: ./.github/workflows/build-web.yml
         with:
             version: ${{ needs.init.outputs.version }}
+            git_hash: ${{ needs.init.outputs.git_hash }}
 
     # ========================= 构建 Tauri 版本 =========================
     build-tauri:
@@ -36,6 +41,7 @@ jobs:
         uses: ./.github/workflows/build-tauri.yml
         with:
             version: ${{ needs.init.outputs.version }}
+            git_hash: ${{ needs.init.outputs.git_hash }}
         secrets: inherit
 
     # ========================= 构建 Android 版本 =========================
@@ -44,6 +50,7 @@ jobs:
         uses: ./.github/workflows/build-android.yml
         with:
             version: ${{ needs.init.outputs.version }}
+            git_hash: ${{ needs.init.outputs.git_hash }}
         secrets: inherit
 
     # ========================= 构建 iOS 版本 =========================
@@ -52,6 +59,7 @@ jobs:
         uses: ./.github/workflows/build-ios.yml
         with:
             version: ${{ needs.init.outputs.version }}
+            git_hash: ${{ needs.init.outputs.git_hash }}
         secrets: inherit
 
     # ========================= 发布构建结果 =========================
