@@ -44,6 +44,6 @@ jobs:
             - name: 上传构建产物
               uses: actions/upload-artifact@v4
               with:
-                  name: ${{ inputs.version }}-${{ inputs.git_hash }}-ios
+                  name: v${{ inputs.version }}-${{ inputs.git_hash }}-stable-ios
                   path: dist_capacitor/*.ipa
                   if-no-files-found: error
