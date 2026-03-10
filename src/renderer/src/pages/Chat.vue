@@ -548,7 +548,6 @@ import MsgBody from '@renderer/components/MsgBody.vue'
 import NoticeBody from '@renderer/components/NoticeBody.vue'
 import FacePan from '@renderer/components/FacePan.vue'
 import MergePan from '@renderer/components/MergePan.vue'
-import imageCompression from 'browser-image-compression'
 
 import {
     defineComponent,
@@ -2165,31 +2164,10 @@ import { Img } from '@renderer/function/model/img'
 
                 // 图片太大
                 if (file.size > 3145728) {
-                    const options = { maxSizeMB: 3, useWebWorker: true }
-                    try {
-                        popInfo.add(
-                            PopType.INFO,
-                            this.$t('正在压缩图片 ……'),
-                        )
-                        const compressedFile = await imageCompression(
-                            file,
-                            options,
-                        )
-                        new Logger().add(
-                            LogType.INFO,
-                            '图片压缩成功，原大小：' +
-                                file.size / 1024 / 1024 +
-                                ' MB，压缩后大小：' +
-                                compressedFile.size / 1024 / 1024 +
-                                ' MB',
-                        )
-                        this.setImg(compressedFile)
-                    } catch (error) {
-                        new Logger().error(error as Error, '图片压缩失败')
-                        popInfo.add(PopType.INFO, this.$t('压缩图片失败'))
-                    }
+                    popInfo.add(PopType.INFO, this.$t('图片太大，无法发送'))
                     return
                 }
+
 
                 // sq 占位符
                 const id = this.sendCache.length
