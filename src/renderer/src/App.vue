@@ -266,6 +266,35 @@ export default defineComponent({
         const logger = new Logger()
         window.moYu = () => { return '\x75\x6e\x64\x65\x66\x69\x6e\x65\x64' }
         // 页面加载完成后
+        
+        // 全局处理右键菜单遮罩层的右键事件，使其能够穿透并在新位置触发右键菜单
+        window.addEventListener('contextmenu', (e: MouseEvent) => {
+            const target = e.target as HTMLElement
+            if (target && target.classList && target.classList.contains('msg-menu-bg')) {
+                e.preventDefault()
+                e.stopPropagation()
+                target.style.display = 'none'
+                const under = document.elementFromPoint(e.clientX, e.clientY)
+                target.style.display = ''
+                target.click()
+                if (under) {
+                    const newEvent = new MouseEvent('contextmenu', {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window,
+                        clientX: e.clientX,
+                        clientY: e.clientY,
+                        button: 2
+                    })
+                    // 稍微延迟一下，让上一个右键菜单的关闭动画和 Vue 的 DOM 更新完成
+                    // 这样在这个新位置弹出的菜单才能重新播放从上到下展开的动画
+                    setTimeout(() => {
+                        under.dispatchEvent(newEvent)
+                    }, 100)
+                }
+            }
+        }, true)
+
         window.onload = async () => {
             await backend.init() // Desktop：初始化客户端功能
 
