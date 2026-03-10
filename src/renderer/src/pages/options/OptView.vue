@@ -243,8 +243,9 @@
                     <font-awesome-icon :icon="['fas', 'arrows-rotate']" />
                     <div>
                         <span>{{ $t('重置界面缩放') }}</span>
+                        <span>{{ $t('一键复原！') }}</span>
                     </div>
-                    <button class="ss-button" style="width: 100px; font-size: 0.8rem;" @click="runtimeData.sysConfig.custom_scale = 1.0;runAS('custom_scale', 1.0)">{{ $t('重置') }}</button>
+                    <button class="choice-btn" style="width: 100px; font-size: 0.8rem;" @click="runtimeData.sysConfig.custom_scale = 1.0;runAS('custom_scale', 1.0)">{{ $t('重置') }}</button>
                 </div>
                 <div class="opt-item">
                     <div :class="checkDefault('font_scale')" />
@@ -265,8 +266,9 @@
                     <font-awesome-icon :icon="['fas', 'arrows-rotate']" />
                     <div>
                         <span>{{ $t('重置字体缩放') }}</span>
+                        <span>{{ $t('一键复原！') }}</span>
                     </div>
-                    <button class="ss-button" style="width: 100px; font-size: 0.8rem;" @click="runtimeData.sysConfig.font_scale = 1.0;runAS('font_scale', 1.0)">{{ $t('重置') }}</button>
+                    <button class="choice-btn" style="width: 100px; font-size: 0.8rem;" @click="runtimeData.sysConfig.font_scale = 1.0;runAS('font_scale', 1.0)">{{ $t('重置') }}</button>
                 </div>
             </template>
         </div>
