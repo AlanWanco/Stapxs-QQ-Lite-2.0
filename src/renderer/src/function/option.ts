@@ -140,6 +140,7 @@ function setFaviconNotice(_: boolean) {
 }
 
 function injectCustomCss(value: string) {
+    console.log('DEBUG: injectCustomCss called with value:', value);
     // 移除旧的自定义 CSS
     const oldStyle = document.getElementById('custom-css-inject')
     if (oldStyle) {
