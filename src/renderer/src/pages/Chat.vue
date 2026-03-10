@@ -818,7 +818,7 @@ import { Img } from '@renderer/function/model/img'
                 }
                 input.style.height = 'auto'
                 const baseHeight = parseFloat(input.dataset.baseHeight) || minHeight
-                const targetHeight = input.scrollHeight > baseHeight * 2 ? Math.max(input.scrollHeight, baseHeight): baseHeight
+                const targetHeight = input.scrollHeight > baseHeight * 1.5 ? Math.max(input.scrollHeight, baseHeight): baseHeight
                 input.style.height = targetHeight + 'px'
             },
             jumpSearchMsg() {
