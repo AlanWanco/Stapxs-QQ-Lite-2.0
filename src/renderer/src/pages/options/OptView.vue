@@ -131,83 +131,6 @@
                         </div>
                     </label>
                 </div>
-            </template>
-            <div class="opt-item">
-                <div :class="checkDefault('chat_more_blur')" />
-                <font-awesome-icon :icon="['fas', 'expand']" />
-                <div>
-                    <span>{{ $t('透明模式') }}</span>
-                    <span>{{ $t('透明超级加倍！在界面上使用更泛滥的透明和模糊') }}</span>
-                </div>
-                <label class="ss-switch">
-                    <input v-model="runtimeData.sysConfig.chat_more_blur"
-                        type="checkbox" name="chat_more_blur" @change="blurTip">
-                    <div>
-                        <div />
-                    </div>
-                </label>
-            </div>
-            <div v-if="runtimeData.sysConfig.chat_more_blur && backend.platform === 'darwin' && Number(backend.release.split(' ')[1].split('.')[0]) >= 26" class="opt-item">
-                <div :class="checkDefault('glass_effect')" />
-                <font-awesome-icon :icon="['fas', 'wand-sparkles']" />
-                <div>
-                    <span>{{ $t('流体玻璃窗口') }}</span>
-                    <span>{{ $t('仅支持 macOS 26 及以上系统') }}</span>
-                </div>
-                <label class="ss-switch">
-                    <input v-model="runtimeData.sysConfig.glass_effect"
-                        type="checkbox" name="glass_effect" @change="glassEffectToggle">
-                    <div>
-                        <div />
-                    </div>
-                </label>
-            </div>
-            <template v-if="!runtimeData.sysConfig.chat_more_blur">
-                <div class="opt-item">
-                    <div :class="checkDefault('chat_background')" />
-                    <font-awesome-icon :icon="['fas', 'image']" />
-                    <div>
-                        <span>{{ $t('背景图片') }}</span>
-                        <span>{{ $t('嘿嘿嘿（痴呆') }}</span>
-                    </div>
-                    <div class="file-choice">
-                        <div class="choice-btn"
-                            @click="($refs.choiceImg as any)?.click()">
-                            {{
-                                runtimeData.sysConfig.chat_background
-                                    ? $t('更换背景')
-                                    : $t('上传背景')
-                            }}
-                            <input ref="choiceImg"
-                                type="file"
-                                style="display: none"
-                                name="chat_background"
-                                accept="image/*"
-                                @change="setBackground($event)">
-                        </div>
-                        <div v-if="runtimeData.sysConfig.chat_background !== ''"
-                            class="rm-btn"
-                            @click="removeBackground">
-                            <font-awesome-icon :icon="['fas', 'xmark']" />
-                        </div>
-                    </div>
-                </div>
-                <div class="opt-item">
-                    <div :class="checkDefault('chat_background_blur')" />
-                    <font-awesome-icon :icon="['fas', 'o']" />
-                    <div>
-                        <span>{{ $t('背景模糊') }}</span>
-                        <span>{{ $t('什么都看不见了（恼') }}</span>
-                    </div>
-                    <div class="ss-range">
-                        <input v-model="runtimeData.sysConfig.chat_background_blur"
-                            :style="`background-size: ${runtimeData.sysConfig.chat_background_blur}% 100%;`"
-                            type="range" name="chat_background_blur" @input="save">
-                        <span :style="`color: var(--color-font${ runtimeData.sysConfig.chat_background_blur > 50 ? '-r' : ''})`">
-                            {{ runtimeData.sysConfig.chat_background_blur }}
-                            px</span>
-                    </div>
-                </div>
                 <div class="opt-item">
                     <div :class="checkDefault('custom_scale')" />
                     <font-awesome-icon :icon="['fas', 'expand']" />
@@ -234,21 +157,6 @@
                             :style="`background-size: ${(runtimeData.sysConfig.font_scale - 0.5) * 100}% 100%;`"
                             type="range" min="0.5" max="1.5" step="0.05" name="font_scale" @input="save">
                         <span>{{ Math.round(runtimeData.sysConfig.font_scale * 100) }}%</span>
-                    </div>
-                </div>
-                </div>
-                <div class="opt-item">
-                    <div :class="checkDefault('font_scale')" />
-                    <font-awesome-icon :icon="['fas', 'text-height']" />
-                    <div>
-                        <span>{{ $t('字体缩放') }}</span>
-                        <span>{{ $t('调整界面字体大小') }}</span>
-                    </div>
-                    <div class="ss-range">
-                        <input v-model="runtimeData.sysConfig.font_scale"
-                            :style="`background-size: ${(runtimeData.sysConfig.font_scale - 0.5) * 100}% 100%;`"
-                            type="range" min="0.5" max="1.5" step="0.05" name="font_scale" @input="save">
-                        <span>{{ (runtimeData.sysConfig.font_scale * 100).toFixed(0) }}%</span>
                     </div>
                 </div>
             </template>
