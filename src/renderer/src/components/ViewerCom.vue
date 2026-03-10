@@ -234,6 +234,10 @@ const modify = shallowReactive({
     y: 0,
 })
 const { vw, vh } = useViewportUnits()
+const totalScale = computed(() => {
+    const scale = runtimeData.sysConfig?.custom_scale || 1;
+    return scale * scale;
+})
 
 const canvas = useTemplateRef('canvas')
 const prev = computed(() => currentImg.value?.prev)
@@ -364,9 +368,9 @@ function autoFit() {
     if (!info) return
     // 长图
     if (info.height / info.width > 2.5) {
-        modify.scale = Math.min(vh.value * 100 / 2, info.width, vw.value * 90) / info.width
+        modify.scale = Math.min((vh.value * 100 / totalScale.value) / 2, info.width, (vw.value * 90 / totalScale.value)) / info.width
         modify.x = 0
-        modify.y = info.height * modify.scale / 2 - vh.value * 50
+        modify.y = info.height * modify.scale / 2 - (vh.value * 50 / totalScale.value)
     }
     // 正常图片
     else {
@@ -384,12 +388,12 @@ function stdFit() {
     modify.y = 0
     let scale: number
     if (modify.rotate % 180 === 0) {
-        const scaleX = vw.value * 100 / (info.width * 1.2)
-        const scaleY = vh.value * 100 / (info.height * 1.2)
+        const scaleX = (vw.value * 100 / totalScale.value) / (info.width * 1.2)
+        const scaleY = (vh.value * 100 / totalScale.value) / (info.height * 1.2)
         scale = Math.min(scaleX, scaleY)
     }else {
-        const scaleX = vw.value * 100 / (info.height * 1.2)
-        const scaleY = vh.value * 100 / (info.width * 1.2)
+        const scaleX = (vw.value * 100 / totalScale.value) / (info.height * 1.2)
+        const scaleY = (vh.value * 100 / totalScale.value) / (info.width * 1.2)
         scale = Math.min(scaleX, scaleY)
     }
     if (scale < 1)
@@ -611,25 +615,25 @@ const showScrollbarX = computed(() => {
     if (!currentImgInfo.value || loading.value) return false
     if (modify.rotate % 180 === 0)
         // 图片宽度缩放后是否超出视口宽度
-        return currentImgInfo.value.width * modify.scale > vw.value * 100
+        return currentImgInfo.value.width * modify.scale > (vw.value * 100 / totalScale.value)
     else
-        return currentImgInfo.value.height * modify.scale > vw.value * 100
+        return currentImgInfo.value.height * modify.scale > (vw.value * 100 / totalScale.value)
 })
 const showScrollbarY = computed(() => {
     if (!currentImgInfo.value || loading.value) return false
     if (modify.rotate % 180 === 0)
         // 图片高度缩放后是否超出视口高度
-        return currentImgInfo.value.height * modify.scale > vh.value * 100
+        return currentImgInfo.value.height * modify.scale > (vh.value * 100 / totalScale.value)
     else
         // 图片高度缩放后是否超出视口高度
-        return currentImgInfo.value.width * modify.scale > vh.value * 100
+        return currentImgInfo.value.width * modify.scale > (vh.value * 100 / totalScale.value)
 })
 // 滑块位置信息
 const scrollbarThumbXStyle = computed(() => {
     if (!currentImgInfo.value || loading.value) return {'--thumb': 0, '--pos': 0}
 
     if (modify.rotate % 180 === 0) {
-        const viewW = vw.value * 100
+        const viewW = (vw.value * 100 / totalScale.value)
         const imgW = currentImgInfo.value.width * modify.scale
         const ratio = viewW / imgW
         // 计算滑块位置
@@ -637,7 +641,7 @@ const scrollbarThumbXStyle = computed(() => {
         const pos = Math.max(0, Math.min(1 - ratio, head / imgW))
         return {'--thumb': ratio, '--pos': pos}
     }else {
-        const viewW = vw.value * 100
+        const viewW = (vw.value * 100 / totalScale.value)
         const imgH = currentImgInfo.value.height * modify.scale
         const ratio = viewW / imgH
         // 计算滑块位置
@@ -650,7 +654,7 @@ const scrollbarThumbYStyle = computed(() => {
     if (!currentImgInfo.value || loading.value) return {'--thumb': 0, '--pos': 0}
 
     if (modify.rotate === 0) {
-        const viewH = vh.value * 100
+        const viewH = (vh.value * 100 / totalScale.value)
         const imgH = currentImgInfo.value.height * modify.scale
         const ratio = viewH / imgH
         // 计算滑块位置
@@ -658,7 +662,7 @@ const scrollbarThumbYStyle = computed(() => {
         const pos = Math.max(0, Math.min(1 - ratio, head / imgH))
         return {'--thumb': ratio, '--pos': pos}
     }else {
-        const viewH = vh.value * 100
+        const viewH = (vh.value * 100 / totalScale.value)
         const imgW = currentImgInfo.value.width * modify.scale
         const ratio = viewH / imgW
         // 计算滑块位置
@@ -681,11 +685,11 @@ function onScrollbarWheel(axis: 'x'|'y', event: WheelEvent) {
         const info = currentImgInfo.value
         if (!info) return
         if (modify.rotate % 180 === 0) {
-            const maxOffset = (info.width * modify.scale - vw.value * 100) / 2
+            const maxOffset = (info.width * modify.scale - (vw.value * 100 / totalScale.value)) / 2
             modify.x = Math.max(-maxOffset, Math.min(modify.x, maxOffset))
         }
         else{
-            const maxOffset = (info.height * modify.scale - vw.value * 100) / 2
+            const maxOffset = (info.height * modify.scale - (vw.value * 100 / totalScale.value)) / 2
             modify.x = Math.max(-maxOffset, Math.min(modify.x, maxOffset))
         }
 
@@ -695,10 +699,10 @@ function onScrollbarWheel(axis: 'x'|'y', event: WheelEvent) {
         const info = currentImgInfo.value
         if (!info) return
         if (modify.rotate % 180 === 0) {
-            const maxOffset = (info.height * modify.scale - vh.value * 100) / 2
+            const maxOffset = (info.height * modify.scale - (vh.value * 100 / totalScale.value)) / 2
             modify.y = Math.max(-maxOffset, Math.min(modify.y, maxOffset))
         }else {
-            const maxOffset = (info.width * modify.scale - vh.value * 100) / 2
+            const maxOffset = (info.width * modify.scale - (vh.value * 100 / totalScale.value)) / 2
             modify.y = Math.max(-maxOffset, Math.min(modify.y, maxOffset))
         }
     }
@@ -738,11 +742,11 @@ function onScrollbarDrag(axis: 'x' | 'y', event: MouseEvent) {
             const info = currentImgInfo.value
             if (!info) return true
             if (modify.rotate % 180 === 0) {
-                const maxOffset = (info.width * modify.scale - vw.value * 100) / 2
+                const maxOffset = (info.width * modify.scale - (vw.value * 100 / totalScale.value)) / 2
                 modify.x = Math.max(-maxOffset, Math.min(modify.x, maxOffset))
             }
             else{
-                const maxOffset = (info.height * modify.scale - vw.value * 100) / 2
+                const maxOffset = (info.height * modify.scale - (vw.value * 100 / totalScale.value)) / 2
                 modify.x = Math.max(-maxOffset, Math.min(modify.x, maxOffset))
             }
         } else {
@@ -751,10 +755,10 @@ function onScrollbarDrag(axis: 'x' | 'y', event: MouseEvent) {
             const info = currentImgInfo.value
             if (!info) return true
             if (modify.rotate % 180 === 0) {
-                const maxOffset = (info.height * modify.scale - vh.value * 100) / 2
+                const maxOffset = (info.height * modify.scale - (vh.value * 100 / totalScale.value)) / 2
                 modify.y = Math.max(-maxOffset, Math.min(modify.y, maxOffset))
             }else {
-                const maxOffset = (info.width * modify.scale - vh.value * 100) / 2
+                const maxOffset = (info.width * modify.scale - (vh.value * 100 / totalScale.value)) / 2
                 modify.y = Math.max(-maxOffset, Math.min(modify.y, maxOffset))
             }
         }
@@ -790,8 +794,8 @@ function onWheel(event: WheelEvent) {
         newScale /= 0.9
 
     // 移动位置变换
-    const mouseX = event.clientX - (vw.value * 50 + modify.x)
-    const mouseY = event.clientY - (vh.value * 50 + modify.y)
+    const mouseX = (event.clientX / totalScale.value) - ((vw.value * 50 / totalScale.value) + modify.x)
+    const mouseY = (event.clientY / totalScale.value) - ((vh.value * 50 / totalScale.value) + modify.y)
     const movX = mouseX * (1 - newScale / prevScale)
     const movY = mouseY * (1 - newScale / prevScale)
     modify.x += movX
@@ -805,13 +809,13 @@ function onMouseDown(event: MouseEvent) {
 
     switch (currentTool.value) {
         case 'hand':
-            handMouseDown(event.clientX, event.clientY)
+            handMouseDown(event.clientX / totalScale.value, event.clientY / totalScale.value)
             break
         case 'pen':
-            penMouseDown(event.clientX, event.clientY)
+            penMouseDown(event.clientX / totalScale.value, event.clientY / totalScale.value)
             break
         case 'rect':
-            rectMouseDown(event.clientX, event.clientY)
+            rectMouseDown(event.clientX / totalScale.value, event.clientY / totalScale.value)
             break
     }
 }
@@ -821,13 +825,13 @@ function onMouseMove(event: MouseEvent) {
 
     switch (currentTool.value) {
         case 'hand':
-            handMouseMove(event.clientX, event.clientY)
+            handMouseMove(event.clientX / totalScale.value, event.clientY / totalScale.value)
             break
         case 'pen':
-            penMouseMove(event.clientX, event.clientY)
+            penMouseMove(event.clientX / totalScale.value, event.clientY / totalScale.value)
             break
         case 'rect':
-            rectMouseMove(event.clientX, event.clientY)
+            rectMouseMove(event.clientX / totalScale.value, event.clientY / totalScale.value)
             break
     }
 
@@ -837,13 +841,13 @@ function onMouseUp(event: MouseEvent) {
 
     switch (currentTool.value) {
         case 'hand':
-            handMouseUp(event.clientX, event.clientY)
+            handMouseUp(event.clientX / totalScale.value, event.clientY / totalScale.value)
             break
         case 'pen':
-            penMouseUp(event.clientX, event.clientY)
+            penMouseUp(event.clientX / totalScale.value, event.clientY / totalScale.value)
             break
         case 'rect':
-            rectMouseUp(event.clientX, event.clientY)
+            rectMouseUp(event.clientX / totalScale.value, event.clientY / totalScale.value)
             break
     }
 }
@@ -868,13 +872,13 @@ function onImgTouchStart(event: TouchEvent) {
     const touch = event.touches[0]
     switch (currentTool.value) {
         case 'hand':
-            handMouseDown(touch.clientX, touch.clientY)
+            handMouseDown(touch.clientX / totalScale.value, touch.clientY / totalScale.value)
             break
         case 'pen':
-            penMouseDown(touch.clientX, touch.clientY)
+            penMouseDown(touch.clientX / totalScale.value, touch.clientY / totalScale.value)
             break
         case 'rect':
-            rectMouseDown(touch.clientX, touch.clientY)
+            rectMouseDown(touch.clientX / totalScale.value, touch.clientY / totalScale.value)
             break
     }
 }
@@ -884,13 +888,13 @@ function onImgTouchMove(event: TouchEvent) {
     const touch = event.touches[0]
     switch (currentTool.value) {
         case 'hand':
-            handMouseMove(touch.clientX, touch.clientY)
+            handMouseMove(touch.clientX / totalScale.value, touch.clientY / totalScale.value)
             break
         case 'pen':
-            penMouseMove(touch.clientX, touch.clientY)
+            penMouseMove(touch.clientX / totalScale.value, touch.clientY / totalScale.value)
             break
         case 'rect':
-            rectMouseMove(touch.clientX, touch.clientY)
+            rectMouseMove(touch.clientX / totalScale.value, touch.clientY / totalScale.value)
             break
     }
 }
@@ -1057,12 +1061,12 @@ function touchResizeKeep(point1: Touch, point2: Touch) {
     const centerY = (point1.clientY + point2.clientY) / 2
 
     // 计算中心点相对于图片中心的偏移
-    const viewCenterX = vw.value * 50
-    const viewCenterY = vh.value * 50
+    const viewCenterX = (vw.value * 50 / totalScale.value)
+    const viewCenterY = (vh.value * 50 / totalScale.value)
 
     // 计算缩放中心相对于视口中心的偏移
-    const scaleOffsetX = centerX - viewCenterX
-    const scaleOffsetY = centerY - viewCenterY
+    const scaleOffsetX = (centerX / totalScale.value) - viewCenterX
+    const scaleOffsetY = (centerY / totalScale.value) - viewCenterY
 
     // 根据缩放比例调整位置，确保缩放中心保持不变
     const scaleRatio = newScale / touchResizeInfo.initialScale
@@ -1265,8 +1269,8 @@ async function getBlob(): Promise<Blob|undefined> {
  */
 function getPos(x: number, y: number): {x: number, y: number} {
     if (!currentImgInfo.value) return { x: 0, y: 0 }
-    const viewW = vw.value * 100
-    const viewH = vh.value * 100
+    const viewW = (vw.value * 100 / totalScale.value)
+    const viewH = (vh.value * 100 / totalScale.value)
     const imgW = currentImgInfo.value!.width
     const imgH = currentImgInfo.value!.height
     let imgHWithScaleRotate: number

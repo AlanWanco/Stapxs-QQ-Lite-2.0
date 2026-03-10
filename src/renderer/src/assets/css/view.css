@@ -1360,21 +1360,24 @@ textarea:focus {
     position: absolute;
     top: 0;
     left: 0;
-    height: 100vh;
-    width: 100vw;
+    height: 100%;
+    width: 100%;
 }
 
 .viewer-img > canvas {
     display: block;
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
 }
 
 .viewer-img > img,
 .viewer-img > canvas {
-    margin-top: calc(50vh - var(--height) * var(--scale) / 2 + var(--y));
-    margin-left: calc(50vw - var(--width) * var(--scale) / 2 + var(--x));
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-top: calc(-1 * var(--height) * var(--scale) / 2 + var(--y));
+    margin-left: calc(-1 * var(--width) * var(--scale) / 2 + var(--x));
     transition: all 0.2s;
     width: calc(var(--width) * var(--scale));
     height: calc(var(--height) * var(--scale));
@@ -1419,7 +1422,7 @@ textarea:focus {
 .viewer-img > div.x {
     left: 0;
     bottom: 8px;
-    width: 100vw;
+    width: 100%;
     height: 12px;
 }
 
@@ -1427,7 +1430,7 @@ textarea:focus {
     right: 8px;
     top: 0;
     width: 12px;
-    height: 100vh;
+    height: 100%;
 }
 
 .viewer-img.grab > div.scrollbar,
@@ -1445,16 +1448,16 @@ textarea:focus {
 }
 
 .viewer-img > div.x > div.scrollbar-thumb {
-    left: calc(var(--pos) * 100vw);
+    left: calc(var(--pos) * 100%);
     top: 2px;
-    width: max(calc(var(--thumb) * 100vw), 40px);
+    width: max(calc(var(--thumb) * 100%), 40px);
     height: 8px;
 }
 
 .viewer-img > div.y > div.scrollbar-thumb {
-    top: calc(var(--pos) * 100vh);
+    top: calc(var(--pos) * 100%);
     right: 2px;
-    height: max(calc(var(--thumb) * 100vh), 40px);
+    height: max(calc(var(--thumb) * 100%), 40px);
     width: 8px;
 }
 

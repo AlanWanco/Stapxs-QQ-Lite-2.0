@@ -1245,7 +1245,6 @@ import { Img } from '@renderer/function/model/img'
              * @param data 消息信息
              */
             showMsgMeun(event: MenuEventData, data: any) {
-                const scale = runtimeData.sysConfig.custom_scale || 1
                 
                 this.selectedMsg = data
                 this.tags.menuDisplay.menuSelectedMsgId = data.message_id
