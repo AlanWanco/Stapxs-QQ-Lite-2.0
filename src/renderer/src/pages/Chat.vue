@@ -2163,7 +2163,7 @@ import { Img } from '@renderer/function/model/img'
                 if (file.size === 0) return
 
                 // 图片太大
-                if (file.size > 3145728) {
+                if (file.size > 31457280) {
                     popInfo.add(PopType.INFO, this.$t('图片太大，无法发送'))
                     return
                 }
