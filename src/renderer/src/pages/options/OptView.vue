@@ -211,7 +211,8 @@
                     <div class="ss-range">
                         <input v-model="runtimeData.sysConfig.custom_scale"
                             :style="`background-size: ${(runtimeData.sysConfig.custom_scale - 0.5) * 100}% 100%;`"
-                            type="range" min="0.5" max="1.5" step="0.05" name="custom_scale" @input="save">
+                            type="range" min="0.5" max="1.5"
+                            step="0.05" name="custom_scale" @input="save">
                         <span>{{ Math.round(runtimeData.sysConfig.custom_scale * 100) }}%</span>
                     </div>
                 </div>
@@ -222,7 +223,9 @@
                         <span>{{ $t('重置界面缩放') }}</span>
                         <span>{{ $t('界面太怪了就点我') }}</span>
                     </div>
-                    <button class="ss-button" style="width: 100px; font-size: 0.8rem;" @click="runtimeData.sysConfig.custom_scale = 1.0;runAS('custom_scale', 1.0)">{{ $t('重置') }}</button>
+                    <button class="ss-button" style="width: 100px; font-size: 0.8rem;" @click="runtimeData.sysConfig.custom_scale = 1.0;runAS('custom_scale', 1.0)">
+                        {{ $t('重置') }}
+                    </button>
                 </div>
                 <div class="opt-item">
                     <div :class="checkDefault('font_scale')" />
@@ -234,7 +237,8 @@
                     <div class="ss-range">
                         <input v-model="runtimeData.sysConfig.font_scale"
                             :style="`background-size: ${(runtimeData.sysConfig.font_scale - 0.5) * 100}% 100%;`"
-                            type="range" min="0.5" max="1.5" step="0.05" name="font_scale" @input="save">
+                            type="range" min="0.5" max="1.5"
+                            step="0.05" name="font_scale" @input="save">
                         <span>{{ Math.round(runtimeData.sysConfig.font_scale * 100) }}%</span>
                     </div>
                 </div>
@@ -245,7 +249,9 @@
                         <span>{{ $t('重置字体缩放') }}</span>
                         <span>{{ $t('一键复原！') }}</span>
                     </div>
-                    <button class="ss-button" style="width: 100px; font-size: 0.8rem;" @click="runtimeData.sysConfig.font_scale = 1.0;runAS('font_scale', 1.0)">{{ $t('重置') }}</button>
+                    <button class="ss-button" style="width: 100px; font-size: 0.8rem;" @click="runtimeData.sysConfig.font_scale = 1.0;runAS('font_scale', 1.0)">
+                        {{ $t('重置') }}
+                    </button>
                 </div>
             </template>
         </div>

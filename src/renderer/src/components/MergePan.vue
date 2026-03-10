@@ -48,8 +48,8 @@
     export default defineComponent({
         name: 'MergePan',
         components: { NoticeBody, MsgBody },
-        emits: ['showMenu'],
         inject: ['viewer'],
+        emits: ['showMenu'],
         data() {
             const stack = runtimeData.mergeMsgStack
             const nowData: Ref<MergeStackData|undefined> = ref()
