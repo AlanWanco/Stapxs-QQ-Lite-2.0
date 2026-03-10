@@ -1246,7 +1246,6 @@ import { Img } from '@renderer/function/model/img'
              */
             showMsgMeun(event: MenuEventData, data: any) {
                 const scale = runtimeData.sysConfig.custom_scale || 1
-                console.log('DEBUG: Right-click menu opened (Chat) - Scale:', scale, 'Mouse Event x,y:', (event as any).x, (event as any).y);
                 
                 this.selectedMsg = data
                 this.tags.menuDisplay.menuSelectedMsgId = data.message_id

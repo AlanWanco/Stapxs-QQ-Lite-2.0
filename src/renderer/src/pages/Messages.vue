@@ -513,8 +513,6 @@
                 
                 info.point.x = info.point.x / totalScale
                 info.point.y = info.point.y / totalScale
-                
-                console.log('DEBUG: Right-click menu opened (Messages) - Scale:', scale, 'TotalScale:', totalScale, 'Mouse Event x,y:', (info.point as any).x, (info.point as any).y);
 
                 this.listMenuShowRun(info, item)
             },
