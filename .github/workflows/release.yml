@@ -2,8 +2,8 @@
 name: build-app
 on:
     push:
-        branches:
-            - next
+        tags:
+            - 'v*'
 
 jobs:
     # ========================= 准备项目 =========================
@@ -14,18 +14,22 @@ jobs:
             version: ${{ steps.step_init.outputs.VERSION }}
             git_hash: ${{ steps.step_hash.outputs.HASH }}
         steps:
-            # 拉取代码
             - name: Checkout
               uses: actions/checkout@v4
               with:
                   submodules: recursive
-            # 初始化一些流程需要的环境变量
             - name: Init Env
               id: step_init
-              run: echo VERSION=$(node -p "require('./package.json').version") >> $GITHUB_OUTPUT
+              run: |
+                TAG=${{ github.ref_name }}
+                VERSION=${TAG#v}
+                echo VERSION=$VERSION >> $GITHUB_OUTPUT
             - name: Get Git Hash
               id: step_hash
-              run: echo HASH=$(git rev-parse --short=6 HEAD) >> $GITHUB_OUTPUT
+              run: |
+                TAG=${{ github.ref_name }}
+                HASH=${TAG#*-dev-}
+                echo HASH=$HASH >> $GITHUB_OUTPUT
 
     # ========================= 构建 Web 版本 =========================
     build-root-web:
@@ -66,7 +70,6 @@ jobs:
     release:
         name: 发布构建结果
         runs-on: ubuntu-latest
-        if: ${{ needs.init.result == 'success' && needs.build-root-web.result == 'success' && needs.build-tauri.result == 'success' && needs.build-android.result == 'success' && needs.build-ios.result == 'success' }}
         needs:
             - init
             - build-root-web
@@ -74,31 +77,15 @@ jobs:
             - build-android
             - build-ios
         steps:
-            # 下载构建结果
             - name: Download Artifacts
-              id: download-artifact
               uses: actions/download-artifact@v4
               with:
                   path: artifacts
                   pattern: Stapxs-QQ-Lite-v${{ needs.init.outputs.version }}-*
                   merge-multiple: false
-            - name: Artifacts List
-              run: ls -R artifacts
-            # 发布构建结果
             - name: Publish Release
-              uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
-              with:
-                  files: artifacts/**/*
-                  tag_name: v${{ needs.init.outputs.version }}
-                  body: |
-                      # Release 自动构建
-                      `这是一个自动构建版本，由 GitHub Actions 自动构建并发布。`
-                      ## 更新内容
-                      ${{ github.event.head_commit.message }}
-                      ## 自动构建信息
-                      - 构建时间：${{ github.event.head_commit.timestamp }}
-                      - 构建提交：${{ github.event.head_commit.id }}
-                      - 构建分支：${{ github.event.head_commit.tree_id }}
-                  draft: false
-                  prerelease: false
-                  token: ${{ secrets.ACCESS_TOKEN }}
+              env:
+                GH_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+              run: |
+                gh release view v${{ needs.init.outputs.version }} || gh release create v${{ needs.init.outputs.version }} --title "Release v${{ needs.init.outputs.version }}" --notes "Automated release"
+                gh release upload v${{ needs.init.outputs.version }} artifacts/**/* --clobber
