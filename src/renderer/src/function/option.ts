@@ -141,20 +141,24 @@ function setFaviconNotice(_: boolean) {
 
 function injectCustomCss(value: string) {
     console.log('DEBUG: injectCustomCss called with value:', value);
-    // 移除旧的自定义 CSS
-    const oldStyle = document.getElementById('custom-css-inject')
-    if (oldStyle) {
-        document.head.removeChild(oldStyle)
-    }
+    
+    // 使用延时注入，确保在应用样式初始化完成后再应用自定义样式，避免被覆盖
+    setTimeout(() => {
+        // 移除旧的自定义 CSS
+        const oldStyle = document.getElementById('custom-css-inject')
+        if (oldStyle) {
+            document.head.removeChild(oldStyle)
+        }
 
-    // 如果有新的 CSS 内容，注入它
-    if (value && value.trim() !== '') {
-        const style = document.createElement('style')
-        style.id = 'custom-css-inject'
-        style.textContent = value
-        document.head.appendChild(style)
-        new Logger().add(LogType.UI, '已注入自定义 CSS')
-    }
+        // 如果有新的 CSS 内容，注入它
+        if (value && value.trim() !== '') {
+            const style = document.createElement('style')
+            style.id = 'custom-css-inject'
+            style.textContent = value
+            document.head.appendChild(style)
+            new Logger().add(LogType.UI, '已注入自定义 CSS (延时)')
+        }
+    }, 500)
 }
 
 function clearGroupAssist() {
