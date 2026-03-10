@@ -385,7 +385,7 @@
                             @input="handleInput">
                         <textarea v-else id="main-input-ex"
                             v-model="msg"
-                            type="text"
+                            rows="1"
                             :disabled="runtimeData.tags.openSideBar"
                             @paste="addImg"
                             @keydown="mainKey"
@@ -754,11 +754,9 @@ import { Img } from '@renderer/function/model/img'
             },
             msg(newMsg: string, oldMsg: string) {
                 this.oldMsg = oldMsg
-                if (!newMsg) {
-                    this.$nextTick(() => {
-                        this.resizeMainInput()
-                    })
-                }
+                this.$nextTick(() => {
+                    this.resizeMainInput()
+                })
             }
         },
         async mounted() {
@@ -797,27 +795,47 @@ import { Img } from '@renderer/function/model/img'
                     input.style.height = ''
                     return
                 }
+                
+                // 1. 记录原始值并测量基准
+                const originalValue = input.value
                 const computed = getComputedStyle(input)
-                const lineHeight = parseFloat(computed.lineHeight)
-                const fontSize = parseFloat(computed.fontSize)
-                const baseLineHeight = Number.isFinite(lineHeight) ? lineHeight : fontSize
-                const paddingTop = parseFloat(computed.paddingTop) || 0
-                const paddingBottom = parseFloat(computed.paddingBottom) || 0
                 const borderTop = parseFloat(computed.borderTopWidth) || 0
                 const borderBottom = parseFloat(computed.borderBottomWidth) || 0
-                let minHeight = (Number.isFinite(baseLineHeight) ? baseLineHeight : 0) + paddingTop + paddingBottom + borderTop + borderBottom
-                if (minHeight <= 0) {
-                    const fallback = input.offsetHeight || parseFloat(computed.height) || fontSize
-                    if (fallback && Number.isFinite(fallback)) {
-                        minHeight = fallback
-                    }
+                const paddingTop = parseFloat(computed.paddingTop) || 0
+                const paddingBottom = parseFloat(computed.paddingBottom) || 0
+                const fontSize = parseFloat(computed.fontSize)
+                const lineHeightValue = parseFloat(computed.lineHeight)
+                const lineHeight = Number.isFinite(lineHeightValue) ? lineHeightValue : (fontSize * 1.2)
+                
+                // 单行基准总高度（含 border 和 padding）
+                const baseHeight = lineHeight + paddingTop + paddingBottom + borderTop + borderBottom
+                
+                // 2. 测量真实内容高度
+                // 先把高度设为极小值，强制内容溢出，这样 scrollHeight 才是最准确的
+                input.style.height = '0px'
+                
+                // 处理末尾换行符的测量逻辑：追加占位符
+                const needsExtraLine = /[\n\r]$/.test(originalValue) || originalValue === ''
+                let scrollHeight = input.scrollHeight
+                if (needsExtraLine) {
+                    input.value = originalValue + ' .'
+                    scrollHeight = input.scrollHeight
+                    input.value = originalValue
                 }
-                if (!input.dataset.baseHeight) {
-                    input.dataset.baseHeight = String(minHeight)
+                
+                // 对于 textarea，scrollHeight 在高度极小时测量的是内层 content 的高度
+                // 如果是 border-box，最终高度应加上 border
+                const contentTotalHeight = scrollHeight + borderTop + borderBottom
+                
+                // 3. 确定最终高度（至少单行，且不超过最大高度）
+                let targetHeight = originalValue === '' ? baseHeight : Math.max(baseHeight, contentTotalHeight)
+                
+                // 如果是多行，确保能看到全部内容
+                // 在某些浏览器下，即使单行，scrollHeight 也可能略大于 lineHeight，所以给 2px 的容错
+                if (contentTotalHeight < baseHeight + 2 && originalValue !== '') {
+                   targetHeight = baseHeight
                 }
-                input.style.height = 'auto'
-                const baseHeight = parseFloat(input.dataset.baseHeight) || minHeight
-                const targetHeight = input.scrollHeight > baseHeight * 1.5 ? Math.max(input.scrollHeight, baseHeight): baseHeight
+
                 input.style.height = targetHeight + 'px'
             },
             jumpSearchMsg() {
