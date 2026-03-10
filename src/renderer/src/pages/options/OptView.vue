@@ -423,12 +423,13 @@
             return {
                 napcat: import.meta.env.VITE_NAPCAT,
                 backend: backend,
-                get: get,
-                runtimeData: runtimeData,
-                checkDefault: checkDefault,
-                save: save,
-                languages: languages,
-                // 别问我为什么微软是紫色的
+                        get: get,
+                        runtimeData: runtimeData,
+                        checkDefault: checkDefault,
+                        save: save,
+                        runAS: runAS,
+                        // 别问我为什么微软是紫色的
+
                 colors: [
                     '林槐蓝',
                     '墨竹青',

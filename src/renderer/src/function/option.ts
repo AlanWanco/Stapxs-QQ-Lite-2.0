@@ -166,10 +166,12 @@ function injectCustomCss(value: string) {
 }
 
 function setCustomScale(value: number) {
+    console.log('DEBUG: setCustomScale called with value:', value);
     document.documentElement.style.setProperty('--scale-custom', value.toString());
 }
 
 function setFontScale(value: number) {
+    console.log('DEBUG: setFontScale called with value:', value);
     document.documentElement.style.setProperty('--scale-font', value.toString());
 }
 
