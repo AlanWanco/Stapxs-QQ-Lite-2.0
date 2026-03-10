@@ -58,8 +58,8 @@ export class Connector {
 
         logger.add(LogType.WS, '当前处于 ALL 日志模式。连接器将输出全部收发消息 ……')
 
-        // Electron 默认使用后端连接模式（Tauri 暂时走前端 WebSocket）
-        if (backend.type === 'electron') {
+        // Electron 和 Capacitor 默认使用后端连接模式（Tauri 暂时走前端 WebSocket）
+        if (backend.type === 'electron' || backend.type === 'capacitor') {
             logger.add(LogType.WS, '使用后端连接模式')
             backend.call('Onebot', 'onebot:connect', false,
                 backend.isDesktop() ?  { address: address, token: token, } : { url: `${address}?access_token=${token ? encodeURIComponent(token) : ''}` })
@@ -269,7 +269,7 @@ export class Connector {
      * 正常断开 Websocket 连接
      */
     static close() {
-        if(backend.type === 'electron') {
+        if(backend.type === 'electron' || backend.type === 'capacitor') {
             backend.call('Onebot', 'onebot:close', false)
         } else {
             popInfo.add(
@@ -387,7 +387,7 @@ export class Connector {
             echo: echo,
         } as BotActionElem)
         // 发送
-        if(backend.type === 'electron') {
+        if(backend.type === 'electron' || backend.type === 'capacitor') {
             backend.call('Onebot', 'onebot:send', false, json)
         } else if (websocket) {
             websocket.send(json)
