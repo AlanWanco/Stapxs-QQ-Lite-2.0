@@ -213,9 +213,6 @@
                             :style="`background-size: ${(runtimeData.sysConfig.custom_scale - 0.5) * 100}% 100%;`"
                             type="range" min="0.5" max="1.5" step="0.05" name="custom_scale" @input="save">
                         <span>{{ Math.round(runtimeData.sysConfig.custom_scale * 100) }}%</span>
-                        <div style="margin-top: 5px;">
-                            <button class="ss-button" style="width: 100px; font-size: 0.8rem;" @click="runtimeData.sysConfig.custom_scale = 1.0;save({target:{name:'custom_scale'}} as any)">{{ $t('重置') }}</button>
-                        </div>
                     </div>
                 </div>
                 <div class="opt-item">
@@ -230,12 +227,26 @@
                             :style="`background-size: ${(runtimeData.sysConfig.font_scale - 0.5) * 100}% 100%;`"
                             type="range" min="0.5" max="1.5" step="0.05" name="font_scale" @input="save">
                         <span>{{ Math.round(runtimeData.sysConfig.font_scale * 100) }}%</span>
-                        <div style="margin-top: 5px;">
-                            <button class="ss-button" style="width: 100px; font-size: 0.8rem;" @click="runtimeData.sysConfig.font_scale = 1.0;save({target:{name:'font_scale'}} as any)">{{ $t('重置') }}</button>
-                        </div>
                     </div>
                 </div>
             </template>
+        </div>
+        <div class="ss-card">
+            <header>{{ $t('缩放重置') }}</header>
+            <div class="opt-item">
+                <font-awesome-icon :icon="['fas', 'arrows-rotate']" />
+                <div>
+                    <span>{{ $t('重置界面缩放') }}</span>
+                </div>
+                <button class="ss-button" style="width: 100px; font-size: 0.8rem;" @click="runtimeData.sysConfig.custom_scale = 1.0;save({target:{name:'custom_scale'}} as any)">{{ $t('重置') }}</button>
+            </div>
+            <div class="opt-item">
+                <font-awesome-icon :icon="['fas', 'arrows-rotate']" />
+                <div>
+                    <span>{{ $t('重置字体缩放') }}</span>
+                </div>
+                <button class="ss-button" style="width: 100px; font-size: 0.8rem;" @click="runtimeData.sysConfig.font_scale = 1.0;save({target:{name:'font_scale'}} as any)">{{ $t('重置') }}</button>
+            </div>
         </div>
         <div class="ss-card">
             <header>{{ $t('页面') }}</header>
