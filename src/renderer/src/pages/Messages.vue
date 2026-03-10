@@ -293,6 +293,10 @@
              */
             systemNoticeMenuShow(event: Event) {
                 const info = this.menu.set('messages-menu', event as MouseEvent)
+                const scale = runtimeData.sysConfig.custom_scale || 1
+                const totalScale = scale * scale
+                info.point.x = info.point.x / totalScale
+                info.point.y = info.point.y / totalScale
                 this.showMenu = false
                 info.list = ['clear_system_notice']
                 this.listMenu = info
@@ -503,6 +507,15 @@
              */
             listMenuShow(event: Event, item: UserFriendElem & UserGroupElem) {
                 const info = this.menu.set('messages-menu', event as MouseEvent)
+                
+                const scale = runtimeData.sysConfig.custom_scale || 1
+                const totalScale = scale * scale
+                
+                info.point.x = info.point.x / totalScale
+                info.point.y = info.point.y / totalScale
+                
+                console.log('DEBUG: Right-click menu opened (Messages) - Scale:', scale, 'TotalScale:', totalScale, 'Mouse Event x,y:', (info.point as any).x, (info.point as any).y);
+
                 this.listMenuShowRun(info, item)
             },
             listMenuShowRun(info: any, item: UserFriendElem & UserGroupElem) {
@@ -535,13 +548,15 @@
                     )?.children[1] as HTMLDivElement
                     if (menu) {
                         menu.style.transition = 'margin .2s, transform .1s'
-                        const hight = menu.clientHeight
-                        const top = menu.getBoundingClientRect().top
+                        const rect = menu.getBoundingClientRect()
                         const docHight = document.documentElement.clientHeight
                         // 出界高度
-                        const dtHight = hight + top - docHight + 20
+                        const dtHight = rect.bottom - docHight + 20
                         if (dtHight > 0) {
-                            menu.style.marginTop = docHight - hight - 30 + 'px'
+                            const currentMarginTop = parseFloat(menu.style.marginTop || '0')
+                            const scale = runtimeData.sysConfig.custom_scale || 1
+                            const totalScale = scale * scale
+                            menu.style.marginTop = (currentMarginTop - (dtHight / totalScale)) + 'px'
                         }
                     }
                 }, 100)

@@ -1245,8 +1245,12 @@ import { Img } from '@renderer/function/model/img'
              * @param data 消息信息
              */
             showMsgMeun(event: MenuEventData, data: any) {
+                const scale = runtimeData.sysConfig.custom_scale || 1
+                console.log('DEBUG: Right-click menu opened (Chat) - Scale:', scale, 'Mouse Event x,y:', (event as any).x, (event as any).y);
+                
                 this.selectedMsg = data
                 this.tags.menuDisplay.menuSelectedMsgId = data.message_id
+
 
                 if (Option.get('log_level') === 'debug') {
                     new Logger().debug('右击消息：' + data)
@@ -1392,8 +1396,9 @@ import { Img } from '@renderer/function/model/img'
                     }
                     // 鼠标位置
                     const scale = runtimeData.sysConfig.custom_scale || 1
-                    const pointX = event.x / scale
-                    const pointY = event.y / scale
+                    const totalScale = scale * scale
+                    const pointX = event.x / totalScale
+                    const pointY = event.y / totalScale
                     // 移动菜单位置
                     menu.style.position = 'fixed'
                     menu.style.left = pointX + 'px'
@@ -1408,8 +1413,10 @@ import { Img } from '@renderer/function/model/img'
                         menuWidth = item.clientWidth
                     }
                     const maxWidth = window.innerWidth
-                    if (pointX + menuWidth > maxWidth + 27) {
-                        menu.style.left = maxWidth + 7 - menuWidth + 'px'
+                    // menuWidth 是 CSS 像素，乘以 totalScale 转为物理屏幕像素进行真实碰撞测试
+                    if (event.x + menuWidth * totalScale > maxWidth - 20) {
+                        // 算出物理屏幕安全的左上角 X 坐标，除以 totalScale 转回 CSS 像素
+                        menu.style.left = (maxWidth - menuWidth * totalScale - 20) / totalScale + 'px'
                     }
                     // 显示菜单
                     this.tags.showMsgMenu = true
@@ -1417,11 +1424,12 @@ import { Img } from '@renderer/function/model/img'
                     setTimeout(() => {
                         // 出界判定
                         const menuHeight = menu.clientHeight
-                        const bodyHeight = document.body.clientHeight
-                        if (pointY + menuHeight > bodyHeight - 20) {
+                        const bodyHeight = document.documentElement.clientHeight
+                        // 同样，用真实的物理事件 Y 坐标与真实的视觉高度 (menuHeight * totalScale) 进行判定
+                        if (event.y + menuHeight * totalScale > bodyHeight - 20) {
                             menu.classList.add('topOut')
-                            menu.style.top =
-                                bodyHeight - menuHeight - 10 + 'px'
+                            // 将安全的物理 Y 坐标换算回 CSS 的 top 值
+                            menu.style.top = (bodyHeight - menuHeight * totalScale - 10) / totalScale + 'px'
                         }
                     }, 100)
                 }
