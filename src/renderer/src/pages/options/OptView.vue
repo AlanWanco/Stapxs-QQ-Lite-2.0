@@ -216,6 +216,20 @@
                     </div>
                 </div>
                 <div class="opt-item">
+                    <div :class="checkDefault('custom_scale')" />
+                    <font-awesome-icon :icon="['fas', 'expand']" />
+                    <div>
+                        <span>{{ $t('界面缩放') }}</span>
+                        <span>{{ $t('调整界面整体大小') }}<br>{{ $t('不建议缩放到 70% 以下或 130% 以上') }}</span>
+                    </div>
+                    <div class="ss-range">
+                        <input v-model="runtimeData.sysConfig.custom_scale"
+                            :style="`background-size: ${(runtimeData.sysConfig.custom_scale - 0.5) * 100}% 100%;`"
+                            type="range" min="0.5" max="1.5" step="0.05" name="custom_scale" @input="save">
+                        <span>{{ Math.round(runtimeData.sysConfig.custom_scale * 100) }}%</span>
+                    </div>
+                </div>
+                <div class="opt-item">
                     <div :class="checkDefault('font_scale')" />
                     <font-awesome-icon :icon="['fas', 'text-height']" />
                     <div>
