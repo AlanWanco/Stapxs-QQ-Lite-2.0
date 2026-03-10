@@ -49,6 +49,8 @@ export const optDefault: { [key: string]: any } = {
     opt_auto_win_color: false,
     chat_background: '',
     chat_background_blur: 0,
+    custom_scale: 1.0,
+    font_scale: 1.0,
     chatview_name: '',
     opt_fast_animation: false,
     chat_more_blur: false,
@@ -126,6 +128,8 @@ const configFunction: { [key: string]: (value: any) => void } = {
     bubble_sort_user: clearGroupAssist,
     use_favicon_notice: setFaviconNotice,
     custom_css: injectCustomCss,
+    custom_scale: setCustomScale,
+    font_scale: setFontScale,
     opt_ind_message: updateChatPan
 }
 
@@ -159,6 +163,14 @@ function injectCustomCss(value: string) {
             new Logger().add(LogType.UI, '已注入自定义 CSS (延时)')
         }
     }, 500)
+}
+
+function setCustomScale(value: number) {
+    document.documentElement.style.setProperty('--scale-custom', value.toString());
+}
+
+function setFontScale(value: number) {
+    document.documentElement.style.setProperty('--scale-font', value.toString());
 }
 
 function clearGroupAssist() {

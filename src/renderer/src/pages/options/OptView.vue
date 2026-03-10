@@ -208,6 +208,34 @@
                             px</span>
                     </div>
                 </div>
+                <div class="opt-item">
+                    <div :class="checkDefault('custom_scale')" />
+                    <font-awesome-icon :icon="['fas', 'expand']" />
+                    <div>
+                        <span>{{ $t('界面缩放') }}</span>
+                        <span>{{ $t('调整界面整体大小') }}</span>
+                    </div>
+                    <div class="ss-range">
+                        <input v-model="runtimeData.sysConfig.custom_scale"
+                            :style="`background-size: ${(runtimeData.sysConfig.custom_scale - 0.5) * 100}% 100%;`"
+                            type="range" min="0.5" max="1.5" step="0.05" name="custom_scale" @input="save">
+                        <span>{{ (runtimeData.sysConfig.custom_scale * 100).toFixed(0) }}%</span>
+                    </div>
+                </div>
+                <div class="opt-item">
+                    <div :class="checkDefault('font_scale')" />
+                    <font-awesome-icon :icon="['fas', 'text-height']" />
+                    <div>
+                        <span>{{ $t('字体缩放') }}</span>
+                        <span>{{ $t('调整界面字体大小') }}</span>
+                    </div>
+                    <div class="ss-range">
+                        <input v-model="runtimeData.sysConfig.font_scale"
+                            :style="`background-size: ${(runtimeData.sysConfig.font_scale - 0.5) * 100}% 100%;`"
+                            type="range" min="0.5" max="1.5" step="0.05" name="font_scale" @input="save">
+                        <span>{{ (runtimeData.sysConfig.font_scale * 100).toFixed(0) }}%</span>
+                    </div>
+                </div>
             </template>
         </div>
         <div class="ss-card">
