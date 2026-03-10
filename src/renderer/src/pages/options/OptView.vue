@@ -213,7 +213,9 @@
                             :style="`background-size: ${(runtimeData.sysConfig.custom_scale - 0.5) * 100}% 100%;`"
                             type="range" min="0.5" max="1.5" step="0.05" name="custom_scale" @input="save">
                         <span>{{ Math.round(runtimeData.sysConfig.custom_scale * 100) }}%</span>
-                        <button class="ss-button" style="width: 60px; font-size: 0.8rem; margin-left: 10px;" @click="runtimeData.sysConfig.custom_scale = 1.0;save({target:{name:'custom_scale'}} as any)">{{ $t('重置') }}</button>
+                        <div style="margin-top: 5px;">
+                            <button class="ss-button" style="width: 100px; font-size: 0.8rem;" @click="runtimeData.sysConfig.custom_scale = 1.0;save({target:{name:'custom_scale'}} as any)">{{ $t('重置') }}</button>
+                        </div>
                     </div>
                 </div>
                 <div class="opt-item">
@@ -228,7 +230,9 @@
                             :style="`background-size: ${(runtimeData.sysConfig.font_scale - 0.5) * 100}% 100%;`"
                             type="range" min="0.5" max="1.5" step="0.05" name="font_scale" @input="save">
                         <span>{{ Math.round(runtimeData.sysConfig.font_scale * 100) }}%</span>
-                        <button class="ss-button" style="width: 60px; font-size: 0.8rem; margin-left: 10px;" @click="runtimeData.sysConfig.font_scale = 1.0;save({target:{name:'font_scale'}} as any)">{{ $t('重置') }}</button>
+                        <div style="margin-top: 5px;">
+                            <button class="ss-button" style="width: 100px; font-size: 0.8rem;" @click="runtimeData.sysConfig.font_scale = 1.0;save({target:{name:'font_scale'}} as any)">{{ $t('重置') }}</button>
+                        </div>
                     </div>
                 </div>
             </template>
