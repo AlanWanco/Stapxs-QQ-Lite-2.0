@@ -1272,10 +1272,15 @@ input {
     cursor: pointer;
 }
 
+.face-pan div.title:first-child {
+    margin-top: 5px !important;
+}
+
 .face-pan div.system-face-bar {
     height: 100%;
     overflow-y: auto;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .face {
