@@ -15,12 +15,15 @@
     - 自定义CSS无法自动加载的问题
     - 把图片压缩功能改为了WebSocket base64文件传输上限30MB（OnebotV11ws协议传输大于50MB就会崩溃 改为base64后求稳改为30MB）
     - 修改输入框宽度逻辑
-    - **2026-03-11 dev-ec1ac9**
+    - CI流程优化
+      - 优化了 GitHub Actions 的构建性能（增加了 Rust 和 Gradle 缓存）
+      - 将 CI 流程中的依赖安装改为 `yarn install --immutable` 以确保一致性
+    - **2026-03-11 dev-2e78bc**
       - 当输入ws地址符合http(s)://x.x.x.x:xxxx时 不会因为忘记加结尾的/而无法连接
       - ~~[iOS]iOS最低版本下调至15.0 好像没效果~~
       - [Electron/tauri]右键图片添加到本地表情文件夹
-      - 优化了 GitHub Actions 的构建性能（增加了 Rust 和 Gradle 缓存）
-      - 将 CI 流程中的依赖安装改为 `yarn install --immutable` 以确保一致性
+      - 本地表情栏表情按照修改时间倒序 保证最新表情在最前
+      - 新增本地表情栏点击外部空白区域关闭
 
 ## TODO feats
 - 在群聊里右键用户无法触发私聊
