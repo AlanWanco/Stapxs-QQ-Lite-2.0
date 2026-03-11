@@ -33,6 +33,12 @@ jobs:
                   distribution: 'temurin'
                   java-version: '17'
             
+            - name: 设置 Gradle 缓存
+              uses: gradle/actions/setup-gradle@v4
+              with:
+                gradle-version: wrapper
+                build-root-directory: src/mobile/android
+            
             - name: 启用 Corepack
               run: corepack enable
             
@@ -43,7 +49,7 @@ jobs:
                   cache: 'yarn'
             
             - name: 更新依赖
-              run: yarn
+              run: yarn install --immutable
             
             - name: 构建 Android 应用（Gradle Release）
               run: |

@@ -19,6 +19,8 @@
       - 当输入ws地址符合http(s)://x.x.x.x:xxxx时 不会因为忘记加结尾的/而无法连接
       - ~~[iOS]iOS最低版本下调至15.0 好像没效果~~
       - [Electron/tauri]右键图片添加到本地表情文件夹
+      - 优化了 GitHub Actions 的构建性能（增加了 Rust 和 Gradle 缓存）
+      - 将 CI 流程中的依赖安装改为 `yarn install --immutable` 以确保一致性
 
 ## TODO feats
 - 在群聊里右键用户无法触发私聊
@@ -159,6 +161,12 @@ git submodule update --init
 # 安装依赖
 yarn install
 ```
+
+> [!TIP]
+> **依赖维护建议**：由于项目使用 Yarn 4 (Berry)，在删除或更换依赖库后，建议按照以下步骤操作以确保 `yarn.lock` 的整洁：
+> 1. `yarn dedupe`（清理冗余依赖版本）
+> 2. `yarn install`（更新锁定文件）
+> 3. `git add yarn.lock`（提交更新）
 
 另外，Stapxs QQ Lite 使用了高德地图 API 来显示位置共享地图。`.env` 文件中提供了一个默认的高德地图 API Key，如果你打算自行部署，建议在 [这里](https://lbs.amap.com/dev/key/app) 申请属于你自己的 API Key 并替换默认值。
 
