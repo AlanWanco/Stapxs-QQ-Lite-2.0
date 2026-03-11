@@ -29,6 +29,8 @@
     <string>3.3.5-dev</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
+    <key>MinimumOSVersion</key>
+    <string>15.0</string>
     <key>NSAppTransportSecurity</key>
     <dict>
       <key>NSAllowsArbitraryLoads</key>

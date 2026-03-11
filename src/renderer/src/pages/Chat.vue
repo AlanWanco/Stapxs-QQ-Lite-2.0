@@ -454,6 +454,10 @@
                         <div><font-awesome-icon :icon="['fas', 'floppy-disk']" /></div>
                         <a>{{ $t('下载图片') }}</a>
                     </div>
+                    <div v-show="tags.menuDisplay.addLocalEmoji" @click="addLocalEmoji">
+                        <div><font-awesome-icon :icon="['fas', 'plus']" /></div>
+                        <a>{{ $t('添加到本地表情') }}</a>
+                    </div>
                     <div v-show="tags.menuDisplay.revoke" @click="revokeMsg">
                         <div><font-awesome-icon :icon="['fas', 'xmark']" /></div>
                         <a>{{ $t('撤回') }}</a>
@@ -1405,8 +1409,10 @@ import { Img } from '@renderer/function/model/img'
                             this.tags.menuDisplay.downloadImg = (
                                 select as HTMLImageElement
                             ).src
-                            if (backend.isDesktop())
+                            if (backend.isDesktop()) {
                                 this.tags.menuDisplay.copyImg = true
+                                this.tags.menuDisplay.addLocalEmoji = true
+                            }
                         }
                     }
                     // 鼠标位置
@@ -1463,13 +1469,13 @@ import { Img } from '@renderer/function/model/img'
                     select: true,
                     copy: true,
                     copySelect: false,
-                    downloadImg: false,
-                    copyImg: false,
-                    revoke: false,
-                    reedit: false,
-                    at: false,
-                    poke: false,
-                    remove: false,
+                        downloadImg: false,
+                        revoke: false,
+                        reedit: false,
+                        at: true,
+                        addLocalEmoji: false,
+                        poke: false,
+                        remove: false,
                     respond: false,
                     showRespond: true,
                     config: false,
@@ -1830,6 +1836,32 @@ import { Img } from '@renderer/function/model/img'
 
                     downloadFile(url as string, `img_${new Date().getTime()}.png`, () => undefined, () => undefined)
                 }
+                this.closeMsgMenu()
+            },
+
+            /**
+             * 添加到本地表情
+             */
+            async addLocalEmoji() {
+                const url = this.tags.menuDisplay.downloadImg
+                if (url == false) return
+                
+                const folder = Option.get('local_emoji_folder')
+                if (!folder) {
+                    new PopInfo().add(PopType.ERR, this.$t('请先在设置中配置本地表情文件夹'), true)
+                    this.closeMsgMenu()
+                    return
+                }
+
+                const fileName = `emoji_${new Date().getTime()}.png`
+                const success = await backend.call(undefined, 'sys:saveImage', true, { url, folder, fileName })
+                
+                if (success) {
+                    new PopInfo().add(PopType.INFO, this.$t('保存成功'), true)
+                } else {
+                    new PopInfo().add(PopType.ERR, this.$t('保存失败'), true)
+                }
+                
                 this.closeMsgMenu()
             },
 

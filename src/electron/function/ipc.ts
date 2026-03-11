@@ -624,6 +624,23 @@ export function regIpcListener() {
         }
     })
 
+    // 保存图片
+    ipcMain.handle('sys:saveImage', async (_, args: { url: string; folder: string; fileName: string }) => {
+        const fs = await import('fs')
+        const path = await import('path')
+        
+        try {
+            const response = await axios.get(args.url, { responseType: 'arraybuffer' })
+            const buffer = Buffer.from(response.data, 'binary')
+            const filePath = path.join(args.folder, args.fileName)
+            fs.writeFileSync(filePath, buffer)
+            return true
+        } catch (e) {
+            logger.error('保存图片失败', e)
+            return false
+        }
+    })
+
     // 读取文件为 base64
     ipcMain.handle('sys:readFileAsBase64', async (_, filePath: string) => {
         const fs = await import('fs')
