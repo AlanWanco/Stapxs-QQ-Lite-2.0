@@ -19,7 +19,7 @@
         @v-move-right.prevent="exitWin()">
         <slot name="chat-extra" />
         <!-- 聊天基本信息 -->
-        <div class="info">
+        <div class="info" @click="closeAllPanels">
             <font-awesome-icon :icon="['fas', 'bars-staggered']" @click="openLeftBar" />
             <font-awesome-icon class="back" :icon="['fas', 'angle-left']" @click="exitWin" />
             <img :src="chat.show.avatar">
@@ -66,7 +66,8 @@
         <!-- 消息显示区 -->
         <div id="msgPan" class="chat"
             style="scroll-behavior: smooth"
-            @scroll="chatScroll($event, details[3].open)">
+            @scroll="chatScroll($event, details[3].open)"
+            @click="closeAllPanels">
             <template v-if="!details[3].open">
                 <div v-if="!runtimeData.tags.canLoadHistory" class="note note-nomsg">
                     <hr>
@@ -852,8 +853,19 @@ import { Img } from '@renderer/function/model/img'
             },
 
             /**
-             * 消息区滚动
-             * @param event 滚动事件
+             * 关闭所有附加面板
+             */
+            closeAllPanels() {
+                this.details.forEach((item: any, index: number) => {
+                    // 排除搜索面板
+                    if (index !== 3) {
+                        item.open = false
+                    }
+                })
+                this.tags.showMoreDetail = false
+            },
+            /**
+             * 消息列表刷新
              */
             chatScroll(event: Event, pass: boolean) {
                 if(pass) return
