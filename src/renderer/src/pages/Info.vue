@@ -106,7 +106,18 @@
                         :items="number_cache.length > 0 ? number_cache : chat.info.group_members"
                         :item-size="60"
                         key-field="user_id">
-                        <div class="member-item edit">
+                        <div class="member-item edit"
+                            v-menu.prevent="event => $emit('showMenu', event, {
+                                message_id: 'fake',
+                                sender: {
+                                    user_id: item.user_id,
+                                    nickname: item.nickname,
+                                    card: item.card,
+                                    role: item.role
+                                },
+                                group_id: chat.show.id,
+                                message: []
+                            })">
                             <img alt="nk" loading="lazy"
                                 :src="`https://q1.qlogo.cn/g?b=qq&s=0&nk=${item.user_id}`">
                             <div>
@@ -242,6 +253,7 @@
     import { defineComponent, toRaw } from 'vue'
     import { delay, getTrueLang } from '@renderer/function/utils/systemUtil'
     import { runtimeData } from '@renderer/function/msg'
+    import { vMenu } from '@renderer/function/utils/appUtil'
     import {
         UserFriendElem,
         UserGroupElem,
@@ -250,9 +262,12 @@
 
     export default defineComponent({
         name: 'ViewInfo',
+        directives: {
+            menu: vMenu,
+        },
         components: { BulletinBody, FileBody, OptInfo, BcTab, RecycleScroller },
         props: ['tags', 'chat'],
-        emits: ['close'],
+        emits: ['close', 'showMenu'],
         data() {
             return {
                 qqLevelToEmoji,

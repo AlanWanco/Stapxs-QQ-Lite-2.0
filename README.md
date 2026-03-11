@@ -27,9 +27,9 @@
     - **2026-03-11 dev-f31dca**
       - 修改QQ表情为本地
       - 打开本地表情时自动重新加载
+      - 在群聊里右键用户可以发起私聊
 
 ## TODO feats
-- 在群聊里右键用户无法触发私聊
 - 使用新版onebot ws流式协议传输文件
 - [Electron/tauri/web]剪贴板里有文件时在聊天窗口粘贴文件可以调用onebot ws流式协议传输文件
 - [Android]安卓版icon符合Google制定的APK ICON规范

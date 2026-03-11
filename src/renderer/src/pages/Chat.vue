@@ -475,6 +475,10 @@
                         <div><font-awesome-icon :icon="['fas', 'at']" /></div>
                         <a>{{ $t('提及') }}</a>
                     </div>
+                    <div v-show="tags.menuDisplay.startChat" @click="startPrivateChat">
+                        <div><font-awesome-icon :icon="['fas', 'user-pen']" /></div>
+                        <a>{{ $t('发起私聊') }}</a>
+                    </div>
                     <div v-show="tags.menuDisplay.poke" @click="sendPoke(selectedMsg ? selectedMsg.sender.user_id : undefined)">
                         <div><font-awesome-icon :icon="['fas', 'fa-hand-point-up']" /></div>
                         <a>{{ $t('戳一戳') }}</a>
@@ -504,7 +508,8 @@
         <!-- 群 / 好友信息弹窗 -->
         <Transition>
             <Info ref="infoRef" :chat="chat" :tags="tags"
-                @close="openChatInfoPan" />
+                @close="openChatInfoPan"
+                @show-menu="showMsgMeun" />
         </Transition>
         <!-- 转发面板 -->
         <Transition>
@@ -697,6 +702,7 @@ import { Img } from '@renderer/function/model/img'
                         copySelect: false,
                         copyImg: false,
                         downloadImg: false as string | false,
+                        startChat: false,
                         revoke: false,
                         reedit: false,
                         at: true,
@@ -1314,8 +1320,9 @@ import { Img } from '@renderer/function/model/img'
                         this.tags.menuDisplay.showRespond = false
                     }
                     if (
-                        select.nodeName == 'IMG' &&
-                        (select as HTMLImageElement).name == 'avatar'
+                        (select.nodeName == 'IMG' &&
+                        (select as HTMLImageElement).name == 'avatar') ||
+                        data.message_id == 'fake'
                     ) {
                         // 右击头像需要显示的内容
                         Object.keys(this.tags.menuDisplay).forEach(
@@ -1326,6 +1333,7 @@ import { Img } from '@renderer/function/model/img'
                         this.tags.menuDisplay.showRespond = false
                         this.tags.menuDisplay.at = true
                         this.tags.menuDisplay.poke = true
+                        this.tags.menuDisplay.startChat = true
                         this.tags.menuDisplay.remove = true
                         if (
                             runtimeData.chatInfo.show.type != 'group' ||
@@ -1338,8 +1346,9 @@ import { Img } from '@renderer/function/model/img'
                             this.tags.menuDisplay.remove = false
                         }
                         if (data.sender?.user_id === runtimeData.loginInfo.uin) {
-                            // 自己不显示提及
+                            // 自己不显示提及和私聊
                             this.tags.menuDisplay.at = false
+                            this.tags.menuDisplay.startChat = false
                         }
                         // 群成员设置
                         if(runtimeData.chatInfo.show.type == 'group' &&
@@ -1359,6 +1368,9 @@ import { Img } from '@renderer/function/model/img'
                         }
                         // 重新编辑判定
                         this.tags.menuDisplay.reedit = this.tags.menuDisplay.revoke && data.sender?.user_id === runtimeData.loginInfo.uin
+                        if (runtimeData.chatInfo.show.type == 'group' && data.sender?.user_id !== runtimeData.loginInfo.uin) {
+                            this.tags.menuDisplay.startChat = true
+                        }
                         if (data.revoke === true) {
                             // 已被撤回的自己的消息只显示复制
                             this.tags.menuDisplay.relpy = false
@@ -1483,6 +1495,7 @@ import { Img } from '@renderer/function/model/img'
                     copy: true,
                     copySelect: false,
                         downloadImg: false,
+                        startChat: false,
                         revoke: false,
                         reedit: false,
                         at: true,
@@ -1888,6 +1901,51 @@ import { Img } from '@renderer/function/model/img'
                     new PopInfo().add(PopType.ERR, this.$t('保存失败：{msg}', { msg: result.message }), true)
                 }
                 
+                this.closeMsgMenu()
+            },
+
+            /**
+             * 发起私聊
+             */
+            startPrivateChat() {
+                const msg = this.selectedMsg
+                if (msg) {
+                    const info = {
+                        user_id: msg.sender.user_id,
+                        nickname: msg.sender.card || msg.sender.nickname,
+                        group_id: msg.group_id
+                    }
+                    // 借用 Info.vue 的逻辑实现
+                    // 检查这个人是不是好友
+                    let chat = runtimeData.userList.find(
+                        (item: any) => {
+                            return item.user_id == info.user_id
+                        },
+                    )
+                    if (!chat) {
+                        // 创建一个临时会话
+                        const user = {
+                            user_id: info.user_id,
+                            nickname: info.nickname || this.$t('临时会话'),
+                            remark: info.user_id,
+                            group_id: info.group_id,
+                            group_name: '',
+                        }
+                        chat = user
+                    }
+                    runtimeData.baseOnMsgList.set(Number(info.user_id), chat)
+                    // 切换到这个聊天
+                    this.$nextTick(() => {
+                        if (chat) {
+                            const item = document.getElementById(
+                                'user-' + chat.user_id,
+                            )
+                            if (item) {
+                                item.click()
+                            }
+                        }
+                    })
+                }
                 this.closeMsgMenu()
             },
 

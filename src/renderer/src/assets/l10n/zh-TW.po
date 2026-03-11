@@ -1052,3 +1052,6 @@ msgstr ""
 
 msgid "收藏的表情"
 msgstr "已收藏的表情"
+
+msgid "发起私聊"
+msgstr "發起私聊"
