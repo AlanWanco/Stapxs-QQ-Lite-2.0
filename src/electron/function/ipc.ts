@@ -629,6 +629,8 @@ export function regIpcListener() {
         const fs = await import('fs')
         const path = await import('path')
         
+        logger.debug('sys:saveImage started:', args)
+        
         try {
             const response = await axios.get(args.url, { responseType: 'arraybuffer' })
             
