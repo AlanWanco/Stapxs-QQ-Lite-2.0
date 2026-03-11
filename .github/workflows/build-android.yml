@@ -84,6 +84,7 @@ jobs:
                   set -euo pipefail
                   mkdir -p upload
                   VERSION=${{ inputs.version }}
+                  HASH=${{ inputs.git_hash }}
                   APK_PATH="src/mobile/android/app/build/outputs/apk/release/app-release.apk"
                   if [ ! -f "$APK_PATH" ]; then
                     echo "Signed APK not found: $APK_PATH"
@@ -91,11 +92,18 @@ jobs:
                     exit 1
                   fi
                   
-                  cp "$APK_PATH" "upload/Stapxs-QQ-Lite-v${VERSION}-android.apk"
+                  # 如果版本号里已经包含了哈希值（如 dev 构建），就不重复加了
+                  if [[ "$VERSION" == *"$HASH"* ]]; then
+                    FILE_VERSION="$VERSION"
+                  else
+                    FILE_VERSION="${VERSION}-${HASH}"
+                  fi
+                  
+                  cp "$APK_PATH" "upload/Stapxs-QQ-Lite-v${FILE_VERSION}-android.apk"
                   
                   AAB_PATH=$(find src/mobile/android/app/build/outputs/bundle/release -name "*.aab" | head -n 1)
                   if [ -n "$AAB_PATH" ] && [ -f "$AAB_PATH" ]; then
-                    cp "$AAB_PATH" "upload/Stapxs-QQ-Lite-v${VERSION}-android.aab"
+                    cp "$AAB_PATH" "upload/Stapxs-QQ-Lite-v${FILE_VERSION}-android.aab"
                   fi
             
             - name: 上传构建产物

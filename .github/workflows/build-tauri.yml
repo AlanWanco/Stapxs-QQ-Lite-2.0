@@ -87,6 +87,16 @@ jobs:
                   cp src/tauri/target/*/release/bundle/appimage/*.AppImage upload/ || true
                   cp src/tauri/target/*/release/bundle/dmg/*.dmg upload/ || true
                   cp src/tauri/target/release/bundle/dmg/*.dmg upload/ || true
+                  
+                  # 重命名产物以包含 Git 哈希
+                  cd upload
+                  for f in *; do
+                    if [ -f "$f" ]; then
+                      filename="${f%.*}"
+                      extension="${f##*.}"
+                      mv "$f" "${filename}-${{ inputs.git_hash }}.${extension}"
+                    fi
+                  done
 
             - name: 准备产物目录
               if: matrix.os == 'windows-2022'
@@ -95,7 +105,8 @@ jobs:
                   New-Item -ItemType Directory -Path upload -Force
                   $files = Get-ChildItem -Path "src/tauri/target/*/release/bundle/nsis/" -Filter *.exe -Recurse
                   foreach ($file in $files) {
-                      Copy-Item -Path $file.FullName -Destination "upload/"
+                      $newName = "$($file.BaseName)-${{ inputs.git_hash }}$($file.Extension)"
+                      Copy-Item -Path $file.FullName -Destination "upload/$newName"
                   }
 
             - name: 上传构建产物

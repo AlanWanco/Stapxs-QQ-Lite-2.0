@@ -21,7 +21,9 @@ jobs:
             # 初始化一些流程需要的环境变量
             - name: Init Env
               id: step_init
-              run: echo VERSION=$(node -p "require('./package.json').version") >> $GITHUB_OUTPUT
+              run: |
+                echo VERSION=$(node -p "require('./package.json').version") >> $GITHUB_OUTPUT
+                echo HASH=$(git rev-parse --short HEAD) >> $GITHUB_OUTPUT
 
     # ========================= 构建 Tauri 版本 =========================
 
@@ -86,6 +88,16 @@ jobs:
               run: |
                   mkdir -p upload
                   cp src/tauri/target/*/release/bundle/deb/*.deb upload/ || true
+                  
+                  # 重命名产物以包含 Git 哈希
+                  cd upload
+                  for f in *; do
+                    if [ -f "$f" ]; then
+                      filename="${f%.*}"
+                      extension="${f##*.}"
+                      mv "$f" "${filename}-${{ needs.init.outputs.HASH }}.${extension}"
+                    fi
+                  done
 
             - name: 准备产物目录
               if: matrix.os == 'windows-2022'
@@ -94,11 +106,12 @@ jobs:
                   New-Item -ItemType Directory -Path upload -Force
                   $files = Get-ChildItem -Path "src/tauri/target/*/release/bundle/nsis/" -Filter *.exe -Recurse
                   foreach ($file in $files) {
-                      Copy-Item -Path $file.FullName -Destination "upload/"
+                      $newName = "$($file.BaseName)-${{ needs.init.outputs.HASH }}$($file.Extension)"
+                      Copy-Item -Path $file.FullName -Destination "upload/$newName"
                   }
 
             - name: 上传构建产物
               uses: actions/upload-artifact@v4
               with:
-                  name: ${{ needs.init.outputs.version }}-${{ matrix.os }}
+                  name: ${{ needs.init.outputs.version }}-${{ needs.init.outputs.HASH }}-${{ matrix.os }}
                   path: upload/

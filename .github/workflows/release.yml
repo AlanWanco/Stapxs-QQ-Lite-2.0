@@ -28,7 +28,11 @@ jobs:
               id: step_hash
               run: |
                 TAG=${{ github.ref_name }}
-                HASH=${TAG#*-dev-}
+                if [[ $TAG == *"-dev-"* ]]; then
+                  HASH=${TAG#*-dev-}
+                else
+                  HASH=$(git rev-parse --short HEAD)
+                fi
                 echo HASH=$HASH >> $GITHUB_OUTPUT
 
     # ========================= 构建 Web 版本 =========================

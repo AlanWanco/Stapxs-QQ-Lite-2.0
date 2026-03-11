@@ -5,7 +5,11 @@ rm -rf dist_capacitor
 mkdir -p dist_capacitor
 
 VERSION=$(node -p "require('./package.json').version")
-IPA_NAME="Stapxs.QQ.Lite-$VERSION.ipa"
+if [ -n "$GIT_HASH" ]; then
+    IPA_NAME="Stapxs.QQ.Lite-$VERSION-$GIT_HASH.ipa"
+else
+    IPA_NAME="Stapxs.QQ.Lite-$VERSION.ipa"
+fi
 EXPORT_PATH="dist_capacitor/$IPA_NAME"
 
 # 1. 编译并归档项目 (跳过签名)
