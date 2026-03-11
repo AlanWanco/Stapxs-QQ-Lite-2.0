@@ -171,7 +171,7 @@ import {
     MsgItemElem,
     SQCodeElem,
 } from '@renderer/function/elements/information'
-import { computed, ComputedRef, Ref, ShallowRef, shallowRef } from 'vue'
+import { computed, ComputedRef, Ref, ShallowRef, shallowRef, watch } from 'vue'
 import { runtimeData } from '@renderer/function/msg'
 import { Connector } from '@renderer/function/connect'
 import { backend } from '@renderer/runtime/backend'
@@ -213,10 +213,21 @@ const popInfo = new PopInfo()
 const stickerPage = shallowRef(1)
 const localEmojis = shallowRef<LocalEmoji[]>([])
 
+const props = defineProps<{
+    open?: boolean
+}>()
+
 const emit = defineEmits<{
     addSpecialMsg: [data: SQCodeElem],
     sendMsg: [echo?: string]
 }>()
+
+// 监听面板打开，自动重新加载本地表情
+watch(() => props.open, (val) => {
+    if (val && backend.isDesktop() && runtimeData.sysConfig.local_emoji_folder) {
+        reloadLocalEmojis()
+    }
+})
 
 // 加载漫游表情
 if (

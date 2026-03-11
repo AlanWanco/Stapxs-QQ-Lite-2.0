@@ -158,6 +158,7 @@
                     <!-- 表情面板 -->
                     <Transition name="pan">
                         <FacePan v-show="details[1].open"
+                            :open="details[1].open"
                             @add-special-msg="addSpecialMsg" @send-msg="sendMsg" />
                     </Transition>
                     <!-- 精华消息 -->
