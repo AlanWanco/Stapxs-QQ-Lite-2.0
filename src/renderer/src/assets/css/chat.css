@@ -1273,8 +1273,8 @@ input {
 }
 
 .face-pan div.system-face-bar {
-    height: calc(300px - 145px);
-    overflow-y: scroll;
+    height: 100%;
+    overflow-y: auto;
     width: 100%;
 }
 

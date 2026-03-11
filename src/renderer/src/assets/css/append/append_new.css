@@ -226,8 +226,8 @@ body {
     margin-bottom: 0 !important;
 }
 .face-pan div.system-face-bar {
-    height: calc(300px - 75px);
-    overflow-y: scroll;
+    height: 100%;
+    overflow-y: auto;
     margin-top: 15px;
     width: 100%;
 }
