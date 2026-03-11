@@ -593,7 +593,7 @@ export function regIpcListener() {
 
             // 读取文件夹中的所有文件
             const files = fs.readdirSync(folderPath)
-            const emojis = [] as Array<{ name: string; path: string; url: string }>
+            const emojis = [] as Array<{ name: string; path: string; url: string; mtime: number }>
 
             for (const file of files) {
                 const filePath = path.join(folderPath, file)
@@ -610,7 +610,8 @@ export function regIpcListener() {
                         emojis.push({
                             name: file,
                             path: filePath,
-                            url: fileUrl
+                            url: fileUrl,
+                            mtime: stats.mtimeMs
                         })
                     }
                 }

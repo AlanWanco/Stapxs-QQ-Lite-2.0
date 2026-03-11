@@ -651,9 +651,9 @@ pub async fn sys_select_folder() -> Result<Option<String>, String> {
 pub async fn sys_get_local_emojis(data: String) -> Result<Vec<HashMap<String, String>>, String> {
     use std::fs;
     use std::path::Path;
+    use std::time::UNIX_EPOCH;
 
     let folder_path = Path::new(&data);
-
     // 验证路径是否存在且为目录
     if !folder_path.exists() {
         return Err(format!("文件夹不存在: {}", data));
@@ -688,6 +688,12 @@ pub async fn sys_get_local_emojis(data: String) -> Result<Vec<HashMap<String, St
                                     .to_string();
 
                                 let file_path = path.to_string_lossy().to_string();
+                                
+                                // 获取修改时间
+                                let mtime = fs::metadata(&path)
+                                    .and_then(|m| m.modified())
+                                    .map(|t| t.duration_since(UNIX_EPOCH).unwrap_or_default().as_millis().to_string())
+                                    .unwrap_or_else(|_| "0".to_string());
 
                                 // 直接返回文件路径
                                 // 前端会使用 Tauri 的 convertFileSrc API 来转换为可加载的 URL
@@ -695,6 +701,7 @@ pub async fn sys_get_local_emojis(data: String) -> Result<Vec<HashMap<String, St
                                 emoji_info.insert("name".to_string(), file_name);
                                 emoji_info.insert("path".to_string(), file_path.clone());
                                 emoji_info.insert("url".to_string(), file_path);
+                                emoji_info.insert("mtime".to_string(), mtime);
 
                                 emojis.push(emoji_info);
                             }

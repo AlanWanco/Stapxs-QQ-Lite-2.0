@@ -344,6 +344,13 @@ async function reloadLocalEmojis() {
         )
 
         if (images && Array.isArray(images)) {
+            // 按修改时间倒序排序
+            images.sort((a: any, b: any) => {
+                const timeA = typeof a.mtime === 'string' ? parseInt(a.mtime) : a.mtime
+                const timeB = typeof b.mtime === 'string' ? parseInt(b.mtime) : b.mtime
+                return timeB - timeA
+            })
+
             // 对于 Tauri，需要使用 convertFileSrc 转换文件路径
             if (backend.type === 'tauri') {
                 const { convertFileSrc } = await import('@tauri-apps/api/core')
