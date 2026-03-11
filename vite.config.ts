@@ -14,7 +14,7 @@ const isDesktop = !!process.env.DESKTOP
 export function configFactory(outPath: string): UserConfigFnObject {
     return ({ mode }) => {
         const env = loadEnv(mode, process.cwd())
-        const useLocalFace = env.VITE_LOCAL_FACE == 'true'
+        const useLocalFace = env.VITE_LOCAL_FACE !== 'false'
 
         const plugins: PluginOption[] = [
             vue(),
