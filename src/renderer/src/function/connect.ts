@@ -236,14 +236,15 @@ export class Connector {
                 break // 正常关闭
             default: {
                 // 默认尝试重连（排除 1000 正常关闭）
-                popInfo.add(PopType.ERR, $t('连接失败') + ': ' + (msg || $t('连接异常关闭')), false)
                 if (login.status) {
-                    // 延迟重连，防止网络抖动导致的短时间频繁请求
+                    // 如果是登录状态下的断开，尝试静默重连，只在控制台输出日志
+                    logger.add(LogType.WS, $t('连接失败') + ': ' + (msg || $t('连接异常关闭')) + '，正在尝试自动重连...')
                     setTimeout(() => {
                         this.create(address, token, undefined)
                     }, 2000)
                 } else {
-                    // 初始连接失败，不做自动重连，防止陷入死循环
+                    // 初始连接失败，弹出错误提示
+                    popInfo.add(PopType.ERR, $t('连接失败') + ': ' + (msg || $t('连接异常关闭')), false)
                     login.creating = false
                 }
                 break
