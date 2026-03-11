@@ -1853,10 +1853,9 @@ import { Img } from '@renderer/function/model/img'
                     return
                 }
 
-                // 调试日志
-                console.log('[DEBUG] Calling sys:saveImage:', { url, folder })
-                const result = await backend.call(undefined, 'sys:saveImage', true, { url, folder })
-                console.log('[DEBUG] sys:saveImage result:', result)
+                const fileName = `emoji_${new Date().getTime()}.png`
+                // 确保对返回结果进行空值检查
+                const result = await backend.call(undefined, 'sys:saveImage', true, { url, folder, fileName })
                 
                 if (!result) {
                     new PopInfo().add(PopType.ERR, this.$t('保存失败：后端无响应'), true)

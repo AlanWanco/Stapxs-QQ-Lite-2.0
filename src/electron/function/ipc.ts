@@ -625,27 +625,28 @@ export function regIpcListener() {
     })
 
     // 保存图片
-    ipcMain.handle('sys:saveImage', async (_, args: { url: string; folder: string }) => {
-        const fs = await import('fs')
-        const path = await import('path')
-        
-        logger.debug('sys:saveImage started:', args)
-        
+    ipcMain.handle('sys:saveImage', async (_, args: { url: string; folder: string; fileName: string }) => {
         try {
+            const fs = await import('fs')
+            const path = await import('path')
+            const axios = (await import('axios')).default
+
+            logger.debug('sys:saveImage starting. Args:', args)
+
+            // 确保目录存在
+            if (!fs.existsSync(args.folder)) {
+                logger.debug('sys:saveImage folder does not exist, creating:', args.folder)
+                fs.mkdirSync(args.folder, { recursive: true })
+            }
+
             const response = await axios.get(args.url, { responseType: 'arraybuffer' })
-            
-            // MIME type to extension
-            const mime = response.headers['content-type'] || 'image/png'
-            const extMap: Record<string, string> = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif', 'image/webp': '.webp' }
-            const ext = extMap[mime] || '.png'
-            const fileName = `emoji_${new Date().getTime()}${ext}`
-            
             const buffer = Buffer.from(response.data, 'binary')
-            const filePath = path.join(args.folder, fileName)
+            const filePath = path.join(args.folder, args.fileName)
             
+            logger.debug('sys:saveImage writing to:', filePath)
             fs.writeFileSync(filePath, buffer)
             
-            logger.debug('保存图片成功:', { url: args.url, mime, filePath })
+            logger.debug('sys:saveImage success')
             return { success: true, message: '保存成功' }
         } catch (e: any) {
             logger.error('保存图片失败:', e)
