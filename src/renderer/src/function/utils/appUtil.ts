@@ -604,6 +604,7 @@ export async function loadMobile() {
             const html = document.getElementsByTagName('html')[0]
             if(html && backend.platform == 'android') {
                 html.style.height = `calc((100% - ${keyboardHeight + safeArea.top}px) / var(--scale-custom, 1))`
+                html.style.overflow = 'hidden'
             }
         })
         backend.addListener('Keyboard', 'keyboardWillHide', async () => {
