@@ -234,27 +234,19 @@ export class Connector {
             case 1000:
                 popInfo.add(PopType.INFO, $t('连接已断开') + (msg ? (': ' + msg.replace(':', ' - ')) : ''), false)
                 break // 正常关闭
-            case 1006: {
-                // 非正常关闭，尝试重连
-                popInfo.add(PopType.ERR, $t('连接失败') + ': ' + $t('连接异常关闭'), false)
+            default: {
+                // 默认尝试重连（排除 1000 正常关闭）
+                popInfo.add(PopType.ERR, $t('连接失败') + ': ' + (msg || $t('连接异常关闭')), false)
                 if (login.status) {
-                    this.create(address, token, undefined)
+                    // 延迟重连，防止网络抖动导致的短时间频繁请求
+                    setTimeout(() => {
+                        this.create(address, token, undefined)
+                    }, 2000)
                 } else {
-                    // PS：由于创建连接失败也会触发此事件，所以需要判断是否已经登录
-                    // 尝试使用 ws 连接
-                    this.create(address, token, false)
+                    // 初始连接失败，不做自动重连，防止陷入死循环
+                    login.creating = false
                 }
                 break
-            }
-            case 1015: {
-                // TLS 错误，尝试使用 ws 连接
-                popInfo.add(PopType.ERR, $t('连接失败') + ': ' + $t('TLS错误'), false)
-                this.create(address, token, false)
-                break
-            }
-            default: {
-                login.creating = false
-                popInfo.add(PopType.ERR, $t('连接失败') + ': ' + $t('未知的错误 {code}',{ code: code }), false)
             }
         }
 
