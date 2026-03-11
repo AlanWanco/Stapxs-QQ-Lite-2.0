@@ -20,6 +20,7 @@ public class WebSocketClient {
     private WebSocket webSocket;
 
     private final OnebotPlugin plugin;
+    private boolean isDeactivated = false;
 
     private String address;
     private String token;
@@ -71,6 +72,7 @@ public class WebSocketClient {
             public void onOpen(
                 @NonNull WebSocket webSocket,
                 @NonNull Response response) {
+                if (isDeactivated) return;
                 JSObject ret = new JSObject();
                 ret.put("address", address);
                 ret.put("token", token);
@@ -81,6 +83,7 @@ public class WebSocketClient {
             public void onMessage(
                 @NonNull WebSocket webSocket,
                 @NonNull String text) {
+                if (isDeactivated) return;
                 plugin.sendNotify("onmessage", text);
             }
 
@@ -88,6 +91,7 @@ public class WebSocketClient {
             public void onClosed(
                 @NonNull WebSocket webSocket,
                 int code, @NonNull String reason) {
+                if (isDeactivated) return;
                 Log.d("Onebot", "WebSocket已关闭: " + code + " / " + reason);
                 closeBack(code, "WebSocket已关闭: " + code + " / " + reason);
             }
@@ -96,6 +100,7 @@ public class WebSocketClient {
             public void onFailure(
                 @NonNull WebSocket webSocket,
                 @NonNull Throwable t, Response response) {
+                if (isDeactivated) return;
                 Log.d("Onebot", "WebSocket连接失败: " + t.getMessage());
                 closeBack(-1, "WebSocket连接失败: " + t.getMessage());
             }
@@ -114,6 +119,11 @@ public class WebSocketClient {
         if (webSocket != null) {
             webSocket.close(1000, "客户端关闭连接");
         }
+    }
+
+    public void deactivate() {
+        isDeactivated = true;
+        close();
     }
 
     private void closeBack(int code, String error) {
