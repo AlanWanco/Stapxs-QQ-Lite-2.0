@@ -219,6 +219,7 @@ body {
 .face-pan {
     border: 1px solid var(--color-card-2);
 }
+/* 移除对 face-pan 内部布局的强制覆盖，使用 chat.css 中的统一布局 */
 .face-pan div.tab-main {
     margin-top: 0 !important;
     height: 100% !important;

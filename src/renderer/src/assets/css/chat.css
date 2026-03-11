@@ -1223,6 +1223,25 @@ input {
     height: 250px;
     width: 300px;
     padding: 0;
+    /* 恢复绝对定位，确保外框位置不偏移 */
+}
+.face-pan > div:first-child {
+    height: 100%;
+}
+.face-pan div.tab-body > div {
+    overflow: hidden !important;
+}
+.face-pan div.tab-main {
+    margin-top: 30px !important;
+    height: calc(100% - 30px);
+    display: flex;
+    flex-direction: column;
+}
+.face-pan div.system-face-bar {
+    flex: 1;
+    overflow-y: auto;
+    width: 100%;
+    min-height: 0; /* 允许压缩 */
 }
 .face-pan div.tab-body > div {
     overflow: hidden !important;
