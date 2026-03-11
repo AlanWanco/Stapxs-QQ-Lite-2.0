@@ -267,6 +267,69 @@ export default defineComponent({
         window.moYu = () => { return '\x75\x6e\x64\x65\x66\x69\x6e\x65\x64' }
         // 页面加载完成后
         
+        // 禁止所有原生滚动行为（防止缩放模式下的焦点偏移）
+        window.addEventListener('scroll', () => {
+            if (window.scrollX !== 0 || window.scrollY !== 0) {
+                window.scrollTo(0, 0)
+            }
+        }, { passive: true })
+
+        // 全局 Tab 键焦点管理
+        window.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.key === 'Tab') {
+                const focusableSelector = 'a[href], button, input, textarea, select, [tabindex]:not([tabindex="-1"])'
+                const elements = Array.from(document.querySelectorAll(focusableSelector)) as HTMLElement[]
+                
+                // 过滤掉不可见或禁用的元素
+                const focusableElements = elements.filter(el => {
+                    const style = window.getComputedStyle(el)
+                    return !el.hasAttribute('disabled') && 
+                           style.display !== 'none' && 
+                           style.visibility !== 'hidden' && 
+                           el.offsetWidth > 0 && 
+                           el.offsetHeight > 0
+                })
+
+                if (focusableElements.length > 0) {
+                    e.preventDefault()
+                    const currIndex = focusableElements.indexOf(document.activeElement as HTMLElement)
+                    let nextIndex = 0
+                    
+                    if (currIndex === -1) {
+                        nextIndex = e.shiftKey ? focusableElements.length - 1 : 0
+                    } else {
+                        nextIndex = (currIndex + (e.shiftKey ? -1 : 1) + focusableElements.length) % focusableElements.length
+                    }
+                    
+                    // 使用 preventScroll 确保聚焦时不触发页面滚动
+                    focusableElements[nextIndex].focus({ preventScroll: true })
+
+                    // 补丁：强制重置可能由于焦点行为产生的位移
+                    // 即使有 preventScroll，某些浏览器在特定情况下仍可能产生 1px 级别的偏移
+                    setTimeout(() => {
+                        const containers = document.querySelectorAll('.main-body, .main-body > div, #base-app, #app')
+                        containers.forEach(el => {
+                            if (el.scrollTop !== 0) el.scrollTop = 0
+                            if (el.scrollLeft !== 0) el.scrollLeft = 0
+                        })
+                        window.scrollTo(0, 0)
+                    }, 0)
+                }
+            }
+        }, true)
+
+        // 焦点补丁：防止任何方式触发的焦点导致容器偏移
+        window.addEventListener('focusin', () => {
+            setTimeout(() => {
+                const containers = document.querySelectorAll('.main-body, .main-body > div, #base-app, #app')
+                containers.forEach(el => {
+                    if (el.scrollTop !== 0) el.scrollTop = 0
+                    if (el.scrollLeft !== 0) el.scrollLeft = 0
+                })
+                window.scrollTo(0, 0)
+            }, 0)
+        }, { passive: true })
+
         // 全局处理右键菜单遮罩层的右键事件，使其能够穿透并在新位置触发右键菜单
         window.addEventListener('contextmenu', (e: MouseEvent) => {
             const target = e.target as HTMLElement

@@ -589,12 +589,13 @@ export async function loadMobile() {
             // 干脆把所有的 iOS 版本处理方法都改为内部避让
             if(backend.platform == 'ios') {
                 const baseApp = document.getElementById('base-app')
+                const offset = `calc(${keyboardHeight - safeArea.bottom + 100}px / var(--scale-custom, 1))`
                 if (safeArea && baseApp) {
-                    baseApp.style.setProperty('--safe-area-bottom', (keyboardHeight - safeArea.bottom + 100) + 'px')
+                    baseApp.style.setProperty('--safe-area-bottom', offset)
                 }
                 // 调整菜单高度
                 if(safeArea && tabBar) {
-                    tabBar.style.setProperty('padding-bottom', (keyboardHeight - safeArea.bottom + 100) + 'px', 'important')
+                    tabBar.style.setProperty('padding-bottom', offset, 'important')
                 }
             }
 
@@ -602,7 +603,7 @@ export async function loadMobile() {
             // PS：仅用于解决 Android 在全屏沉浸式下键盘遮挡问题
             const html = document.getElementsByTagName('html')[0]
             if(html && backend.platform == 'android') {
-                html.style.height = `calc(100% - ${keyboardHeight + safeArea.top}px)`
+                html.style.height = `calc((100% - ${keyboardHeight + safeArea.top}px) / var(--scale-custom, 1))`
             }
         })
         backend.addListener('Keyboard', 'keyboardWillHide', async () => {
@@ -626,7 +627,7 @@ export async function loadMobile() {
             // PS：仅用于解决 Android 在全屏沉浸式下键盘遮挡问题
             const html = document.getElementsByTagName('html')[0]
             if(html && backend.platform == 'android') {
-                html.style.height = 'calc(100%)'
+                html.style.height = ''
             }
         })
         // 状态栏（Android）
