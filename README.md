@@ -15,19 +15,19 @@
     - 自定义CSS无法自动加载的问题
     - 把图片压缩功能改为了WebSocket base64文件传输上限30MB（OnebotV11ws协议传输大于50MB就会崩溃 改为base64后求稳改为30MB）
     - 修改输入框宽度逻辑
-  - 2026-03-11 dev-0bcf2b
-    - 当输入ws地址符合http(s)://x.x.x.x:xxxx时 不会因为忘记加结尾的/而无法连接
-    - [iOS]iOS最低版本下调至15.0
-    - [Electron/tauri]右键图片添加到本地表情文件夹
+    - **2026-03-11 dev-0bcf2b**
+      - 当输入ws地址符合http(s)://x.x.x.x:xxxx时 不会因为忘记加结尾的/而无法连接
+      ~~- [iOS]iOS最低版本下调至15.0 好像没效果~~
+      - [Electron/tauri]右键图片添加到本地表情文件夹
 
 ## TODO feats
 - 在群聊里右键用户无法触发私聊
 - 使用新版onebot ws流式协议传输文件
-- 剪贴板里有文件时在聊天窗口粘贴文件可以调用onebot ws流式协议传输文件
-- 安卓版icon符合Google制定的APK ICON规范
+- [Electron/tauri/web]剪贴板里有文件时在聊天窗口粘贴文件可以调用onebot ws流式协议传输文件
+- [Android]安卓版icon符合Google制定的APK ICON规范
 
 ## 已发现的问题
-- 安卓端切到后台之后要点两次重连 （加入顺畅的自动重连）
+- [Android]安卓端切到后台之后要点两次重连 （加入顺畅的自动重连）
 - [tauri]字体缩放功能在tauri客户端上好像没起作用
 - [Android]竖排情况下会下面的三个主按钮所在的框会向上缩 出现一大块主题色色块 Android网页端没有这个问题
 - [Android]表情回复块被压缩

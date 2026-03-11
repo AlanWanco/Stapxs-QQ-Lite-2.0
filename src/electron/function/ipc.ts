@@ -625,19 +625,29 @@ export function regIpcListener() {
     })
 
     // 保存图片
-    ipcMain.handle('sys:saveImage', async (_, args: { url: string; folder: string; fileName: string }) => {
+    ipcMain.handle('sys:saveImage', async (_, args: { url: string; folder: string }) => {
         const fs = await import('fs')
         const path = await import('path')
         
         try {
             const response = await axios.get(args.url, { responseType: 'arraybuffer' })
+            
+            // MIME type to extension
+            const mime = response.headers['content-type'] || 'image/png'
+            const extMap: Record<string, string> = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif', 'image/webp': '.webp' }
+            const ext = extMap[mime] || '.png'
+            const fileName = `emoji_${new Date().getTime()}${ext}`
+            
             const buffer = Buffer.from(response.data, 'binary')
-            const filePath = path.join(args.folder, args.fileName)
+            const filePath = path.join(args.folder, fileName)
+            
             fs.writeFileSync(filePath, buffer)
-            return true
-        } catch (e) {
-            logger.error('保存图片失败', e)
-            return false
+            
+            logger.debug('保存图片成功:', { url: args.url, mime, filePath })
+            return { success: true, message: '保存成功' }
+        } catch (e: any) {
+            logger.error('保存图片失败:', e)
+            return { success: false, message: e.message || '未知错误' }
         }
     })
 

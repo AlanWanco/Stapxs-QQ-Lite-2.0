@@ -1853,13 +1853,12 @@ import { Img } from '@renderer/function/model/img'
                     return
                 }
 
-                const fileName = `emoji_${new Date().getTime()}.png`
-                const success = await backend.call(undefined, 'sys:saveImage', true, { url, folder, fileName })
+                const result = await backend.call(undefined, 'sys:saveImage', true, { url, folder })
                 
-                if (success) {
+                if (result.success) {
                     new PopInfo().add(PopType.INFO, this.$t('保存成功'), true)
                 } else {
-                    new PopInfo().add(PopType.ERR, this.$t('保存失败'), true)
+                    new PopInfo().add(PopType.ERR, this.$t('保存失败：{msg}', { msg: result.message }), true)
                 }
                 
                 this.closeMsgMenu()
