@@ -1853,7 +1853,17 @@ import { Img } from '@renderer/function/model/img'
                     return
                 }
 
-                const fileName = `emoji_${new Date().getTime()}.png`
+                // 尝试从 URL 中获取扩展名
+                let ext = '.png'
+                try {
+                    const pathName = new URL(url).pathname
+                    const match = pathName.match(/\.(png|jpg|jpeg|gif|webp|bmp|svg)$/i)
+                    if (match) {
+                        ext = match[0]
+                    }
+                } catch (e) { /* ignore */ }
+
+                const fileName = `emoji_${new Date().getTime()}${ext}`
                 // 确保对返回结果进行空值检查
                 const result = await backend.call(undefined, 'sys:saveImage', true, { url, folder, fileName })
                 

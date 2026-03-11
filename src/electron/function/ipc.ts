@@ -626,11 +626,8 @@ export function regIpcListener() {
 
     // 保存图片
     ipcMain.handle('sys:saveImage', async (_, args: { url: string; folder: string; fileName: string }) => {
+        const fs = await import('fs')
         try {
-            const fs = await import('fs')
-            const path = await import('path')
-            const axios = (await import('axios')).default
-
             logger.debug('sys:saveImage starting. Args:', args)
 
             // 确保目录存在

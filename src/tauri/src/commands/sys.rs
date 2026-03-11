@@ -713,6 +713,37 @@ pub async fn sys_get_local_emojis(data: String) -> Result<Vec<HashMap<String, St
     }
 }
 
+/// 保存图片到指定文件夹
+#[command]
+pub async fn sys_save_image(url: String, folder: String, fileName: String) -> Result<Value, String> {
+    use std::path::PathBuf;
+    
+    debug!("保存图片到本地: {} -> {}/{}", url, folder, fileName);
+    
+    let folder_path = PathBuf::from(&folder);
+    // 确保目录存在
+    if !folder_path.exists() {
+        fs::create_dir_all(&folder_path).map_err(|e| format!("创建文件夹失败: {}", e))?;
+    }
+    
+    let file_path = folder_path.join(fileName);
+    
+    let client = Client::new();
+    let response = client.get(url).send().await.map_err(|e| format!("下载失败: {}", e))?;
+    
+    if !response.status().is_success() {
+        return Err(format!("下载失败，状态码: {}", response.status()));
+    }
+    
+    let bytes = response.bytes().await.map_err(|e| format!("读取内容失败: {}", e))?;
+    let mut file = File::create(&file_path).map_err(|e| format!("创建文件失败: {}", e))?;
+    file.write_all(&bytes).map_err(|e| format!("写入文件失败: {}", e))?;
+    
+    let mut ret = HashMap::new();
+    ret.insert("success", true);
+    Ok(serde_json::to_value(ret).unwrap())
+}
+
 #[command]
 pub async fn sys_read_file_as_base64(data: String) -> Result<String, String> {
     use base64::{engine::general_purpose, Engine as _};

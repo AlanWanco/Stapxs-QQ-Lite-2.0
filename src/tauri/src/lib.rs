@@ -211,6 +211,7 @@ pub fn run() {
             commands::sys::sys_get_html,
             commands::sys::sys_get_api,
             commands::sys::sys_download,
+            commands::sys::sys_save_image,
             commands::sys::sys_flush_on_message,
             commands::sys::sys_flush_friend_search,
             commands::sys::sys_select_folder,
