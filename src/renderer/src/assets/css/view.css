@@ -85,13 +85,13 @@ textarea:focus {
     -webkit-app-region: drag;
     box-shadow: 0 0 10px 0 rgb(0 0 0 / 28%);
     background: var(--color-card-2);
-    margin-bottom: 10px;
     flex-direction: row;
-    position: absolute;
+    position: relative; /* 改为相对定位，占据 flex 空间 */
     display: flex;
     height: 40px;
     width: 100%;
     z-index: 999;
+    flex-shrink: 0;
 }
 .top-bar.win {
     background: var(--color-bg-yellow);
@@ -162,30 +162,6 @@ textarea:focus {
 #base-app.withBar {
     /* 彻底弃用 padding-top 方案，改由 flex 布局自动处理 */
     height: 100%;
-}
-
-.top-bar {
-    -webkit-app-region: drag;
-    box-shadow: 0 0 10px 0 rgb(0 0 0 / 28%);
-    background: var(--color-card-2);
-    flex-direction: row;
-    position: relative; /* 改为相对定位，占据 flex 空间 */
-    display: flex;
-    height: 40px;
-    width: 100%;
-    z-index: 999;
-    flex-shrink: 0;
-}
-#base-app {
-    transition: transform 0.2s;
-}
-#base-app.no-touch {
-    transform: rotate(180deg);
-    padding-bottom: 30px;
-}
-#base-app.withBar {
-    height: calc(100% - 40px);
-    padding-top: 40px;
 }
 
 .main-body {

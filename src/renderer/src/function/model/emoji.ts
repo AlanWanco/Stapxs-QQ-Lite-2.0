@@ -234,8 +234,8 @@ export default class Emoji {
         if (import.meta.env.VITE_LOCAL_FACE !== 'false')
             return `./img/qface/${id}.png`
         else {
-            // 4. 远程显示兜底 (GitHub Raw)
-            return `https://raw.githubusercontent.com/koishijs/QFace/master/public/assets/qq_emoji/${id}/apng/${id}.png`
+            // 4. 远程显示兜底 (jsDelivr CDN)
+            return `https://cdn.jsdelivr.net/gh/koishijs/QFace@master/public/assets/qq_emoji/${id}/apng/${id}.png`
         }
     }
 
@@ -268,7 +268,7 @@ export default class Emoji {
             return `./img/qface/${name}.json`
         else {
             // 4. 远程显示兜底
-            return `https://raw.githubusercontent.com/koishijs/QFace/master/public/assets/qq_emoji/${id}/lottie/${name}.json`
+            return `https://cdn.jsdelivr.net/gh/koishijs/QFace@master/public/assets/qq_emoji/${id}/lottie/${name}.json`
         }
     }
 }

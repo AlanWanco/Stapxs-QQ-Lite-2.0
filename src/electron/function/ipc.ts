@@ -667,4 +667,71 @@ export function regIpcListener() {
             throw error
         }
     })
+
+    // 获取默认表情路径
+    ipcMain.handle('sys:getDefaultFacePath', async () => {
+        const path = await import('path')
+        const fs = await import('fs')
+        const facePath = path.join(app.getPath('userData'), 'qface')
+        if (!fs.existsSync(facePath)) {
+            fs.mkdirSync(facePath, { recursive: true })
+        }
+        return facePath
+    })
+
+    // 下载并解压 zip
+    ipcMain.handle('sys:downloadAndExtractZip', async (_, args: { url: string; dest?: string; proxy?: string }) => {
+        const fs = await import('fs')
+        const path = await import('path')
+        const axios = (await import('axios')).default
+        const extract = (await import('extract-zip')).default
+
+        const destPath = args.dest || path.join(app.getPath('userData'), 'qface')
+        if (!fs.existsSync(destPath)) {
+            fs.mkdirSync(destPath, { recursive: true })
+        }
+
+        const tempFile = path.join(os.tmpdir(), `qface_${Date.now()}.zip`)
+        
+        try {
+            const axiosConfig = {
+                responseType: 'stream' as const,
+                timeout: 60000,
+            } as any
+            
+            if (args.proxy) {
+                try {
+                    const proxyUrl = new URL(args.proxy)
+                    axiosConfig.proxy = {
+                        protocol: proxyUrl.protocol.replace(':', ''),
+                        host: proxyUrl.hostname,
+                        port: parseInt(proxyUrl.port)
+                    }
+                } catch (e) {
+                    logger.error('代理地址解析失败:', e)
+                }
+            }
+
+            const response = await axios.get(args.url, axiosConfig)
+            const writer = fs.createWriteStream(tempFile)
+            response.data.pipe(writer)
+
+            await new Promise<void>((resolve, reject) => {
+                writer.on('finish', () => resolve())
+                writer.on('error', (err) => reject(err))
+            })
+
+            // 解压
+            await extract(tempFile, { dir: destPath })
+            
+            // 删除临时文件
+            fs.unlinkSync(tempFile)
+            
+            return destPath
+        } catch (error) {
+            if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile)
+            logger.error('下载或解压失败:', error)
+            throw error
+        }
+    })
 }

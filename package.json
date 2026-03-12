@@ -90,6 +90,7 @@
     "electron-vite": "^2.3.0",
     "eslint": "^8.57.0",
     "eslint-plugin-vue": "^9.26.0",
+    "extract-zip": "^2.0.1",
     "js-file-downloader": "^1.1.25",
     "markdown-it": "^14.1.0",
     "pofile": "^1.1.4",
