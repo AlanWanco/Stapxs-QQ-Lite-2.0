@@ -693,7 +693,6 @@ export async function loadAppendStyle() {
                 cssStype.innerHTML = horizontalCss + verticalCss + appendCss
             }
         }
-        }
 
         if(backend.isDesktop()) {
             backend.call(undefined, 'win:maximize', false)
@@ -766,10 +765,6 @@ export async function loadAppendStyle() {
                         logger.info('Linux 透明 UI 附加样式加载完成')
                     })
                 }
-            })
-        }
-    }
-}
             })
         }
     }
