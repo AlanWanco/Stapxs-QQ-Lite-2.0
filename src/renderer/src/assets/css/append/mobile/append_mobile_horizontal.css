@@ -1,5 +1,5 @@
-/* 移动端附加样式（横向） */
-@media (min-width: 501px) {
+/* 移动端附加样式（横向 - 大屏/桌面） */
+@media (min-width: 751px) {
     html {
         -webkit-tap-highlight-color: transparent;
     }
@@ -299,5 +299,19 @@
         font-size: 0.85rem;
         color: var(--color-font-1);
         margin-top: 5px;
+    }
+}
+
+/* 移动端附加样式（横向 - 平板，缩减侧边栏） */
+@media (min-width: 501px) and (max-width: 750px) {
+    .friend-list {
+        width: 250px !important;
+    }
+    .chat-pan {
+        left: 250px !important;
+    }
+    .home-body {
+        width: calc(100% - 250px) !important;
+        margin-left: 250px !important;
     }
 }
