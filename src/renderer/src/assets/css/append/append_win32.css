@@ -24,19 +24,7 @@ input {
     height: 14px;
 }
 
-.main-body > div {
-    margin-top: -35px;
-    height: calc(100% + 35px);
-}
-.main-body > ul {
-    margin-top: -35px;
-    height: calc(100% + 35px);
-    padding-left: 5px;
-}
-.main-body > div.friend-list > div:first-child {
-    margin-top: 50px; /* 15px + 35px titlebar */
-}
-
+/* 移除导致遮挡的负边距魔法 */
 .chat-pan.withBar {
     left: 275px;
     top: 0;
@@ -64,8 +52,8 @@ input {
     }
     .chat-pan.withBar {
         left: 60px !important;
-        height: calc(100% - 75px);
-        padding-top: 20px;
+        height: calc(100% - 35px);
+        padding-top: 35px;
     }
     .chat-pan.open.withBar {
         left: 80px !important;
@@ -78,23 +66,9 @@ input {
         height: calc(100% + 55px);
         margin-top: -20px;
     }
-    .friend-list > div:first-child {
-        margin: 55px 15px 0 10px !important;
-    }
-    .friend-list > div:first-child > div.small > div {
-        width: 35px;
-        height: 35px;
-        margin-right: 0;
-    }
     .friend-list.open > div:first-child > div.small > div {
         height: 44px;
         width: 44px;
-    }
-
-    .friend-list > div:first-child > div.small {
-        margin-top: -20px;
-        margin-left: 5px;
-        margin-bottom: 5px;
     }
 }
 
