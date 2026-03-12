@@ -59,10 +59,16 @@ input {
         padding-top: 25px !important;
         height: calc(100% - 37px) !important;
     }
+    .chat-pan {
+        left: 80px !important;
+    }
     .chat-pan.withBar {
         left: 80px !important;
         height: calc(100% - 35px);
         padding-top: 35px;
+    }
+    .chat-pan.open {
+        left: 300px !important;
     }
     .chat-pan.open.withBar {
         left: 300px !important;
@@ -90,10 +96,16 @@ input {
     .friend-list.open {
         width: 300px !important;
     }
+    .chat-pan {
+        left: 80px !important;
+    }
     .chat-pan.withBar {
         left: 80px !important;
         height: calc(100% - 35px);
         padding-top: 35px;
+    }
+    .chat-pan.open {
+        left: 300px !important;
     }
     .chat-pan.open.withBar {
         left: 300px !important;
