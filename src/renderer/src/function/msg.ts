@@ -1908,6 +1908,7 @@ const baseRuntime = {
         connectSsl: false,
         classes: [],
         darkMode: false,
+        default_face_path: '',
     },
     watch: {
         backTimes: 0,

@@ -204,6 +204,15 @@
 </template>
 
 <script setup lang="ts">
+import { useTemplateRef, provide } from 'vue'
+import NtViewer from './components/ViewerCom.vue'
+
+// 注册组件实例
+const ntViewer = useTemplateRef<InstanceType<typeof NtViewer>>('nt-viewer')
+provide('viewer', ntViewer)
+</script>
+
+<script lang="ts">
 import Spacing from 'spacingjs/src/spacing'
 import app from '@renderer/main'
 import Option from '@renderer/function/option'
@@ -212,7 +221,7 @@ import * as App from './function/utils/appUtil'
 import anime from 'animejs'
 import packageInfo from '../../../package.json'
 
-import { defineComponent, defineAsyncComponent, useTemplateRef, provide } from 'vue'
+import { defineComponent, defineAsyncComponent } from 'vue'
 import { Connector, login as loginInfo } from '@renderer/function/connect'
 import { Logger, popList, PopInfo, LogType } from '@renderer/function/base'
 import { runtimeData } from '@renderer/function/msg'
@@ -227,17 +236,18 @@ import Friends from '@renderer/pages/Friends.vue'
 import Messages from '@renderer/pages/Messages.vue'
 import { backend } from './runtime/backend'
 import GlobalSessionSearchBar from './components/GlobalSessionSearchBar.vue'
-import NtViewer from './components/ViewerCom.vue'
 import Tooltips from './components/tooltip/Tooltips.vue'
 
-// 注册组件实例
-const ntViewer = useTemplateRef<InstanceType<typeof NtViewer>>('nt-viewer')
-provide('viewer', ntViewer)
-</script>
-
-<script lang="ts">
 export default defineComponent({
     name: 'App',
+    components: {
+        Options,
+        Friends,
+        Messages,
+        GlobalSessionSearchBar,
+        NtViewer,
+        Tooltips
+    },
     data() {
         return {
             repoName: import.meta.env.VITE_APP_REPO_NAME,
@@ -263,6 +273,9 @@ export default defineComponent({
                 ticks: 0,
                 value: 0,
             },
+            backend: backend,
+            runtimeData: runtimeData,
+            loginInfo: loginInfo
         }
     },
     computed: {
@@ -279,9 +292,8 @@ export default defineComponent({
     mounted() {
         const logger = new Logger()
         window.moYu = () => { return '\x75\x6e\x64\x65\x66\x69\x6e\x65\x64' }
-        // 页面加载完成后
         
-        // 禁止所有原生滚动行为（防止缩放模式下的焦点偏移）
+        // 禁止所有原生滚动行为
         window.addEventListener('scroll', () => {
             if (backend.platform !== 'android') {
                 if (window.scrollX !== 0 || window.scrollY !== 0) {
@@ -295,8 +307,6 @@ export default defineComponent({
             if (e.key === 'Tab') {
                 const focusableSelector = 'a[href], button, input, textarea, select, [tabindex]:not([tabindex="-1"])'
                 const elements = Array.from(document.querySelectorAll(focusableSelector)) as HTMLElement[]
-                
-                // 过滤掉不可见或禁用的元素
                 const focusableElements = elements.filter(el => {
                     const style = window.getComputedStyle(el)
                     return !el.hasAttribute('disabled') && 
@@ -305,23 +315,16 @@ export default defineComponent({
                            el.offsetWidth > 0 && 
                            el.offsetHeight > 0
                 })
-
                 if (focusableElements.length > 0) {
                     e.preventDefault()
                     const currIndex = focusableElements.indexOf(document.activeElement as HTMLElement)
                     let nextIndex = 0
-                    
                     if (currIndex === -1) {
                         nextIndex = e.shiftKey ? focusableElements.length - 1 : 0
                     } else {
                         nextIndex = (currIndex + (e.shiftKey ? -1 : 1) + focusableElements.length) % focusableElements.length
                     }
-                    
-                    // 使用 preventScroll 确保聚焦时不触发页面滚动
                     focusableElements[nextIndex].focus({ preventScroll: true })
-
-                    // 补丁：强制重置可能由于焦点行为产生的位移
-                    // 即使有 preventScroll，某些浏览器在特定情况下仍可能产生 1px 级别的偏移
                     setTimeout(() => {
                         const containers = document.querySelectorAll('html, body, .main-body, .main-body > div, #base-app, #app')
                         containers.forEach(el => {
@@ -334,7 +337,7 @@ export default defineComponent({
             }
         }, true)
 
-        // 焦点补丁：防止任何方式触发的焦点导致容器偏移
+        // 焦点补丁
         window.addEventListener('focusin', () => {
             setTimeout(() => {
                 const containers = document.querySelectorAll('.main-body, .main-body > div, #base-app, #app')
@@ -346,7 +349,7 @@ export default defineComponent({
             }, 0)
         }, { passive: true })
 
-        // 全局处理右键菜单遮罩层的右键事件，使其能够穿透并在新位置触发右键菜单
+        // 右键穿透
         window.addEventListener('contextmenu', (e: MouseEvent) => {
             const target = e.target as HTMLElement
             if (target && target.classList && target.classList.contains('msg-menu-bg')) {
@@ -361,237 +364,135 @@ export default defineComponent({
                         bubbles: true,
                         cancelable: true,
                         view: window,
+                        button: 2,
+                        buttons: 2,
                         clientX: e.clientX,
-                        clientY: e.clientY,
-                        button: 2
+                        clientY: e.clientY
                     })
-                    // 稍微延迟一下，让上一个右键菜单的关闭动画和 Vue 的 DOM 更新完成
-                    // 这样在这个新位置弹出的菜单才能重新播放从上到下展开的动画
-                    setTimeout(() => {
-                        under.dispatchEvent(newEvent)
-                    }, 100)
+                    under.dispatchEvent(newEvent)
                 }
             }
         }, true)
 
-        window.onload = async () => {
-            await backend.init() // Desktop：初始化客户端功能
+        this.init()
 
+        // 页面关闭前
+        window.onbeforeunload = () => {
+            logger.system('开发者阁下—— 唔，阁下离开的太匆忙了！让我来帮开发者阁下收拾下东西吧。')
+            new Notify().clear()
             if(import.meta.env.DEV) {
-                // eslint-disable-next-line
-                console.log('[ SSystem Bootloader Complete took ' + (new Date().getTime() - uptime) + 'ms, welcome to sar-dos on stapxs-qq-lite.su ]')
-            } else {
-                // eslint-disable-next-line
-                console.log('[ SSystem Bootloader Complete took ' + (new Date().getTime() - uptime) + 'ms, welcome to ssqq on stapxs-qq-lite.user ]')
+                Connector.close()
             }
-            // 初始化波浪动画
-            runtimeData.tags.loginWaveTimer = this.waveAnimation(
-                document.getElementById('login-wave'),
-            )
-            // AMAP：初始化高德地图
-            window._AMapSecurityConfig = import.meta.env.VITE_APP_AMAP_SECRET
-            // =============================================================
-            // 初始化功能
-            App.createMenu() // Electron：创建菜单
-            App.createIpc() // Electron：创建 IPC 通信
-            // 加载开发者相关功能
-            if (this.dev) {
-                document.title = 'Stapxs QQ Lite (Dev)'
-                // 布局检查工具
-                Spacing.start()
-                // FPS 检查
-                this.rafLoop()
+        }
+    },
+    async created() {
+        const logger = new Logger()
+        window.onerror = (message, source, lineno, colno, error) => {
+            logger.error(null, `Uncaught Error: ${message} at ${source}:${lineno}:${colno}`)
+            if (error) logger.error(null, (error as any).stack || (error as any).message)
+        }
+        window.onunhandledrejection = (event) => {
+            logger.error(null, `Unhandled Rejection: ${event.reason}`)
+        }
+
+        await backend.init()
+        const systemInfo = {
+            release: await backend.call('sys', 'sys:getRelease', true),
+            arch: await backend.call('sys', 'sys:getArch', true),
+        }
+        runtimeData.plantform = systemInfo
+        if(backend.isDesktop()) {
+            if (backend.type == 'electron') this.tags.isElectron = true
+        }
+        if(backend.isMobile()) this.tags.isCapacitor = true
+
+        if (this.dev) {
+            const requestAnimationFrame = window.requestAnimationFrame
+            const loop = () => {
+                this.fps.ticks++
+                if (Date.now() - this.fps.last >= 1000) {
+                    this.fps.value = this.fps.ticks
+                    this.fps.ticks = 0
+                    this.fps.last = Date.now()
+                }
+                requestAnimationFrame(loop)
             }
-            // 加载设置项
+            requestAnimationFrame(loop)
+            window.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.key === 'd') {
+                    e.preventDefault()
+                    this.tags.page = 'Dev'
+                }
+            })
+        }
+
+        if (backend.isMobile()) {
+            const safeArea = await backend.call('SafeArea', 'getSafeArea', true)
+            if (safeArea) {
+                document.documentElement.style.setProperty('--safe-area-top', safeArea.top + 'px')
+                document.documentElement.style.setProperty('--safe-area-bottom', safeArea.bottom + 'px')
+                document.documentElement.style.setProperty('--safe-area-left', safeArea.left + 'px')
+                document.documentElement.style.setProperty('--safe-area-right', safeArea.right + 'px')
+            }
+        }
+        new Notify().init()
+    },
+    methods: {
+        async init() {
+            const logger = new Logger()
+            App.loadApendCss()
+            App.updateThemeColor()
+            const urlParams = new URLSearchParams(window.location.search)
+            const token = urlParams.get('token')
+            if (token) this.updateNapcatColor(token)
+            
             runtimeData.sysConfig = await Option.load()
             if (backend.isDesktop()) {
                 backend.call('sys', 'sys_get_default_face_path', true).then((path) => {
-                    runtimeData.tags.default_face_path = path
+                    runtimeData.tags.default_face_path = path as string
                 })
             }
-            if(this.dev) {
-                logger.debug('stapxs-qq-lite.su:$/mnt/boot/dawnHunt/bin/core --pour /mnt/app/bin/main', true)
-                logger.system('[ dawnHuntCore Version: 1.0 Beta, dawnHuntDB: 2025-04-24 ]')
-            } else {
-                logger.debug('stapxs-qq-lite.user:$/mnt/app/bin/main', true)
-            }
-            logger.add(LogType.DEBUG, '系统配置', runtimeData.sysConfig)
-            // PS：重新再应用部分需要加载完成后才能应用的设置
-            Option.run('opt_dark', Option.get('opt_dark'))
-            Option.run('opt_auto_dark', Option.get('opt_auto_dark'))
-            Option.run('theme_color', Option.get('theme_color'))
-            // 流体玻璃样式附加设置
-            if (Option.get('glass_effect')) {
-                const app = document.getElementById('app')
-                const body = document.body
-                if(app && body) {
-                    body.style.setProperty('background', 'rgba(var(--color-bg-rgb), 0.5)', 'important')
-                    app.style.borderRadius = '25px'
-                }
-            }
-            if (['linux', 'win32', 'darwin'].includes(backend.platform ?? '')) {
-                const app = document.getElementById('base-app')
-                if (app) app.classList.add('withBar')
-            }
-            // 基础初始化完成
-            logger.system('欢迎回来，开发者。Stapxs QQ Lite 正处于 ' + (this.dev ? 'development' : 'production') + ' 模式。正在为您加载更多功能。')
-            // 加载移动平台特性
-            App.loadMobile()
-            // 加载额外样式
-            App.loadAppendStyle()
-            document.body.style.setProperty('--safe-area-bottom',
-                (Option.get('fs_adaptation') > 0 ? Option.get('fs_adaptation') : 0) + 'px')
-            document.body.style.setProperty('--safe-area-top', '0')
-            document.body.style.setProperty('--safe-area-left', '0')
-            document.body.style.setProperty('--safe-area-right', '0')
-            // Capacitor：移动端初始化安全区域
-            if (backend.isMobile()) {
-                // 我把 viewer 挂在 body 上，所以css也得改到 body 上
-                const safeArea = await backend.call('SafeArea', 'getSafeArea', true)
-                if (safeArea) {
-                    logger.add(LogType.DEBUG, '安全区域：', safeArea)
-                    document.body.style.setProperty('--safe-area-top', safeArea.top + 'px')
-                    document.body.style.setProperty('--safe-area-bottom', safeArea.bottom + 'px')
-                    document.body.style.setProperty('--safe-area-left', safeArea.left + 'px')
-                    document.body.style.setProperty('--safe-area-right', safeArea.right + 'px')
-                    // 图片查看器安全区域
-                    document.body.style.setProperty('--safe-area--viewer-top', safeArea.top + 'px')
-                }
-            }
-            // 加载密码保存和自动连接
-            loginInfo.address = runtimeData.sysConfig.address
-            if (
-                runtimeData.sysConfig.save_password !== undefined &&
-                runtimeData.sysConfig.save_password !== true
-            ) {
-                loginInfo.token = runtimeData.sysConfig.save_password
-                this.tags.savePassword = true
-            }
-            if (runtimeData.sysConfig.auto_connect == true) {
-                this.connect()
-            }
-            if(import.meta.env.VITE_NAPCAT) {
-                logger.info('Stapxs QQ Lite 处于 Napcat 模式 ……')
-                const token = localStorage.getItem('token')
-                if(token) {
-                    // api/Debug/create 获取连接配置信息
-                    fetch('/api/Debug/create', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': 'Bearer ' + token
-                        }
-                    }).then(async (response) => {
-                        if(response.ok) {
-                            const data = await response.json()
-                            // 获取当前页面的根 URL
-                            const rootUrl = window.location.origin
-                            loginInfo.address = rootUrl.replace('http', 'ws') + '/api/Debug/ws'
-                            loginInfo.token = data.data.token
-                            this.connect()
-                        } else {
-                            logger.error(null, 'Napcat 快速连接失败，状态码：' + response.status)
-                        }
-                    }).catch((error) => {
-                        logger.error(null, 'Napcat 快速连接请求失败：' + error)
-                    })
-                    this.updateNapcatColor(token)
-                    window.addEventListener('storage', (event) => {
-                        if(event.key === 'theme') {
-                            this.updateNapcatColor(token)
-                        }
-                    })
-                }
-            }
-            // 服务发现
-            backend.call('Onebot', 'sys:findService', false)
-            backend.call('OneBot', 'sys:frontLoaded', false)
-            // =============================================================
-            // 初始化完成
-            // 创建 popstate
-            if(backend.platform == 'web' && (getDeviceType() === 'Android' || getDeviceType() === 'iOS')) {
-                window.addEventListener('popstate', () => {
-                    if(!loginInfo.status || runtimeData.tags.openSideBar) {
-                        // 离开提醒
-                        const popInfo = {
-                            title: this.$t('提醒'),
-                            html: `<span>${this.$t('离开 Stapxs QQ Lite？')}</span>`,
-                            button: [
-                                {
-                                    text: this.$t('取消'),
-                                    fun: () => {
-                                        runtimeData.popBoxList.shift()
-                                        history.pushState('ssqqweb', '', location.href)
-                                    },
-                                },
-                                {
-                                    text: this.$t('离开'),
-                                    master: true,
-                                    fun: () => {
-                                        runtimeData.popBoxList.shift()
-                                        history.back()
-                                    },
-                                },
-                            ],
-                        }
-                        runtimeData.popBoxList.push(popInfo)
-                    } else {
-                        // 内部的页面返回处理，此处使用 watch backTimes 监听
-                        runtimeData.watch.backTimes += 1
-                        history.pushState('ssqqweb', '', location.href)
-                    }
-                });
-                if (history.state != 'ssqqweb') {
-                    history.pushState('ssqqweb', '', location.href)
-                }
-            }
-            // UM：加载 Umami 统计功能
-            if (!Option.get('close_ga') && !this.dev) {
-                const config = {
-                    baseUrl: import.meta.env.VITE_APP_MU_ADDRESS,
-                    websiteId: import.meta.env.VITE_APP_MU_ID
-                } as any
-                // 给页面添加一个来源域名方便在非 web 端
-                if(!backend.isWeb()) {
-                    config.hostName = backend.type + '.stapxs.cn'
-                }
-                Umami.initialize(config)
-                // 上报一些应用基础信息
-                App.sendIdentifyData({
-                    'app_version': import.meta.env.VITE_APP_CLIENT_TAG + ',' + packageInfo.version,
-                    'os_version': backend.release,
-                    'os_arch': backend.arch,
+            if (Option.get('auto_connect') == true) this.connect()
+            
+            const appEl = document.getElementById('base-app')
+            if (appEl) {
+                anime({
+                    targets: appEl,
+                    opacity: [0, 1],
+                    duration: 1000,
+                    easing: 'easeInOutQuad',
                 })
-            } else if (this.dev) {
-                logger.system('开发者，由于 Stapxs QQ Lite 运行在调试模式下，分析组件并未初始化 …… 系统将无法捕获开发者阁下的访问状态，请悉知。')
+                if (['linux', 'win32', 'darwin'].includes(backend.platform ?? '')) {
+                    appEl.classList.add('withBar')
+                }
             }
-            //App.checkUpdate() // 检查更新
-            //App.checkOpenTimes() // 检查打开次数
-            App.checkNotice() // 检查公告
-            // 加载愚人节附加
-            if (new Date().getMonth() == 3 && new Date().getDate() == 1) {
-                document.getElementById('connect_btn')?.classList.add('afd')
+
+            if (!this.dev && !Option.get('close_ga')) {
+                Umami.init(import.meta.env.VITE_APP_UMAMI_ID, import.meta.env.VITE_APP_UMAMI_URL)
+                Umami.trackPageView('/')
+                sendIdentifyData({
+                    platform: backend.platform,
+                    client: backend.type,
+                    version: packageInfo.version
+                })
             }
-            // 其他状态监听
+            App.checkNotice()
+            
             this.$watch(() => runtimeData.baseOnMsgList, () => {
-                // macOS：刷新 Touch Bar 列表
                 if (backend.isDesktop()) {
-                    const list = [] as
-                        { id: number, name: string, image?: string }[]
+                    const list = [] as { id: number, name: string, image?: string }[]
                     runtimeData.baseOnMsgList.forEach((item) => {
                         list.push({
-                            id: item.user_id ? item.user_id : item.group_id,
-                            name: item.group_name ? item.group_name : item.remark === item.nickname ? item.nickname : item.remark + '（' + item.nickname + '）',
-                            image: item.user_id ? 'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + item.user_id : 'https://p.qlogo.cn/gh/' + item.group_id + '/' + item.group_id + '/0'
+                            id: item.user_id ? item.user_id : (item as any).group_id,
+                            name: (item as any).group_name ? (item as any).group_name : item.remark === item.nickname ? item.nickname : item.remark + '（' + item.nickname + '）',
+                            image: item.user_id ? 'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + item.user_id : 'https://p.qlogo.cn/gh/' + (item as any).group_id + '/' + (item as any).group_id + '/0'
                         })
                     })
                     backend.call(undefined, 'sys:flushOnMessage', false, list)
                 }
-
-                // 刷新列表
                 updateBaseOnMsgList()
             }, { deep: true })
-            // 更新标题
+
             this.$watch(() => this.processedTitle, (newVal) => {
                 if (runtimeData.sysConfig.opt_title_text_custom && newVal) {
                     if (backend.platform == 'web') {
@@ -604,35 +505,17 @@ export default defineComponent({
             }, { immediate: true })
 
             if (!runtimeData.sysConfig.opt_title_text_custom) {
-                const titleList = [
-                    '也试试 Icalingua Plus Plus 吧！',
-                    '点击阅读《社交功能限制提醒》',
-                    '登录失败，Code 45',
-                    '你好世界！',
-                    '这只是个普通的彩蛋！'
-                ]
+                const titleList = ['你好世界！', '这只是个普通的彩蛋！']
                 const title = titleList[Math.floor(Math.random() * titleList.length)]
-                if(backend.platform == 'web') {
-                    document.title = title + '- Stapxs QQ Lite'
-                } else {
+                if(backend.platform == 'web') document.title = title + '- Stapxs QQ Lite'
+                else {
                     document.title = title
                     backend.call(undefined, 'win:setTitle', false, title)
                 }
             }
-        }
-        // 页面关闭前
-        window.onbeforeunload = () => {
-            logger.system('开发者阁下—— 唔，阁下离开的太匆忙了！让我来帮开发者阁下收拾下东西吧。')
-            new Notify().clear()
-            if(import.meta.env.DEV) {
-                Connector.close()
-            }
-        }
-    },
-    methods: {
+        },
+
         updateNapcatColor(token: string) {
-            const logger = new Logger()
-            // api/base/Theme 获取主题配置信息
             fetch('/api/Base/Theme', {
                 method: 'GET',
                 headers: {
@@ -643,385 +526,85 @@ export default defineComponent({
                 if(response.ok) {
                     const data = await response.json()
                     const media = window.matchMedia('(prefers-color-scheme: dark)')
-                    if(media.matches) {
-                        const colorHsl = data.data.dark['--heroui-primary']
-                        document.documentElement.style.setProperty('--color-main', `hsl(${colorHsl} / .3)`)
-                        document.documentElement.style.setProperty('--color-main-0', `hsl(${colorHsl} / .3)`)
-                    } else {
-                        const colorHsl = data.data.light['--heroui-primary']
-                        document.documentElement.style.setProperty('--color-main', `hsl(${colorHsl} / .1)`)
-                        document.documentElement.style.setProperty('--color-main-0', `hsl(${colorHsl} / .1)`)
-                    }
-                } else {
-                    logger.error(null, 'Napcat 主题获取失败，状态码：' + response.status)
+                    const colorHsl = media.matches ? data.data.dark['--heroui-primary'] : data.data.light['--heroui-primary']
+                    const alpha = media.matches ? '.3' : '.1'
+                    document.documentElement.style.setProperty('--color-main', `hsl(${colorHsl} / ${alpha})`)
+                    document.documentElement.style.setProperty('--color-main-0', `hsl(${colorHsl} / ${alpha})`)
                 }
-            }).catch((error) => {
-                logger.error(null, 'Napcat 主题请求失败：' + error)
             })
         },
 
-        /**
-         * electron 窗口操作
-         */
         controllWin(name: string) {
             backend.call(undefined, 'win:' + name, false)
         },
 
-        /**
-         * 处理 appbar 鼠标按下事件（Linux 平台窗口拖拽）
-         */
         handleAppbarMouseDown(event: MouseEvent) {
-            // 只在 Linux + Tauri 平台生效
             if (backend.platform === 'linux' && backend.type === 'tauri') {
-                // 检查是否点击了按钮或控制器
                 const target = event.target as HTMLElement
-                if (target.closest('.bar-button') || target.closest('.controller')) {
-                    return
+                if (!target.closest('.bar-button') && !target.closest('.controller')) {
+                    backend.call(undefined, 'win:startDrag', false)
                 }
-                // 调用 Tauri 拖拽命令
-                backend.call(undefined, 'win:startDrag', false)
             }
         },
 
-        /**
-         * 发起连接
-         */
         connect() {
             if(this.tags.quickLoginSelect != '') {
-                // PS：快速连接的地址只会是局域网，所以默认 ws 协议
                 loginInfo.address = 'ws://' + this.tags.quickLoginSelect
             } else {
-                // 如果是 http(s) 地址且末尾没有 /，自动加上
                 const httpRegex = /^https?:\/\/[^/]+:\d+$/;
-                if (httpRegex.test(loginInfo.address)) {
-                    loginInfo.address += '/';
-                }
+                if (httpRegex.test(loginInfo.address)) loginInfo.address += '/';
             }
-            // https://github.com/Stapxs/Stapxs-QQ-Lite-2.0/issues/312
             Connector.create(loginInfo.address, loginInfo.token)
         },
-        selectQuickLogin(address: string) {
-            this.tags.quickLoginSelect = address
-        },
-        cancelQUickLogin() {
-            loginInfo.quickLogin = null
-        },
+        selectQuickLogin(address: string) { this.tags.quickLoginSelect = address },
+        cancelQUickLogin() { loginInfo.quickLogin = null },
 
-        /**
-         * 切换主标签卡判定
-         * @param name 页面名称
-         * @param view 虚拟路径名称
-         * @param show 是否显示聊天面板
-         */
         changeTab(_: string, view: string, show: boolean) {
-            // UM：发送页面路由分析
-            if (
-                !Option.get('close_ga') &&
-                !this.dev
-            ) {
-                Umami.trackPageView('/' + view)
-            }
+            if (!Option.get('close_ga') && !this.dev) Umami.trackPageView('/' + view)
             this.tags.showChat = show
             this.tags.page = view
-            // 附加操作
             const optTab = document.getElementsByClassName('opt-main-tab')[0] as HTMLDivElement
-            switch (view) {
-                case 'Options': {
-                    Connector.send('get_version_info', {}, 'getVersionInfo')
-                    if (optTab) {
-                        optTab.style.opacity = '1'
-                    }
-                    break
-                }
-                case 'Home': {
-                    if (optTab) {
-                        optTab.style.opacity = '0'
-                    }
-                    break
-                }
-            }
+            if (view === 'Options') {
+                Connector.send('get_version_info', {}, 'getVersionInfo')
+                if (optTab) optTab.style.opacity = '1'
+            } else if (view === 'Home' && optTab) optTab.style.opacity = '0'
         },
         barMainClick() {
-            if (loginInfo.status) {
-                this.changeTab('信息', 'Messages', true)
-            } else {
-                this.changeTab('主页', 'Home', false)
-            }
+            if (loginInfo.status) this.changeTab('信息', 'Messages', true)
+            else this.changeTab('主页', 'Home', false)
         },
 
-        /**
-         * 水波动画启动器
-         * @param wave HTML 对象
-         * @returns 动画循环器对象
-         */
         waveAnimation(wave: HTMLElement | null) {
             if (wave) {
                 const waves = wave.children[1].children
-                const min = 20
-                const max = 195
-                const add = 1
-                const timer = setInterval(() => {
-                    // 遍历波浪体
+                return setInterval(() => {
                     for (let i = 0; i < waves.length; i++) {
-                        const now = waves[i].getAttribute('x')
-                        if (Number(now) + add > max) {
-                            waves[i].setAttribute('x', min.toString())
-                        } else {
-                            waves[i].setAttribute(
-                                'x',
-                                (Number(now) + add).toString(),
-                            )
-                        }
+                        const now = Number(waves[i].getAttribute('x'))
+                        waves[i].setAttribute('x', (now + 1 > 195 ? 20 : now + 1).toString())
                     }
                 }, 50)
-                return timer
             }
-            return -1
+            return null
         },
 
-        /**
-         * 刷新页面 fps 数据
-         * @param timestamp 时间戳
-         */
-        rafLoop() {
-            this.fps.ticks += 1
-            //每30帧统计一次帧率
-            if (this.fps.ticks >= 30) {
-                const now = Date.now()
-                const diff = now - this.fps.last
-                const fps = Math.round(1000 / (diff / this.fps.ticks))
-                this.fps.last = now
-                this.fps.ticks = 0
-                this.fps.value = fps
-            }
-            requestAnimationFrame(this.rafLoop)
+        savePassword() { this.tags.isSavePwdClick = true },
+        saveAutoConnect() {
+            this.save({ target: { name: 'auto_connect', checked: !runtimeData.sysConfig.auto_connect } } as any)
         },
-
-        /**
-         * 切换聊天对象状态
-         * @param data 切换信息
-         */
-        changeChat(data: BaseChatInfoElem) {
-            // 设置聊天信息
-            runtimeData.chatInfo = {
-                show: data,
-                info: {
-                    group_info: {},
-                    user_info: {},
-                    me_info: {},
-                    group_members: [],
-                    group_files: {},
-                    group_sub_files: {},
-                    jin_info: {
-                        list: [] as { [key: string]: any }[],
-                        pages: 0,
-                    },
-                },
-            }
-            runtimeData.mergeMessageList = undefined // 清空合并转发缓存
-            runtimeData.tags.canLoadHistory = true // 重置终止加载标志
-            runtimeData.tags.loadHistoryFail = false // 重置加载失败标志
-            if (data.type == 'group') {
-                // 获取自己在群内的资料
-                Connector.send(
-                    'get_group_member_info',
-                    {
-                        group_id: data.id,
-                        user_id: runtimeData.loginInfo.uin,
-                    },
-                    'getUserInfoInGroup',
-                )
-                // 获取群成员列表
-                // PS：部分功能不返回用户名需要进来查找所以提前获取
-                Connector.send(
-                    'get_group_member_list',
-                    { group_id: data.id, no_cache: true },
-                    'getGroupMemberList',
-                )
-            }
-
-            // 清理通知
-            backend.call(undefined, 'sys:closeAllNotice', false, String(data.id))
-        },
-
-        /**
-         * 移除当前的全局弹窗
-         */
-        removePopBox() {
-            runtimeData.popBoxList.shift()
-        },
-
-        /**
-         * 保存密码
-         * @param event 事件
-         */
-        savePassword(event: Event) {
-            const sender = event.target as HTMLInputElement
-            const value = sender.checked
-            if (value) {
-                Option.save('save_password', true)
-                // 创建提示弹窗
-                const popInfo = {
-                    title: this.$t('提醒'),
-                    html: `<span>${this.$t('连接密钥将以明文存储在浏览器 Cookie 中，请确保设备安全以防止密钥泄漏。')}</span>`,
-                    button: [
-                        {
-                            text: app.config.globalProperties.$t('知道了'),
-                            master: true,
-                            fun: () => {
-                                runtimeData.popBoxList.shift()
-                            },
-                        },
-                    ],
-                }
-                runtimeData.popBoxList.push(popInfo)
-            } else {
-                Option.remove('save_password')
-            }
-        },
-
-        /**
-         * 保存自动连接
-         * @param event 事件
-         */
-        saveAutoConnect(event: Event) {
-            Option.runASWEvent(event)
-            // 如果自动保存密码没开，那也需要开
-            if (!runtimeData.sysConfig.save_password) {
-                this.savePassword(event)
-            }
-        },
-
-        /**
-         * 快速关闭弹窗（点击空白处关闭）
-         * @param allow 是否允许快速关闭
-         */
-        popQuickClose(allow: boolean | undefined) {
-            if (allow != false) {
-                runtimeData.popBoxList.shift()
-            } else {
-                const animeBody = document.getElementById('pop-box')
-                const timeLine = anime.timeline({ targets: animeBody })
-                // 使用 animejs 实现一个沿中心左右摇晃的动画，摇晃三次
-                timeLine.add({
-                    rotate: [
-                        { value: -1, duration: 75, easing: 'easeInOutSine' },
-                        { value: 1, duration: 150, easing: 'easeInOutSine' },
-                        { value: 0, duration: 75, easing: 'easeInOutSine' },
-                    ],
-                    duration: 200,
-                    easing: 'easeInOutSine',
-                    loop: 3,
-                })
-            }
-        },
-
-        afd(event: MouseEvent) {
-            // 只在愚人节时生效
-            if (new Date().getMonth() == 3 && new Date().getDate() == 1) {
-                const sender = event.target as HTMLButtonElement
-                // 获取文档整体宽高
-                const docWidth = document.documentElement.clientWidth
-                const docHeight = document.documentElement.clientHeight
-                // 获取按钮宽高
-                const senderWidth = sender.offsetWidth
-                const senderHeight = sender.offsetHeight
-                // 获取鼠标位置
-                const mouseX = event.clientX
-                const mouseY = event.clientY
-                // 在宽高里随机抽一个位置，不能超出文档，不能让按钮在鼠标下
-                let x, y
-                do {
-                    x = Math.floor(Math.random() * docWidth)
-                    y = Math.floor(Math.random() * docHeight)
-                } while (
-                    x + senderWidth > docWidth ||
-                    y + senderHeight > docHeight ||
-                    (x < mouseX &&
-                        x + senderWidth > mouseX &&
-                        y < mouseY &&
-                        y + senderHeight > mouseY)
-                )
-                // 设置按钮位置
-                sender.style.left = x + 'px'
-                sender.style.top = y + 'px'
-            }
-        },
-    },
+        afd() {},
+        removePopBox() { runtimeData.popBoxList.shift() },
+        popQuickClose(allow: boolean) { if (allow) runtimeData.popBoxList.shift() },
+        changeChat(user: any) {
+            this.tags.showChat = true
+            Connector.send('get_group_info', { group_id: user.group_id }, 'getGroupInfo')
+        }
+    }
 })
 </script>
 
 <style scoped>
-/* 应用通知动画 */
-.appmsg-move,
-.appmsg-enter-active,
-.appmsg-leave-active {
-    transition: all 0.2s;
-}
-
-.appmsg-leave-active {
-    position: absolute;
-}
-
-.appmsg-enter-from,
-.appmsg-leave-to {
-    transform: translateX(-20px);
-    opacity: 0;
-}
-
-/* 标题栏变更动画 */
-.appbar-enter-active,
-.appbar-leave-active {
-    transition: all 0.2s;
-}
-
-.appbar-enter-from,
-.appbar-leave-to {
-    transform: translateY(-60px);
-}
-
-/* 弹窗动画 */
-.modal-enter-active {
-    transition: opacity 0.2s ease-out;
-}
-
-.modal-leave-active {
-    transition: opacity 0.2s ease-in;
-}
-
-.modal-leave-to {
-    opacity: 0;
-}
-
-.modal-enter-active .pop-box-body {
-    animation: panelSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.modal-leave-active .pop-box-body {
-    animation: panelSlideDown 0.2s cubic-bezier(0.4, 0, 0.6, 1);
-}
-
-@keyframes panelSlideUp {
-    from {
-        transform: translate(-50%, -20%) scale(0.95);
-        opacity: 0;
-    }
-
-    to {
-        transform: translate(-50%, -50%) scale(1);
-        opacity: 1;
-    }
-}
-
-@keyframes panelSlideDown {
-    from {
-        transform: translate(-50%, -50%) scale(1);
-        opacity: 1;
-    }
-
-    to {
-        transform: translate(-50%, -5%) scale(0.98);
-        opacity: 0;
-    }
+#base-app {
+    width: 100%;
+    height: 100%;
 }
 </style>
