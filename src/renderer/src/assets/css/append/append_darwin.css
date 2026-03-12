@@ -25,7 +25,7 @@ body {
 }
 
 .friend-list {
-    padding-top: 20px;
+    padding-top: 0;
 }
 
 @media (max-width: 700px) {
