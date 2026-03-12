@@ -770,6 +770,10 @@ export async function loadAppendStyle() {
         }
     }
 }
+            })
+        }
+    }
+}
 
 /**
 * 初始化快速连接信息
