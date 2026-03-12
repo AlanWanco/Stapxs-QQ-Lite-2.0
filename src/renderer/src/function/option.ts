@@ -41,6 +41,8 @@ export const optDefault: { [key: string]: any } = {
     notice_group: {},
     auto_connect: false,
     local_emoji_folder: null,
+    global_proxy: 'http://127.0.0.1:7890',
+    url_parse_auto: true,
     // View
     language: 'zh-CN',
     opt_dark: false,

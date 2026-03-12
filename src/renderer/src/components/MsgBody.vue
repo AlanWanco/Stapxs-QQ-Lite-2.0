@@ -752,34 +752,36 @@ function getUserById(id: number): IUser | undefined {
                             bilibili: ['bilibili.com', 'b23.tv', 'bili2233.cn', 'acg.tv'],
                             music163: ['music.163.com', '163cn.tv'],
                         }
-                        for (const key in showLinkList) {
-                            if (showLinkList[key].some((item: string) => finaLink.includes(item))) {
-                                data = await linkView[key](finaLink)
-                            }
-                        }
-                        // 通用 og 解析
-                        if(!data) {
-                            if (!backend.isWeb()) {
-                                let html = await backend.call('Onebot', 'sys:getHtml', true, finaLink)
-                                if(html) {
-                                    const headEnd = html.indexOf('</head>')
-                                    html = html.slice(0, headEnd)
-                                    // 获取所有的 og meta 标签
-                                    const ogRegex = /<meta\s+property="og:([^"]+)"\s+content="([^"]+)"\s*\/?>/g
-                                    const ogTags = {} as {[key: string]: string}
-                                    let match: string[] | null
-                                    while ((match = ogRegex.exec(html)) !== null) {
-                                        ogTags[`og:${match[1]}`] = match[2]
-                                    }
-                                    data = ogTags
+                        if (runtimeData.sysConfig.url_parse_auto) {
+                            for (const key in showLinkList) {
+                                if (showLinkList[key].some((item: string) => finaLink.includes(item))) {
+                                    data = await linkView[key](finaLink)
                                 }
-                            } else {
-                                // 获取链接预览
-                                const response = await fetch(`${import.meta.env.VITE_APP_LINK_VIEW}/${encodeURIComponent(fistLink)}`)
-                                if(response.ok) {
-                                    const res = await response.json()
-                                    if (res.status === undefined && Object.keys(res).length > 0) {
-                                        data = res
+                            }
+                            // 通用 og 解析
+                            if(!data) {
+                                if (!backend.isWeb()) {
+                                    let html = await backend.call('Onebot', 'sys:getHtml', true, finaLink)
+                                    if(html) {
+                                        const headEnd = html.indexOf('</head>')
+                                        html = html.slice(0, headEnd)
+                                        // 获取所有的 og meta 标签
+                                        const ogRegex = /<meta\s+property="og:([^"]+)"\s+content="([^"]+)"\s*\/?>/g
+                                        const ogTags = {} as {[key: string]: string}
+                                        let match: string[] | null
+                                        while ((match = ogRegex.exec(html)) !== null) {
+                                            ogTags[`og:${match[1]}`] = match[2]
+                                        }
+                                        data = ogTags
+                                    }
+                                } else {
+                                    // 获取链接预览
+                                    const response = await fetch(`${import.meta.env.VITE_APP_LINK_VIEW}/${encodeURIComponent(fistLink)}`)
+                                    if(response.ok) {
+                                        const res = await response.json()
+                                        if (res.status === undefined && Object.keys(res).length > 0) {
+                                            data = res
+                                        }
                                     }
                                 }
                             }

@@ -13,6 +13,7 @@ import { openLink } from '@renderer/function/utils/appUtil'
 import { getDeviceType } from '@renderer/function/utils/systemUtil'
 import { linkView } from '../utils/linkViewUtil'
 import { backend } from '@renderer/runtime/backend'
+import { runtimeData } from '../msg'
 
 export class MsgBodyFuns {
     /**
@@ -240,8 +241,12 @@ export class MsgBodyFuns {
             if (json.app == 'com.tencent.miniapp_01' && info.name == '哔哩哔哩') {
                 backend.call('Onebot', 'sys:getFinalRedirectUrl', true, info.url)
                 .then((fistLink) => {
-                    linkView.bilibili(fistLink).then((result) => {
-                        card.$emit('page-view', fistLink, result)
+                    setTimeout(() => {
+                        if (runtimeData.sysConfig.url_parse_auto) {
+                            linkView.bilibili(fistLink).then((result) => {
+                                card.$emit('page-view', fistLink, result)
+                            })
+                        }
                     })
                 })
                 if (!backend.isWeb()) {

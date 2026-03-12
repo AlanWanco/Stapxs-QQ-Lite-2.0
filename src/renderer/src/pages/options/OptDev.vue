@@ -58,6 +58,56 @@
         </div>
 
         <div class="ss-card">
+            <header>{{ $t('高级选项') }}</header>
+            <div class="opt-item">
+                <div :class="checkDefault('global_proxy')" />
+                <font-awesome-icon :icon="['fas', 'network-wired']" />
+                <div>
+                    <span>{{ $t('全局代理地址') }}</span>
+                    <span>{{ $t('用于下载表情和自动解析网站，留空则不使用代理') }}</span>
+                </div>
+                <input v-model="runtimeData.sysConfig.global_proxy" class="ss-input"
+                    style="width: 150px" type="text" name="global_proxy" @keyup.enter="save">
+            </div>
+            <div class="opt-item">
+                <div :class="checkDefault('url_parse_auto')" />
+                <font-awesome-icon :icon="['fas', 'link']" />
+                <div>
+                    <span>{{ $t('自动解析外链') }}</span>
+                    <span>{{ $t('是否在聊天中自动解析国外站点卡片 (Twitter, YouTube 等)') }}</span>
+                </div>
+                <label class="ss-switch">
+                    <input v-model="runtimeData.sysConfig.url_parse_auto"
+                        type="checkbox" name="url_parse_auto" @change="save">
+                    <div>
+                        <div />
+                    </div>
+                </label>
+            </div>
+            <div v-if="backend.isDesktop()" class="opt-item">
+                <div :class="checkDefault('local_emoji_folder')" />
+                <font-awesome-icon :icon="['fas', 'folder']" />
+                <div>
+                    <span>{{ $t('自定义 QQ 表情路径') }}</span>
+                    <span>
+                        <template v-if="runtimeData.sysConfig.local_emoji_folder">
+                            {{ runtimeData.sysConfig.local_emoji_folder }}
+                        </template>
+                        <template v-else>
+                            {{ $t('文件树示例：/your_path/public/assets/qq_emoji/...') }}
+                        </template>
+                    </span>
+                </div>
+                <button
+                    style="width: 100px; font-size: 0.8rem"
+                    class="ss-button"
+                    @click="selectLocalEmojiFolder">
+                    {{ runtimeData.sysConfig.local_emoji_folder ? $t('重新选择') : $t('选择') }}
+                </button>
+            </div>
+        </div>
+
+        <div class="ss-card">
             <header>{{ $t('开发者选项') }}</header>
             <div class="opt-item">
                 <div :class="checkDefault('log_level')" />
@@ -867,6 +917,14 @@
                 }
                 runtimeData.popBoxList.push(popInfo)
             },
+            async selectLocalEmojiFolder() {
+                const folder = await backend.call('sys', 'sys:selectFolder', true)
+                if (folder) {
+                    runtimeData.sysConfig.local_emoji_folder = folder
+                    save('local_emoji_folder', folder)
+                    new PopInfo().add(PopType.INFO, this.$t('设置成功，将在下一次启动或刷新表情时生效。'))
+                }
+            }
         },
     })
 </script>

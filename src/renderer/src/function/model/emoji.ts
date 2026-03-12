@@ -9,6 +9,8 @@ import index from '@renderer/assets/img/qq-face/public/assets/qq_emoji/_index.js
 import app from '@renderer/main'
 import { Logger } from '../base'
 import { randomChoice } from '../utils/systemUtil'
+import { runtimeData } from '../msg'
+import { backend } from '@renderer/runtime/backend'
 
 export default class Emoji {
     static readonly apngMap = new Map<number, {super: boolean, suffix: number[]}>()
@@ -206,6 +208,17 @@ export default class Emoji {
     }
 
     private getNormalUrl(id: number): string {
+        const localFolder = runtimeData.sysConfig.local_emoji_folder
+        if (localFolder && backend.isDesktop()) {
+            if (backend.type === 'tauri') {
+                const path = `${localFolder}/public/assets/qq_emoji/${id}/apng/${id}.png`.replace(/\\/g, '/')
+                return `asset://${path}`
+            } else if (backend.type === 'electron') {
+                const path = `${localFolder}/public/assets/qq_emoji/${id}/apng/${id}.png`.replace(/\\/g, '/')
+                return `file://${path}`
+            }
+        }
+
         // 由于原开发者的远程服务器 (lib.stapxs.cn) 已失效，默认优先使用本地表情
         if (import.meta.env.VITE_LOCAL_FACE !== 'false')
             return `./img/qface/${id}.png`
@@ -215,6 +228,18 @@ export default class Emoji {
 
     private getSuperUrl(id: number, suffix?: number): string {
         const name = suffix ? `${id}_${suffix}` : `${id}`
+        
+        const localFolder = runtimeData.sysConfig.local_emoji_folder
+        if (localFolder && backend.isDesktop()) {
+            if (backend.type === 'tauri') {
+                const path = `${localFolder}/public/assets/qq_emoji/${id}/lottie/${name}.json`.replace(/\\/g, '/')
+                return `asset://${path}`
+            } else if (backend.type === 'electron') {
+                const path = `${localFolder}/public/assets/qq_emoji/${id}/lottie/${name}.json`.replace(/\\/g, '/')
+                return `file://${path}`
+            }
+        }
+        
         // 由于原开发者的远程服务器 (lib.stapxs.cn) 已失效，默认优先使用本地表情
         if (import.meta.env.VITE_LOCAL_FACE !== 'false')
             return `./img/qface/${name}.json`
