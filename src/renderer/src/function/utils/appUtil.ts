@@ -684,12 +684,12 @@ export async function loadAppendStyle() {
         const cssStype = document.getElementById('mobile-css')
 
         const width = window.innerWidth
-        const height = window.innerHeight
         if(cssStype) {
+            // 根据宽度加载互斥的布局，不再拼接字符串
             if(width > 750) {
-                cssStype.innerHTML = (width > height ? horizontalCss : (horizontalCss + verticalCss)) + appendCss
+                cssStype.innerHTML = horizontalCss + appendCss
             } else {
-                cssStype.innerHTML = horizontalCss + verticalCss + appendCss
+                cssStype.innerHTML = verticalCss + appendCss
             }
         }
 
