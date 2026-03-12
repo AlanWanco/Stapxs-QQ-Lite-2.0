@@ -752,6 +752,61 @@ pub async fn sys_save_image(url: String, folder: String, fileName: String) -> Re
 }
 
 #[command]
+pub async fn sys_download_and_extract_zip(
+    url: String,
+    dest: String,
+    proxy: Option<String>
+) -> Result<String, String> {
+    use std::io::Cursor;
+    use zip::ZipArchive;
+
+    info!("开始下载并解压: {}", url);
+    let mut client_builder = Client::builder()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+    
+    if let Some(proxy_url) = proxy {
+        if !proxy_url.is_empty() {
+             client_builder = client_builder.proxy(reqwest::Proxy::all(proxy_url).map_err(|e| e.to_string())?);
+        }
+    }
+    let client = client_builder.build().map_err(|e| e.to_string())?;
+
+    let response = client.get(url).send().await.map_err(|e| e.to_string())?;
+    let bytes = response.bytes().await.map_err(|e| e.to_string())?;
+
+    let reader = Cursor::new(bytes);
+    let mut archive = ZipArchive::new(reader).map_err(|e| e.to_string())?;
+
+    let dest_path = PathBuf::from(dest);
+    if !dest_path.exists() {
+        fs::create_dir_all(&dest_path).map_err(|e| e.to_string())?;
+    }
+
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i).map_err(|e| e.to_string())?;
+        let outpath = match file.enclosed_name() {
+            Some(path) => dest_path.join(path),
+            None => continue,
+        };
+
+        if file.name().ends_with('/') {
+            fs::create_dir_all(&outpath).map_err(|e| e.to_string())?;
+        } else {
+            if let Some(p) = outpath.parent() {
+                if !p.exists() {
+                    fs::create_dir_all(&p).map_err(|e| e.to_string())?;
+                }
+            }
+            let mut outfile = fs::File::create(&outpath).map_err(|e| e.to_string())?;
+            std::io::copy(&mut file, &mut outfile).map_err(|e| e.to_string())?;
+        }
+    }
+
+    info!("下载并解压完成");
+    Ok("success".to_string())
+}
+
+#[command]
 pub async fn sys_read_file_as_base64(data: String) -> Result<String, String> {
     use base64::{engine::general_purpose, Engine as _};
 

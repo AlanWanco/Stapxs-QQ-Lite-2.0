@@ -785,6 +785,14 @@ function getUserById(id: number): IUser | undefined {
                                     }
                                 }
                             }
+                        } else {
+                            // 提示解析已禁用
+                            this.pageViewInfo = {
+                                title: this.$t('链接解析已禁用'),
+                                desc: finaLink,
+                                url: finaLink,
+                                site: this.$t('外部链接')
+                            }
                         }
 
                         logger.add(LogType.DEBUG, 'Link View: ', data)

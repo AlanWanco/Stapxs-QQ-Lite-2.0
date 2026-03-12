@@ -6,8 +6,13 @@ input {
 }
 
 #base-app.withBar {
-    height: calc(100% - 35px);
-    padding-top: 35px;
+    height: calc(100% - 35px) !important;
+    padding-top: 0 !important;
+}
+
+.main-body {
+    margin-top: 35px !important;
+    height: calc(100% - 35px) !important;
 }
 
 .top-bar {
@@ -24,12 +29,11 @@ input {
     height: 14px;
 }
 
-/* 移除导致遮挡的负边距魔法 */
 .chat-pan.withBar {
     left: 275px;
-    top: 0;
-    height: calc(100% - 35px);
-    padding-top: 35px;
+    top: 35px !important;
+    height: calc(100% - 35px) !important;
+    padding-top: 0 !important;
 }
 .card-info-pan-bg {
     margin-top: -20px;

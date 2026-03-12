@@ -105,6 +105,20 @@
                     {{ runtimeData.sysConfig.local_emoji_folder ? $t('重新选择') : $t('选择') }}
                 </button>
             </div>
+            <div v-if="backend.isDesktop()" class="opt-item">
+                <font-awesome-icon :icon="['fas', 'download']" />
+                <div>
+                    <span>{{ $t('一键下载 QQ 表情') }}</span>
+                    <span>{{ $t('从 GitHub 下载官方表情包（约 40MB），建议配置代理') }}</span>
+                </div>
+                <button
+                    :disabled="downloading"
+                    style="width: 100px; font-size: 0.8rem"
+                    class="ss-button"
+                    @click="downloadOfficialFaces">
+                    {{ downloading ? $t('下载中...') : $t('下载') }}
+                </button>
+            </div>
         </div>
 
         <div class="ss-card">
@@ -374,6 +388,7 @@
                 dev: import.meta.env.DEV,
                 customCssLoaded: false,
                 customCssSize: '',
+                downloading: false,
             }
         },
         mounted() {
@@ -923,6 +938,32 @@
                     runtimeData.sysConfig.local_emoji_folder = folder
                     save('local_emoji_folder', folder)
                     new PopInfo().add(PopType.INFO, this.$t('设置成功，将在下一次启动或刷新表情时生效。'))
+                }
+            },
+            async downloadOfficialFaces() {
+                const folder = await backend.call('sys', 'sys:selectFolder', true)
+                if (!folder) return
+
+                this.downloading = true
+                new PopInfo().add(PopType.INFO, this.$t('正在下载表情包，请稍候...'))
+                
+                try {
+                    // 使用 master 分支的 zip
+                    const url = 'https://github.com/koishijs/QFace/archive/refs/heads/master.zip'
+                    const proxy = runtimeData.sysConfig.global_proxy
+                    const res = await backend.call('sys', 'sys_download_and_extract_zip', true, url, folder, proxy)
+                    
+                    if (res === 'success') {
+                        // GitHub zip 解压后通常会包含一个以仓库名+分支名命名的根目录
+                        // 例如 QFace-master
+                        runtimeData.sysConfig.local_emoji_folder = `${folder}/QFace-master`
+                        save('local_emoji_folder', runtimeData.sysConfig.local_emoji_folder)
+                        new PopInfo().add(PopType.INFO, this.$t('表情包下载并解压成功！'))
+                    }
+                } catch (e: any) {
+                    new PopInfo().add(PopType.ERR, this.$t('下载失败：') + e.message)
+                } finally {
+                    this.downloading = false
                 }
             }
         },

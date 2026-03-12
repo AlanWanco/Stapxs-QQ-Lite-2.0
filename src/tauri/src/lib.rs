@@ -216,6 +216,7 @@ pub fn run() {
             commands::sys::sys_flush_friend_search,
             commands::sys::sys_select_folder,
             commands::sys::sys_get_local_emojis,
+            commands::sys::sys_download_and_extract_zip,
             commands::sys::sys_read_file_as_base64,
             commands::onebot::onebot_connect,
             commands::onebot::onebot_send,

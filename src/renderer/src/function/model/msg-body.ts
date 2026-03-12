@@ -239,18 +239,26 @@ export class MsgBodyFuns {
                 type = 'tencent.map'
             }
             if (json.app == 'com.tencent.miniapp_01' && info.name == '哔哩哔哩') {
-                backend.call('Onebot', 'sys:getFinalRedirectUrl', true, info.url)
-                .then((fistLink) => {
-                    setTimeout(() => {
-                        if (runtimeData.sysConfig.url_parse_auto) {
-                            linkView.bilibili(fistLink).then((result) => {
-                                card.$emit('page-view', fistLink, result)
-                            })
-                        }
+                if (runtimeData.sysConfig.url_parse_auto) {
+                    backend.call('Onebot', 'sys:getFinalRedirectUrl', true, info.url)
+                    .then((fistLink) => {
+                        setTimeout(() => {
+                            if (runtimeData.sysConfig.url_parse_auto) {
+                                linkView.bilibili(fistLink).then((result) => {
+                                    card.$emit('page-view', fistLink, result)
+                                })
+                            }
+                        })
                     })
-                })
-                if (!backend.isWeb()) {
-                    return null
+                    if (!backend.isWeb()) {
+                        return null
+                    }
+                } else {
+                    // 关闭解析时，增加提示
+                    info.title = `[Card] ${info.title}`
+                    if (info.url) {
+                        info.desc = `${info.desc} (${info.url})`
+                    }
                 }
             }
 
