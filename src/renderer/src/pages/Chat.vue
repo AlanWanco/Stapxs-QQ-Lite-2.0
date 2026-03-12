@@ -105,6 +105,7 @@
                             @show-menu="showMsgMeun"
                             @scroll-to-msg="scrollToMsg"
                             @image-loaded="imgLoadedScroll"
+                            @right-move="replyMsg"
                             @send-poke="sendPoke" />
                         <!-- 其他通知消息 -->
                         <NoticeBody v-else-if="msgIndex.post_type === 'notice'"

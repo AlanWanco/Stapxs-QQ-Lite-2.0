@@ -16,8 +16,8 @@ body {
 }
 
 .main-body > ul {
-    height: 100%;
-    padding-top: 0;
+    height: calc(100% - 30px);
+    padding-top: 30px;
 }
 
 .opt-main > div:last-child {
