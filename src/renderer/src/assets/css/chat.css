@@ -19,15 +19,14 @@ input {
     overflow: hidden;
     display: flex;
     height: 100%;
-    left: 371px;
+    width: 100%;
     z-index: 2;
-    right: 0;
     top: 0;
+    left: 0;
 }
 .chat-pan.withBar {
-    height: 100%;
-    top: 40px; /* 加上顶部栏高度 */
-    height: calc(100% - 40px);
+    top: var(--top-bar-height) !important;
+    height: calc(100% - var(--top-bar-height)) !important;
 }
 .chat-pan.full {
     height: 100%;
@@ -1978,10 +1977,10 @@ div.tiny-session-body > div:nth-child(3) > div > svg {
         height: calc(100% - 75px - var(--safe-area-bottom));
         left: 80px !important;
     }
-    .chat-pan.withBar {
-        height: calc(100% - 115px);
-        top: 40px;
-    }
+.chat-pan.withBar {
+    top: var(--top-bar-height) !important;
+    height: calc(100% - var(--top-bar-height)) !important;
+}
     .chat-pan.open {
         transform: translateX(220px);
     }

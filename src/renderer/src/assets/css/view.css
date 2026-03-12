@@ -1,3 +1,6 @@
+:root {
+    --top-bar-height: 40px;
+}
 html,
 body {
     font-family: Helvetica, Arial, Verdana, Tahoma, sans-serif;
@@ -89,7 +92,7 @@ textarea:focus {
     flex-direction: row;
     position: relative; /* 改为相对定位，占据 flex 空间 */
     display: flex;
-    height: 40px;
+    height: var(--top-bar-height);
     width: 100%;
     z-index: 999;
     flex-shrink: 0;
