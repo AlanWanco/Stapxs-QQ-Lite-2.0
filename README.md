@@ -34,19 +34,20 @@
       - 修复了全平台按下 Tab 键导致界面向上偏移错位的问题（实现了手动焦点管理与禁止原生滚动）
       - 修复了表情块和外部框架没有对齐的问题
       - [Android]自动重连 
+    - **2026-03-12**
+      - [tauri]修复了鼠标放到消息列表上hover效果没有生效的问题
 
-## TODO feats
-- 使用新版onebot ws流式协议传输文件
-- [Electron/tauri/web]剪贴板里有文件时在聊天窗口粘贴文件可以调用onebot ws流式协议传输文件
-- [Android]安卓版icon符合Google制定的APK ICON规范
-- [Electron/tauri/web]按shift+↑/↓切换上一条下一条发送消息 只有当前session可用（防止记录文件太长）F5或者重开就用不了了 可以在设置里打开关闭
-- [Electron/tauri/web]ctrl+↑/↓切换聊天框
-- **对齐Stapxs-QQ-lite-X的相关新功能与重构**
+## TODO Features
+[ ] 使用新版onebot ws流式协议传输文件
+[ ] [Electron/tauri/web]剪贴板里有文件时在聊天窗口粘贴文件可以调用onebot ws流式协议传输文件
+[ ] [Android]安卓版icon符合Google制定的APK ICON规范
+[ ] [Electron/tauri/web]按shift+↑/↓切换上一条下一条发送消息 只有当前session可用（防止记录文件太长）F5或者重开就用不了了 可以在设置里打开关闭
+[ ] [Electron/tauri/web]ctrl+↑/↓切换聊天框
+[ ] **对齐Stapxs-QQ-lite-X的相关新功能与重构**
 
-## 已发现的问题
+## Known Bugs
 - Android 端在缩放模式下键盘弹出导致的布局缩进问题
 - [tauri]上部程序框遮住了导航栏上部和消息/联系人列表上部 设置页不受影响 web不受影响
-- [tauri]鼠标放到消息列表上hover效果似乎没有生效
 - [Android]唤出键盘之后 无论是底部导航栏还是输入框 都变成可以向上滑动了
 - [低优先级/tauri]字体缩放功能在tauri客户端上好像没起作用
 - [低优先级]单条回复有点问题（图片太高？寻求更多错误样本）
