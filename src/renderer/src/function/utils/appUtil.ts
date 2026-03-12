@@ -573,7 +573,11 @@ export async function loadMobile() {
         }
         // 键盘
         backend.call('Keyboard', 'setAccessoryBarVisible', false, { isVisible: false })
-        backend.call('Keyboard', 'setResizeMode', false, { mode: 'none' })
+        if (backend.platform == 'ios') {
+            backend.call('Keyboard', 'setResizeMode', false, { mode: 'none' })
+        } else if (backend.platform == 'android') {
+            backend.call('Keyboard', 'setResizeMode', false, { mode: 'native' })
+        }
         backend.addListener('Keyboard', 'keyboardWillShow', async (info: KeyboardInfo) => {
             const keyboardHeight = info.keyboardHeight
 
@@ -604,8 +608,9 @@ export async function loadMobile() {
             // 改为使用 iOS 类似的底部避让逻辑
             const baseApp = document.getElementById('base-app')
             if(baseApp && backend.platform == 'android') {
-                const offset = `calc(${keyboardHeight}px / var(--scale-custom, 1))`
-                baseApp.style.setProperty('--safe-area-bottom', offset)
+                // 对于 Android，由于某些系统自带了平移避让(Pan)或者我们无法精确计算软键盘的系统边距，
+                // 直接操作 safe-area-bottom 会导致双倍顶起并漏出灰色背景。
+                // 我们不再强制改变全局高度，只限制滑动。如果仍然被遮挡，可以在聊天框组件内部对 scroll 进行到底。
                 
                 // 为了防止安卓整体滑动，依旧给body加上 hidden
                 const html = document.getElementsByTagName('html')[0]
@@ -634,12 +639,6 @@ export async function loadMobile() {
                 }
             }
             if(backend.platform == 'android') {
-                const baseApp = document.getElementById('base-app')
-                const safeArea = await backend.call('SafeArea', 'getSafeArea', true)
-                if (safeArea && baseApp) {
-                    baseApp.style.setProperty('--safe-area-bottom', safeArea.bottom + 'px')
-                }
-
                 const html = document.getElementsByTagName('html')[0]
                 const body = document.getElementsByTagName('body')[0]
                 if(html && body) {
