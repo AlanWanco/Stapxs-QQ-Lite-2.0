@@ -16,6 +16,7 @@ body {
     height: calc(100% / var(--scale-custom, 1));
     /* 字体缩放 */
     font-size: calc(16px * var(--scale-font, 1));
+    overscroll-behavior: none; /* 防止安卓页面滚动 */
 }
 input::placeholder {
     color: var(--color-font-2);

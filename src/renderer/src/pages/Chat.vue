@@ -772,6 +772,7 @@ import { Img } from '@renderer/function/model/img'
             }
         },
         async mounted() {
+            window.addEventListener('click', this.handleOutsideClick)
             // 消息列表刷新
             this.updateList(this.list.length, 0)
             // PS：由于监听 list 本身返回的新旧值是一样，于是监听 length（反正也只要知道长度）
@@ -798,7 +799,17 @@ import { Img } from '@renderer/function/model/img'
                 this.resizeMainInput()
             })
         },
+        beforeUnmount() {
+            window.removeEventListener('click', this.handleOutsideClick)
+        },
         methods: {
+            handleOutsideClick(event: MouseEvent) {
+                const target = event.target as HTMLElement
+                const atTag = document.querySelector('.at-tag.show')
+                if (atTag && !atTag.contains(target)) {
+                    this.choiceAt(undefined)
+                }
+            },
             resizeMainInput(target?: HTMLTextAreaElement | HTMLInputElement | null) {
                 let input = target ?? (document.getElementById('main-input') as HTMLTextAreaElement | HTMLInputElement | null)
                 input = input ?? (document.getElementById('main-input-ex') as HTMLTextAreaElement | HTMLInputElement | null)
