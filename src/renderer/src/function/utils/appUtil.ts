@@ -686,7 +686,7 @@ export async function loadAppendStyle() {
         const width = window.innerWidth
         const height = window.innerHeight
         if(cssStype) {
-            if(width > 600) {
+            if(width > 750) {
                 cssStype.innerHTML = (width > height ? horizontalCss : (horizontalCss + verticalCss)) + appendCss
             } else {
                 cssStype.innerHTML = horizontalCss + verticalCss + appendCss
