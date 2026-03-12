@@ -105,6 +105,9 @@ export const backend = {
         this.release = releaseData?.release || ''
         this.arch = releaseData?.arch || undefined
 
+        // [Debug] 添加平台检测日志
+        console.log(`[Debug Platform] Backend Type: ${this.type}, Platform: ${this.platform}, Arch: ${this.arch}, Release: ${this.release}`);
+
         if(this.type == 'web' && !this.platform) {
             this.platform = 'web'
         }

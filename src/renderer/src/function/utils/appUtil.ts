@@ -684,6 +684,9 @@ export async function loadAppendStyle() {
         const cssStype = document.getElementById('mobile-css')
 
         const width = window.innerWidth
+        const mode = width > 750 ? 'Desktop/Tablet(Horizontal)' : 'Mobile/Tablet(Vertical)'
+        console.log(`[Debug Layout] Scope: updateCss, Window Width: ${width}, Platform: ${backend.platform}, Arch: ${backend.arch}, Current Mode: ${mode}`)
+
         if(cssStype) {
             // 基础集注入，由 CSS 文件内部的 Media Query 管理断点
             cssStype.innerHTML = horizontalCss + verticalCss + appendCss
