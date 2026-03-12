@@ -10,11 +10,10 @@
 -->
 
 <template>
-    <div id="chat-pan"
+        <div id="chat-pan"
         v-move="chatMoveOptions"
         :class="'chat-pan' +
-            (runtimeData.tags.openSideBar ? ' open' : '') +
-            (['linux', 'win32', 'darwin'].includes(backend.platform ?? '') ? ' withBar' : '')"
+            (runtimeData.tags.openSideBar ? ' open' : '')"
         :style="`background-image: url(${runtimeData.sysConfig.chat_background});`"
         @v-move-right.prevent="exitWin()">
         <slot name="chat-extra" />

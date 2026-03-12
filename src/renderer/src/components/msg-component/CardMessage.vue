@@ -66,7 +66,7 @@
                     const div = document.createElement('div')
                     // 构建 HTML
                     const html = '<p>' + info.title +
-                        '</p>' + '<span>' + info.desc + '</span>' +
+                        '</p><span onclick="navigator.clipboard.writeText(this.innerText); new PopInfo().add(PopType.INFO, \'' + app.config.globalProperties.$t('已复制') + '\')" style="cursor: pointer; user-select: text; pointer-events: all;">' + info.desc + '</span>' +
                         '<img style="' + (info.preview === undefined ? 'display:none' : '') + '" src="' + info.preview + '">' +
                         (info.name? '<div><img src="' + info.icon + '"><span>' + info.name + '</span></div>': '')
                     div.className = 'msg-json'
@@ -74,6 +74,18 @@
                     div.dataset.url = info.url
                     div.dataset.urlOpenType = info.urlOpenType
                     div.innerHTML = html
+
+                    // 让底部那一行（带图标和应用名的）可以点击，其余区域不可点击
+                    const footer = div.querySelector('div:nth-child(4)')
+                    if (footer) {
+                        footer.style.pointerEvents = 'all'
+                        footer.style.cursor = 'pointer'
+                        footer.onclick = (e) => {
+                            e.stopPropagation()
+                            ViewFuns.cardClick(div.id)
+                        }
+                    }
+                    div.style.pointerEvents = 'none'
                     // 附加信息
                     if (Object.keys(data.append).length > 0) {
                         // 将 append 里的信息附加到 div 上
