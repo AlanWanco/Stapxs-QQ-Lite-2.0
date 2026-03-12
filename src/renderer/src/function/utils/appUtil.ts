@@ -685,15 +685,10 @@ export async function loadAppendStyle() {
 
         const width = window.innerWidth
         if(cssStype) {
-            if(width > 750) {
-                // 桌面或平板模式，只加载横向样式
-                cssStype.innerHTML = horizontalCss + appendCss
-            } else {
-                // 手机模式，加载为手机优化的样式组合
-                cssStype.innerHTML = horizontalCss + verticalCss + appendCss
-            }
+            // 基础集注入，由 CSS 文件内部的 Media Query 管理断点
+            cssStype.innerHTML = horizontalCss + verticalCss + appendCss
         }
-
+        
         if(backend.isDesktop()) {
             backend.call(undefined, 'win:maximize', false)
             const topBar = document.getElementsByClassName('top-bar')[0] as HTMLElement
