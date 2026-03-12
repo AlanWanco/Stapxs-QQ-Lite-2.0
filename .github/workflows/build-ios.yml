@@ -1,6 +1,7 @@
 name: 构建 iOS
 
 on:
+    workflow_dispatch:
     workflow_call:
         inputs:
             version:
