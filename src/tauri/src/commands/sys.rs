@@ -752,15 +752,32 @@ pub async fn sys_save_image(url: String, folder: String, fileName: String) -> Re
 }
 
 #[command]
+pub fn sys_get_default_face_path(app: AppHandle) -> Result<String, String> {
+    let path = app.path().app_data_dir().map_err(|e| e.to_string())?
+        .join("qface");
+    if !path.exists() {
+        fs::create_dir_all(&path).map_err(|e| e.to_string())?;
+    }
+    Ok(path.to_string_lossy().to_string())
+}
+
+#[command]
 pub async fn sys_download_and_extract_zip(
+    app: AppHandle,
     url: String,
-    dest: String,
+    dest: Option<String>,
     proxy: Option<String>
 ) -> Result<String, String> {
     use std::io::Cursor;
     use zip::ZipArchive;
 
-    info!("开始下载并解压: {}", url);
+    let dest_path = if let Some(d) = dest {
+        PathBuf::from(d)
+    } else {
+        app.path().app_data_dir().map_err(|e| e.to_string())?.join("qface")
+    };
+
+    info!("开始下载并解压: {} 到 {:?}", url, dest_path);
     let mut client_builder = Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
     
@@ -777,7 +794,6 @@ pub async fn sys_download_and_extract_zip(
     let reader = Cursor::new(bytes);
     let mut archive = ZipArchive::new(reader).map_err(|e| e.to_string())?;
 
-    let dest_path = PathBuf::from(dest);
     if !dest_path.exists() {
         fs::create_dir_all(&dest_path).map_err(|e| e.to_string())?;
     }
@@ -803,7 +819,7 @@ pub async fn sys_download_and_extract_zip(
     }
 
     info!("下载并解压完成");
-    Ok("success".to_string())
+    Ok(dest_path.to_string_lossy().to_string())
 }
 
 #[command]

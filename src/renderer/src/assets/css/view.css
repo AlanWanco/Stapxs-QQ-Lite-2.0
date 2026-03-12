@@ -52,31 +52,33 @@ textarea:focus {
 .mac-controller {
     -webkit-app-region: drag;
     z-index: 100;
-    position: absolute;
+    position: relative;
     width: 100%;
     height: 30px;
+    flex-shrink: 0;
 }
 
 .dev-bar {
     transition: opacity 0.3s;
     background: var(--color-bg-yellow);
     display: flex;
-    align-items: end;
+    align-items: center;
     justify-content: center;
     color: var(--color-font-2);
     font-size: 0.7rem;
     box-shadow: 0 0 10px var(--color-shader);
-    position: absolute;
+    position: relative;
     width: 100%;
-    padding: 10px 0;
+    padding: 5px 0;
     z-index: 100;
-    height: calc(var(--safe-area-top) + 10px);
+    height: auto;
+    flex-shrink: 0;
 }
 .dev-bar.win {
-    background: transparent !important;
-    width: calc(100% - 180px);
+    background: var(--color-bg-yellow) !important;
+    width: 100%;
     box-shadow: unset;
-    left: 90px;
+    left: 0;
 }
 
 .top-bar {
@@ -140,10 +142,39 @@ textarea:focus {
     color: #fff;
 }
 
-#app,
-#base-app {
+#app {
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
     height: 100%;
+}
+
+#base-app {
+    flex: 1;
+    overflow: hidden;
+    height: 100%;
+    transition: transform 0.2s;
+}
+#base-app.no-touch {
+    transform: rotate(180deg);
+    padding-bottom: 30px;
+}
+#base-app.withBar {
+    /* 彻底弃用 padding-top 方案，改由 flex 布局自动处理 */
+    height: 100%;
+}
+
+.top-bar {
+    -webkit-app-region: drag;
+    box-shadow: 0 0 10px 0 rgb(0 0 0 / 28%);
+    background: var(--color-card-2);
+    flex-direction: row;
+    position: relative; /* 改为相对定位，占据 flex 空间 */
+    display: flex;
+    height: 40px;
+    width: 100%;
+    z-index: 999;
+    flex-shrink: 0;
 }
 #base-app {
     transition: transform 0.2s;

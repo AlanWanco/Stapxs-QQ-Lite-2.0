@@ -208,8 +208,13 @@ export default class Emoji {
     }
 
     private getNormalUrl(id: number): string {
-        const localFolder = runtimeData.sysConfig.local_emoji_folder
-        if (localFolder && backend.isDesktop()) {
+        const localFolder = runtimeData.sysConfig.official_face_folder
+        const defaultPath = runtimeData.tags.default_face_path
+        const downloaded = runtimeData.sysConfig.official_face_downloaded
+        const isCustom = runtimeData.sysConfig.official_face_folder_custom
+        
+        // 1. 用户自定义路径 (仅当开启自定义开关时)
+        if (isCustom && localFolder && backend.isDesktop()) {
             if (backend.type === 'tauri') {
                 const path = `${localFolder}/public/assets/qq_emoji/${id}/apng/${id}.png`.replace(/\\/g, '/')
                 return `asset://${path}`
@@ -218,19 +223,31 @@ export default class Emoji {
                 return `file://${path}`
             }
         }
+        
+        // 2. 默认隐藏目录 (仅当已下载且未开启自定义时)
+        if (!isCustom && downloaded && defaultPath && backend.isDesktop()) {
+            const path = `${defaultPath}/QFace-master/public/assets/qq_emoji/${id}/apng/${id}.png`.replace(/\\/g, '/')
+            return `asset://${path}`
+        }
 
-        // 由于原开发者的远程服务器 (lib.stapxs.cn) 已失效，默认优先使用本地表情
+        // 3. 内置表情 (如果开启了打包)
         if (import.meta.env.VITE_LOCAL_FACE !== 'false')
             return `./img/qface/${id}.png`
-        else
-            return `https://lib.stapxs.cn/download/stapxs-qq-lite/qq_emoji/${id}/apng/${id}.png`
+        else {
+            // 4. 远程显示兜底 (GitHub Raw)
+            return `https://raw.githubusercontent.com/koishijs/QFace/master/public/assets/qq_emoji/${id}/apng/${id}.png`
+        }
     }
 
     private getSuperUrl(id: number, suffix?: number): string {
         const name = suffix ? `${id}_${suffix}` : `${id}`
+        const localFolder = runtimeData.sysConfig.official_face_folder
+        const defaultPath = runtimeData.tags.default_face_path
+        const downloaded = runtimeData.sysConfig.official_face_downloaded
+        const isCustom = runtimeData.sysConfig.official_face_folder_custom
         
-        const localFolder = runtimeData.sysConfig.local_emoji_folder
-        if (localFolder && backend.isDesktop()) {
+        // 1. 用户自定义路径
+        if (isCustom && localFolder && backend.isDesktop()) {
             if (backend.type === 'tauri') {
                 const path = `${localFolder}/public/assets/qq_emoji/${id}/lottie/${name}.json`.replace(/\\/g, '/')
                 return `asset://${path}`
@@ -239,12 +256,20 @@ export default class Emoji {
                 return `file://${path}`
             }
         }
+
+        // 2. 默认隐藏目录
+        if (!isCustom && downloaded && defaultPath && backend.isDesktop()) {
+            const path = `${defaultPath}/QFace-master/public/assets/qq_emoji/${id}/lottie/${name}.json`.replace(/\\/g, '/')
+            return `asset://${path}`
+        }
         
-        // 由于原开发者的远程服务器 (lib.stapxs.cn) 已失效，默认优先使用本地表情
+        // 3. 内置表情
         if (import.meta.env.VITE_LOCAL_FACE !== 'false')
             return `./img/qface/${name}.json`
-        else
-            return `https://lib.stapxs.cn/download/stapxs-qq-lite/qq_emoji/${id}/lottie/${name}.json`
+        else {
+            // 4. 远程显示兜底
+            return `https://raw.githubusercontent.com/koishijs/QFace/master/public/assets/qq_emoji/${id}/lottie/${name}.json`
+        }
     }
 }
 

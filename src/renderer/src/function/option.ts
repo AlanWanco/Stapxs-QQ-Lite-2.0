@@ -40,8 +40,11 @@ export const optDefault: { [key: string]: any } = {
     save_password: '',
     notice_group: {},
     auto_connect: false,
+    official_face_folder: null,
+    official_face_folder_custom: false,
+    official_face_downloaded: false,
     local_emoji_folder: null,
-    global_proxy: 'http://127.0.0.1:7890',
+    global_proxy: '',
     url_parse_auto: true,
     // View
     language: 'zh-CN',

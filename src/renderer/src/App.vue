@@ -390,6 +390,11 @@ export default defineComponent({
             }
             // 加载设置项
             runtimeData.sysConfig = await Option.load()
+            if (backend.isDesktop()) {
+                backend.call('sys', 'sys_get_default_face_path', true).then((path) => {
+                    runtimeData.tags.default_face_path = path
+                })
+            }
             if(this.dev) {
                 logger.debug('stapxs-qq-lite.su:$/mnt/boot/dawnHunt/bin/core --pour /mnt/app/bin/main', true)
                 logger.system('[ dawnHuntCore Version: 1.0 Beta, dawnHuntDB: 2025-04-24 ]')

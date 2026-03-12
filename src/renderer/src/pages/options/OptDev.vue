@@ -64,7 +64,7 @@
                 <font-awesome-icon :icon="['fas', 'network-wired']" />
                 <div>
                     <span>{{ $t('全局代理地址') }}</span>
-                    <span>{{ $t('用于下载表情和自动解析网站，留空则不使用代理') }}</span>
+                    <span>{{ $t('用于下载表情和自动解析网站（范例：http://127.0.0.1:7890），留空则不使用') }}</span>
                 </div>
                 <input v-model="runtimeData.sysConfig.global_proxy" class="ss-input"
                     style="width: 150px" type="text" name="global_proxy" @keyup.enter="save">
@@ -84,14 +84,45 @@
                     </div>
                 </label>
             </div>
-            <div v-if="backend.isDesktop()" class="opt-item">
-                <div :class="checkDefault('local_emoji_folder')" />
-                <font-awesome-icon :icon="['fas', 'folder']" />
+            
+            <!-- QQ 官方表情管理 -->
+            <div class="opt-item">
+                <font-awesome-icon :icon="['fas', 'face-smile']" />
                 <div>
-                    <span>{{ $t('自定义 QQ 表情路径') }}</span>
+                    <span>{{ $t('QQ 官方表情管理') }}</span>
+                    <span>{{ $t('下载或配置官方小黄脸表情资源') }}</span>
+                </div>
+                <button
+                    :disabled="downloading"
+                    style="width: 100px; font-size: 0.8rem"
+                    class="ss-button"
+                    @click="downloadOfficialFaces">
+                    {{ downloading ? $t('下载中...') : $t('一键下载') }}
+                </button>
+            </div>
+            <div v-if="backend.isDesktop()" class="opt-item">
+                <div :class="checkDefault('official_face_folder_custom')" />
+                <font-awesome-icon :icon="['fas', 'sliders']" />
+                <div>
+                    <span>{{ $t('自定义官方表情目录') }}</span>
+                    <span>{{ $t('开启后将使用手动指定的目录而非应用内置下载目录') }}</span>
+                </div>
+                <label class="ss-switch">
+                    <input v-model="runtimeData.sysConfig.official_face_folder_custom"
+                        type="checkbox" name="official_face_folder_custom" @change="save">
+                    <div>
+                        <div />
+                    </div>
+                </label>
+            </div>
+            <div v-if="backend.isDesktop() && runtimeData.sysConfig.official_face_folder_custom" class="opt-item">
+                <div :class="checkDefault('official_face_folder')" />
+                <font-awesome-icon :icon="['fas', 'folder-tree']" />
+                <div>
+                    <span>{{ $t('官方表情自定义路径') }}</span>
                     <span>
-                        <template v-if="runtimeData.sysConfig.local_emoji_folder">
-                            {{ runtimeData.sysConfig.local_emoji_folder }}
+                        <template v-if="runtimeData.sysConfig.official_face_folder">
+                            {{ runtimeData.sysConfig.official_face_folder }}
                         </template>
                         <template v-else>
                             {{ $t('文件树示例：/your_path/public/assets/qq_emoji/...') }}
@@ -101,22 +132,24 @@
                 <button
                     style="width: 100px; font-size: 0.8rem"
                     class="ss-button"
-                    @click="selectLocalEmojiFolder">
-                    {{ runtimeData.sysConfig.local_emoji_folder ? $t('重新选择') : $t('选择') }}
+                    @click="selectOfficialFaceFolder">
+                    {{ runtimeData.sysConfig.official_face_folder ? $t('重新选择') : $t('选择') }}
                 </button>
             </div>
+
+            <!-- 本地图片表情包 -->
             <div v-if="backend.isDesktop()" class="opt-item">
-                <font-awesome-icon :icon="['fas', 'download']" />
+                <div :class="checkDefault('local_emoji_folder')" />
+                <font-awesome-icon :icon="['fas', 'folder-open']" />
                 <div>
-                    <span>{{ $t('一键下载 QQ 表情') }}</span>
-                    <span>{{ $t('从 GitHub 下载官方表情包（约 40MB），建议配置代理') }}</span>
+                    <span>{{ $t('本地图片表情路径') }}</span>
+                    <span>{{ $t('用于设置聊天面板“本地表情”选项卡的图片目录') }}</span>
                 </div>
                 <button
-                    :disabled="downloading"
                     style="width: 100px; font-size: 0.8rem"
                     class="ss-button"
-                    @click="downloadOfficialFaces">
-                    {{ downloading ? $t('下载中...') : $t('下载') }}
+                    @click="selectLocalEmojiFolder">
+                    {{ runtimeData.sysConfig.local_emoji_folder ? $t('重新选择') : $t('选择') }}
                 </button>
             </div>
         </div>
@@ -932,36 +965,41 @@
                 }
                 runtimeData.popBoxList.push(popInfo)
             },
+            async selectOfficialFaceFolder() {
+                const folder = await backend.call('sys', 'sys:selectFolder', true)
+                if (folder) {
+                    runtimeData.sysConfig.official_face_folder = folder
+                    save('official_face_folder', folder)
+                    new PopInfo().add(PopType.INFO, this.$t('设置成功，将在刷新表情后生效。'))
+                }
+            },
             async selectLocalEmojiFolder() {
                 const folder = await backend.call('sys', 'sys:selectFolder', true)
                 if (folder) {
                     runtimeData.sysConfig.local_emoji_folder = folder
                     save('local_emoji_folder', folder)
-                    new PopInfo().add(PopType.INFO, this.$t('设置成功，将在下一次启动或刷新表情时生效。'))
+                    new PopInfo().add(PopType.INFO, this.$t('本地表情路径已更新。'))
                 }
             },
             async downloadOfficialFaces() {
-                const folder = await backend.call('sys', 'sys:selectFolder', true)
-                if (!folder) return
-
                 this.downloading = true
-                new PopInfo().add(PopType.INFO, this.$t('正在下载表情包，请稍候...'))
+                new PopInfo().add(PopType.INFO, this.$t('正在下载表情包并解压到内部目录，请稍候...'))
                 
                 try {
                     // 使用 master 分支的 zip
                     const url = 'https://github.com/koishijs/QFace/archive/refs/heads/master.zip'
                     const proxy = runtimeData.sysConfig.global_proxy
-                    const res = await backend.call('sys', 'sys_download_and_extract_zip', true, url, folder, proxy)
+                    // 不传 dest，由后端决定默认位置
+                    const res = await backend.call('sys', 'sys_download_and_extract_zip', true, url, null, proxy)
                     
-                    if (res === 'success') {
-                        // GitHub zip 解压后通常会包含一个以仓库名+分支名命名的根目录
-                        // 例如 QFace-master
-                        runtimeData.sysConfig.local_emoji_folder = `${folder}/QFace-master`
-                        save('local_emoji_folder', runtimeData.sysConfig.local_emoji_folder)
-                        new PopInfo().add(PopType.INFO, this.$t('表情包下载并解压成功！'))
+                    if (res) {
+                        runtimeData.tags.default_face_path = res
+                        runtimeData.sysConfig.official_face_downloaded = true
+                        save('official_face_downloaded', true)
+                        new PopInfo().add(PopType.INFO, this.$t('表情包已下载到内置目录并应用！'))
                     }
                 } catch (e: any) {
-                    new PopInfo().add(PopType.ERR, this.$t('下载失败：') + e.message)
+                    new PopInfo().add(PopType.ERR, this.$t('下载失败：') + (e.message ?? e))
                 } finally {
                     this.downloading = false
                 }

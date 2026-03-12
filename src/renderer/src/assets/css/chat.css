@@ -25,8 +25,8 @@ input {
     top: 0;
 }
 .chat-pan.withBar {
-    height: calc(100% - 40px);
-    top: 40px;
+    height: 100%;
+    top: 0;
 }
 .chat-pan.full {
     height: 100%;
