@@ -669,14 +669,25 @@ import { VueCompData } from '../elements/vueComp'
 export async function loadAppendStyle() {
     const platform = backend.platform
     logger.info('正在装载补充样式……')
+    
+    // [Debug] 记录样式加载开始
+    console.log(`[Debug Style] Starting loadAppendStyle. Platform: ${platform}, Type: ${backend.type}, Arch: ${backend.arch}`)
+    
     if(platform != undefined) {
+        const cssPath = `@renderer/assets/css/append/append_${platform}.css`
+        console.log(`[Debug Style] Attempting to load platform CSS: ${cssPath}`)
+        
         import(`@renderer/assets/css/append/append_${platform}.css`)
             .then(() => {
                 logger.info(`${platform} 平台附加样式加载完成`)
+                console.log(`[Debug Style] Successfully loaded: ${cssPath}`)
             })
-            .catch(() => {
+            .catch((err) => {
                 logger.info('未找到对应平台的附加样式：' + platform)
+                console.log(`[Debug Style] Failed to load: ${cssPath}, Error:`, err)
             })
+    } else {
+        console.log('[Debug Style] No platform defined, skipping platform-specific CSS')
     }
 
     // 添加手机端样式
@@ -689,26 +700,37 @@ export async function loadAppendStyle() {
 
         if(cssStype) {
             // 基础集注入，由 CSS 文件内部的 Media Query 管理断点
+            console.log(`[Debug Style] Injecting CSS - horizontal length: ${horizontalCss?.length || 0}, vertical length: ${verticalCss?.length || 0}`)
             cssStype.innerHTML = horizontalCss + verticalCss + appendCss
+            console.log(`[Debug Style] CSS injected successfully. Total length: ${cssStype.innerHTML.length}`)
+        } else {
+            console.log('[Debug Style] mobile-css element not found!')
         }
         
         if(backend.isDesktop()) {
+            console.log('[Debug Style] Desktop detected, maximizing window...')
             backend.call(undefined, 'win:maximize', false)
             const topBar = document.getElementsByClassName('top-bar')[0] as HTMLElement
             if(topBar) {
                 topBar.style.display = 'none'
+                console.log('[Debug Style] Top bar hidden')
             }
         }
     }
     if(backend.isMobile()) {
+        console.log('[Debug Style] Mobile detected, creating mobile-css tag...')
         const styleTag = document.createElement('style')
         styleTag.id = 'mobile-css'
         document.head.appendChild(styleTag)
+        console.log('[Debug Style] mobile-css tag created, calling updateCss...')
         updateCss()
         // 屏幕旋转事件处理
         window.addEventListener('resize', () => {
+            console.log('[Debug Layout] Window resize detected, calling updateCss...')
             updateCss()
         })
+    } else {
+        console.log(`[Debug Style] Not mobile (type: ${backend.type}), skipping mobile CSS`)
     }
 
     // UI 2.0 附加样式
