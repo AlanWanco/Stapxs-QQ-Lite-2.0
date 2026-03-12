@@ -38,12 +38,12 @@
       - [tauri]修复了鼠标放到消息列表上hover效果没有生效的问题
 
 ## TODO Features
-[] 使用新版onebot ws流式协议传输文件
-[] [Electron/tauri/web]剪贴板里有文件时在聊天窗口粘贴文件可以调用onebot ws流式协议传输文件
-[] [Android]安卓版icon符合Google制定的APK ICON规范
-[] [Electron/tauri/web]按shift+↑/↓切换上一条下一条发送消息 只有当前session可用（防止记录文件太长）F5或者重开就用不了了 可以在设置里打开关闭
-[] [Electron/tauri/web]ctrl+↑/↓切换聊天框
-[] **对齐Stapxs-QQ-lite-X的相关新功能与重构**
+- [ ] 使用新版onebot ws流式协议传输文件
+- [ ] [Electron/tauri/web]剪贴板里有文件时在聊天窗口粘贴文件可以调用onebot ws流式协议传输文件
+- [ ] [Android]安卓版icon符合Google制定的APK ICON规范
+- [ ] [Electron/tauri/web]按shift+↑/↓切换上一条下一条发送消息 只有当前session可用（防止记录文件太长）F5或者重开就用不了了 可以在设置里打开关闭
+- [ ] [Electron/tauri/web]ctrl+↑/↓切换聊天框
+- [ ] **对齐Stapxs-QQ-lite-X的相关新功能与重构**
 
 ## Known Bugs
 - Android 端在缩放模式下键盘弹出导致的布局缩进问题
