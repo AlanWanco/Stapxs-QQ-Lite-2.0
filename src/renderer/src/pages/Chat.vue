@@ -104,7 +104,6 @@
                             @show-menu="showMsgMeun"
                             @scroll-to-msg="scrollToMsg"
                             @image-loaded="imgLoadedScroll"
-                            @left-move="replyMsg"
                             @send-poke="sendPoke" />
                         <!-- 其他通知消息 -->
                         <NoticeBody v-else-if="msgIndex.post_type === 'notice'"
@@ -135,8 +134,7 @@
                             :data="msgIndex"
                             @scroll-to-msg="scrollToMsg"
                             @show-menu="showMsgMeun"
-                            @image-loaded="imgLoadedScroll"
-                            @left-move="replyMsg" />
+                            @image-loaded="imgLoadedScroll" />
                     </template>
                 </TransitionGroup>
             </template>
