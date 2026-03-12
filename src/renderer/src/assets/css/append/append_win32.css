@@ -81,18 +81,28 @@ input {
     }
 }
 
+/* Windows 小窗口模式 - 保持 80px/300px 可切换侧边栏（与 700px 一致） */
 @media (max-width: 500px) {
-    .chat-pan.withBar {
-        padding-top: 0;
-        left: 0 !important;
+    .friend-list {
+        transition: width 0.3s;
+        width: 80px !important;
     }
-    .friend-list > div:first-child {
-        margin: 80px 15px 0 10px !important;
+    .friend-list.open {
+        width: 300px !important;
+    }
+    .chat-pan.withBar {
+        left: 80px !important;
+        height: calc(100% - 35px);
+        padding-top: 35px;
+    }
+    .chat-pan.open.withBar {
+        left: 300px !important;
+    }
+    .chat-info {
+        width: calc(100% - 90px);
+        margin: calc(50vh - 20px) 0 0 20px !important;
     }
     .chat-info-pan {
         height: calc(100% + 95px);
-    }
-    .chat-info {
-        margin: calc(50vh - 20px) 0 -20px 0 !important;
     }
 }
