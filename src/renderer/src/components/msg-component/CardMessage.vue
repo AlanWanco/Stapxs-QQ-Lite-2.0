@@ -39,6 +39,7 @@
 
 <script lang="ts">
     import app from '@renderer/main'
+    import Option from '@renderer/function/option'
 
     import { defineComponent } from 'vue'
     import { MsgBodyFuns as ViewFuns } from '@renderer/function/model/msg-body'
@@ -64,10 +65,11 @@
                 try {
                     const info = data.app
                     const div = document.createElement('div')
+                    const isCloseBrowser = Option.get('close_browser')
                     // 构建 HTML
                     const html = '<p>' + info.title +
-                        '</p><span onclick="navigator.clipboard.writeText(this.innerText); new PopInfo().add(PopType.INFO, \'' + app.config.globalProperties.$t('已复制') + '\')" style="cursor: pointer; user-select: text; pointer-events: all;">' + info.desc + '</span>' +
-                        '<img style="' + (info.preview === undefined ? 'display:none' : '') + '" src="' + info.preview + '">' +
+                        '</p><span onclick="navigator.clipboard.writeText(this.innerText); new PopInfo().add(PopType.INFO, \'' + app.config.globalProperties.$t('已复制') + '\')" style="cursor: ' + (isCloseBrowser ? 'default' : 'pointer') + '; user-select: text; pointer-events: ' + (isCloseBrowser ? 'none' : 'all') + ';">' + info.desc + '</span>' +
+                        '<img style="' + (info.preview === undefined ? 'display:none' : '') + '; cursor: pointer;" src="' + info.preview + '" onclick="ViewFuns.cardClick(\'json-' + id + '\')">' +
                         (info.name? '<div><img src="' + info.icon + '"><span>' + info.name + '</span></div>': '')
                     div.className = 'msg-json'
                     div.id = 'json-' + id

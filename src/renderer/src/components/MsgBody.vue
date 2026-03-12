@@ -58,9 +58,7 @@
                     }).format(getViewTime(getViewTime(data.time))) }}
                 </a>
             </header>
-            <div v-move="moveOptions"
-                @v-move-left.prevent="$emit('leftMove', data)"
-                @v-move-right.prevent="$emit('rightMove', data)">
+            <div @mouseleave="hiddenUserInfo">
                 <!-- 消息体 -->
                 <template v-if="data.message.length === 0">
                     <span class="msg-text" style="opacity: 0.5">{{ $t('空消息') }}</span>
@@ -421,35 +419,7 @@ const emit = defineEmits<{
 
 const msgMain = useTemplateRef<HTMLDivElement>('msgMain')
 
-const moveOptions: VMoveOptions<HTMLDivElement> = {
-    moveHook: (_, move: number) => {
-        const target = msgMain.value!
-        target.style.transform = 'translateX(' + move + 'px)'
-    },
-    endHook: (_) => {
-        const target = msgMain.value!
-
-        target.style.transform = ''
-        target.style.transition = 'all 0.3'
-    },
-    leftLimit: {
-        value: runtimeData.inch * 0.75,
-        type: 'px'
-    },
-    rightLimit: {
-        value: runtimeData.inch * 0.75,
-        type: 'px'
-    },
-    moveCondition: {
-        minMove: {
-            value: runtimeData.inch * 0.5,
-            type: 'px'
-        }
-    }
-}
-
 //#endregion
-
 //#region == 工具函数 ================================================================
 function getAtMember(id: number): IUser | number {
     const re = getUserById(id) ?? id
@@ -899,6 +869,9 @@ function getUserById(id: number): IUser | undefined {
             textClick(event: Event) {
                 const target = event.target as HTMLElement
                 if (target.dataset.link) {
+                    // 如果禁用了外部浏览器打开，则不执行任何操作
+                    if (Option.get('close_browser')) return
+                    
                     // 点击了链接
                     const link = target.dataset.link
                     openLink(link)
