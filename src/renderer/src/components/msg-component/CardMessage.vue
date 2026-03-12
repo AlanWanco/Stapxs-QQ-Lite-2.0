@@ -20,7 +20,6 @@
             v-html="View.buildXML(item.data, item.id, id)" />
         <div v-else>
             <div v-if="info?.type == 'default'"
-                @click="View.cardClick('json-' + id)"
                 v-html="buildJSON(info, id)" />
             <div v-else-if="info?.type == 'tencent.map'"
                 v-once
@@ -64,41 +63,32 @@
             buildJSON(data: any, id: string) {
                 try {
                     const info = data.app
+                    
+                    // 构建简化后的 HTML: [Card] + 预览名 + 描述 + 源地址 + 图片
+                    const html = '<span>[Card] ' + info.title + '</span><br>' +
+                        '<span>' + info.desc + '</span><br>' +
+                        '<span>' + info.url + '</span>' +
+                        (info.preview ? '<br><img src="' + info.preview + '" style="max-width: 100%; border-radius: 7px; margin-top: 5px;">' : '')
+                    
                     const div = document.createElement('div')
-                    const isCloseBrowser = Option.get('close_browser')
-                    // 构建 HTML
-                    const html = '<p>' + info.title +
-                        '</p><span onclick="navigator.clipboard.writeText(this.innerText); new PopInfo().add(PopType.INFO, \'' + app.config.globalProperties.$t('已复制') + '\')" style="cursor: ' + (isCloseBrowser ? 'default' : 'pointer') + '; user-select: text; pointer-events: ' + (isCloseBrowser ? 'none' : 'all') + ';">' + info.desc + '</span>' +
-                        '<img style="' + (info.preview === undefined ? 'display:none' : '') + '; cursor: pointer;" src="' + info.preview + '" onclick="ViewFuns.cardClick(\'json-' + id + '\')">' +
-                        (info.name? '<div><img src="' + info.icon + '"><span>' + info.name + '</span></div>': '')
-                    div.className = 'msg-json'
                     div.id = 'json-' + id
-                    div.dataset.url = info.url
-                    div.dataset.urlOpenType = info.urlOpenType
                     div.innerHTML = html
-
-                    // 让底部那一行（带图标和应用名的）可以点击，其余区域不可点击
-                    const footer = div.querySelector('div:nth-child(4)')
-                    if (footer) {
-                        footer.style.pointerEvents = 'all'
-                        footer.style.cursor = 'pointer'
-                        footer.onclick = (e) => {
-                            e.stopPropagation()
-                            ViewFuns.cardClick(div.id)
-                        }
+                    
+                    // 点击卡片容器整体打开链接
+                    div.onclick = (e) => {
+                        e.stopPropagation()
+                        ViewFuns.cardClick(div.id)
                     }
-                    div.style.pointerEvents = 'none'
+
                     // 附加信息
                     if (Object.keys(data.append).length > 0) {
-                        // 将 append 里的信息附加到 div 上
                         for (const key in data.append) {
                             div.dataset[key] = data.append[key]
                         }
                     }
-                    // 返回
                     return div.outerHTML
                 } catch (ex) {
-                    return ('<span v-else class="msg-unknown">( ' + app.config.globalProperties.$t('解析消息错误') + ': json )</span>')
+                    return ('<span class="msg-unknown">( ' + app.config.globalProperties.$t('解析消息错误') + ': json )</span>')
                 }
             },
 
