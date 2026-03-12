@@ -1,5 +1,21 @@
-:root {
-    --top-bar-height: 40px;
+html,
+body {
+    font-family: Helvetica, Arial, Verdana, Tahoma, sans-serif;
+    background: var(--color-main);
+    position: relative;
+    text-autospace: normal;
+    user-select: none;
+    overflow: hidden;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+    /* 界面缩放 */
+    transform-origin: top left;
+    transform: scale(var(--scale-custom, 1));
+    width: calc(100% / var(--scale-custom, 1));
+    height: calc(100% / var(--scale-custom, 1));
+    /* 字体缩放 */
+    font-size: var(--font-size-custom, 14px);
 }
 html,
 body {
@@ -56,7 +72,9 @@ textarea:focus {
 .mac-controller {
     -webkit-app-region: drag;
     z-index: 100;
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 30px;
     flex-shrink: 0;
@@ -92,7 +110,7 @@ textarea:focus {
     flex-direction: row;
     position: relative; /* 改为相对定位，占据 flex 空间 */
     display: flex;
-    height: var(--top-bar-height);
+    height: 40px;
     width: 100%;
     z-index: 999;
     flex-shrink: 0;
