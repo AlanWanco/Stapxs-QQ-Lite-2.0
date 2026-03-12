@@ -19,14 +19,18 @@ input {
     overflow: hidden;
     display: flex;
     height: 100%;
-    width: 100%;
+    left: 371px;
     z-index: 2;
+    right: 0;
     top: 0;
-    left: 0;
 }
-.chat-pan.withBar {
-    top: var(--top-bar-height) !important;
-    height: calc(100% - var(--top-bar-height)) !important;
+/* 桌面端顶部空间占位，避免被 top-bar 遮挡 */
+.top-spacer {
+    height: 40px;
+    width: 100%;
+    background: transparent;
+    pointer-events: none;
+    flex-shrink: 0;
 }
 .chat-pan.full {
     height: 100%;

@@ -13,11 +13,12 @@
         <div id="chat-pan"
         v-move="chatMoveOptions"
         :class="'chat-pan' +
-            (runtimeData.tags.openSideBar ? ' open' : '') +
-            (['linux', 'win32', 'darwin'].includes(backend.platform ?? '') ? ' withBar' : '')"
+            (runtimeData.tags.openSideBar ? ' open' : '')"
         :style="`background-image: url(${runtimeData.sysConfig.chat_background});`"
         @v-move-right.prevent="exitWin()">
         <slot name="chat-extra" />
+        <!-- 桌面端顶部空间占位，避免被 top-bar 遮挡 -->
+        <div v-if="['linux', 'win32'].includes(backend.platform ?? '')" class="top-spacer"></div>
         <!-- 聊天基本信息 -->
         <div class="info" @click="closeAllPanels">
             <font-awesome-icon :icon="['fas', 'bars-staggered']" @click="openLeftBar" />
