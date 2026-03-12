@@ -48,6 +48,8 @@ export const optDefault: { [key: string]: any } = {
     url_parse_auto: true,
     custom_title_text: 'Stapxs QQ Lite v{version} - Hello, {nickname}',
     opt_title_text_custom: false,
+    opt_dark: false,
+    opt_auto_dark: true,
     // View
     theme_color: 0,
     opt_auto_win_color: false,

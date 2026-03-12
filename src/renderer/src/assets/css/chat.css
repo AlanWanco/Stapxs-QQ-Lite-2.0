@@ -26,7 +26,8 @@ input {
 }
 .chat-pan.withBar {
     height: 100%;
-    top: 0;
+    top: 40px; /* 加上顶部栏高度 */
+    height: calc(100% - 40px);
 }
 .chat-pan.full {
     height: 100%;
@@ -1703,7 +1704,7 @@ input {
     transform-origin: bottom;
     transform: scaleY(0);
     transition: all 0.3s;
-    border-radius: 7px;
+    border-radius: 4px;
     overflow-y: scroll;
     max-height: 25vh;
     padding: 0;
@@ -1718,7 +1719,7 @@ input {
 }
 .at-tag > div {
     align-items: center;
-    border-radius: 4px; /* Reduced for Android */
+    border-radius: 2px;
     cursor: pointer;
     padding: 10px;
     display: flex;
