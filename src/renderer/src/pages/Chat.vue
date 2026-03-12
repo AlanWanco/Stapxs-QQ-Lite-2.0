@@ -14,7 +14,7 @@
         v-move="chatMoveOptions"
         :class="'chat-pan' +
             (runtimeData.tags.openSideBar ? ' open' : '') +
-            (['linux', 'win32'].includes(backend.platform ?? '') ? ' withBar' : '')"
+            (['linux', 'win32', 'darwin'].includes(backend.platform ?? '') ? ' withBar' : '')"
         :style="`background-image: url(${runtimeData.sysConfig.chat_background});`"
         @v-move-right.prevent="exitWin()">
         <slot name="chat-extra" />
@@ -410,7 +410,7 @@
         <MergePan ref="mergePan" @show-menu="showMsgMeun" />
         <!-- 消息右击菜单 -->
         <Teleport to="body">
-            <div :class="'msg-menu' + (['linux', 'win32'].includes(backend.platform ?? '') ? ' withBar' : '')">
+            <div :class="'msg-menu' + (['linux', 'win32', 'darwin'].includes(backend.platform ?? '') ? ' withBar' : '')">
                 <div v-show="tags.showMsgMenu" class="msg-menu-bg" @click="closeMsgMenu" />
                 <div id="msgMenu" :class="tags.showMsgMenu ?
                     'ss-card msg-menu-body show' : 'ss-card msg-menu-body'">

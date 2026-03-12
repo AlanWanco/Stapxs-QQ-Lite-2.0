@@ -120,7 +120,7 @@ body {
     font-size: 0.75rem;
 }
 .friend-body:hover {
-    background: transparent !important;
+    background: var(--color-card-2) !important;
 }
 .friend-body > div > div a.time {
     font-size: 0.7rem;

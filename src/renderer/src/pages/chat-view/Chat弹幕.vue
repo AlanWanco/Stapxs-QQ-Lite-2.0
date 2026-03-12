@@ -13,7 +13,7 @@
         :class="
             'chat-pan' +
                 (runtimeData.tags.openSideBar ? ' open' : '') +
-                (['linux', 'win32'].includes(backend.platform ?? '') ? ' withBar' : '')
+                (['linux', 'win32', 'darwin'].includes(backend.platform ?? '') ? ' withBar' : '')
         ">
         <div class="danmu-pan">
             <vue-danmaku

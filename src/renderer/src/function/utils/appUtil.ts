@@ -602,9 +602,13 @@ export async function loadMobile() {
             // 调整整个 HTML 的高度
             // PS：仅用于解决 Android 在全屏沉浸式下键盘遮挡问题
             const html = document.getElementsByTagName('html')[0]
-            if(html && backend.platform == 'android') {
-                html.style.height = `calc((100% - ${keyboardHeight + safeArea.top}px) / var(--scale-custom, 1))`
+            const body = document.getElementsByTagName('body')[0]
+            if(html && body && backend.platform == 'android') {
+                const height = `calc((100% - ${keyboardHeight + safeArea.top}px) / var(--scale-custom, 1))`
+                html.style.height = height
+                body.style.height = height
                 html.style.overflow = 'hidden'
+                body.style.overflow = 'hidden'
             }
         })
         backend.addListener('Keyboard', 'keyboardWillHide', async () => {
@@ -627,8 +631,12 @@ export async function loadMobile() {
             // 调整整个 HTML 的高度
             // PS：仅用于解决 Android 在全屏沉浸式下键盘遮挡问题
             const html = document.getElementsByTagName('html')[0]
-            if(html && backend.platform == 'android') {
+            const body = document.getElementsByTagName('body')[0]
+            if(html && body && backend.platform == 'android') {
                 html.style.height = ''
+                body.style.height = ''
+                html.style.overflow = ''
+                body.style.overflow = ''
             }
         })
         // 状态栏（Android）

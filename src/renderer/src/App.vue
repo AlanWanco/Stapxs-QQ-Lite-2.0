@@ -6,7 +6,7 @@
         {{ ' / fps: ' + fps.value }}
     </div>
     <div v-if="['linux', 'win32'].includes(backend.platform ?? '')"
-        :class="'top-bar' + ((backend.platform == 'win32' && dev) ? ' win' : '')"
+        :class="'top-bar' + ((backend.platform == 'win32' && dev) ? ' win' : '') + (backend.type == 'tauri' ? ' tauri' : '')"
         name="appbar"
         data-tauri-drag-region="true"
         @mousedown="handleAppbarMouseDown">
@@ -269,8 +269,10 @@ export default defineComponent({
         
         // 禁止所有原生滚动行为（防止缩放模式下的焦点偏移）
         window.addEventListener('scroll', () => {
-            if (window.scrollX !== 0 || window.scrollY !== 0) {
-                window.scrollTo(0, 0)
+            if (backend.platform !== 'android') {
+                if (window.scrollX !== 0 || window.scrollY !== 0) {
+                    window.scrollTo(0, 0)
+                }
             }
         }, { passive: true })
 
@@ -307,7 +309,7 @@ export default defineComponent({
                     // 补丁：强制重置可能由于焦点行为产生的位移
                     // 即使有 preventScroll，某些浏览器在特定情况下仍可能产生 1px 级别的偏移
                     setTimeout(() => {
-                        const containers = document.querySelectorAll('.main-body, .main-body > div, #base-app, #app')
+                        const containers = document.querySelectorAll('html, body, .main-body, .main-body > div, #base-app, #app')
                         containers.forEach(el => {
                             if (el.scrollTop !== 0) el.scrollTop = 0
                             if (el.scrollLeft !== 0) el.scrollLeft = 0
@@ -408,7 +410,7 @@ export default defineComponent({
                     app.style.borderRadius = '25px'
                 }
             }
-            if (['linux', 'win32'].includes(backend.platform ?? '')) {
+            if (['linux', 'win32', 'darwin'].includes(backend.platform ?? '')) {
                 const app = document.getElementById('base-app')
                 if (app) app.classList.add('withBar')
             }
