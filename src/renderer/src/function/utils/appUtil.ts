@@ -599,16 +599,21 @@ export async function loadMobile() {
                 }
             }
 
-            // 调整整个 HTML 的高度
-            // PS：仅用于解决 Android 在全屏沉浸式下键盘遮挡问题
-            const html = document.getElementsByTagName('html')[0]
-            const body = document.getElementsByTagName('body')[0]
-            if(html && body && backend.platform == 'android') {
-                const height = `calc((100% - ${keyboardHeight + safeArea.top}px) / var(--scale-custom, 1))`
-                html.style.height = height
-                body.style.height = height
-                html.style.overflow = 'hidden'
-                body.style.overflow = 'hidden'
+            // 调整整个 HTML 的高度或底部避让区域
+            // 对于 Android，强行调整 HTML height 容易导致键盘弹出时多出主体色并放大两倍
+            // 改为使用 iOS 类似的底部避让逻辑
+            const baseApp = document.getElementById('base-app')
+            if(baseApp && backend.platform == 'android') {
+                const offset = `calc(${keyboardHeight}px / var(--scale-custom, 1))`
+                baseApp.style.setProperty('--safe-area-bottom', offset)
+                
+                // 为了防止安卓整体滑动，依旧给body加上 hidden
+                const html = document.getElementsByTagName('html')[0]
+                const body = document.getElementsByTagName('body')[0]
+                if(html && body) {
+                    html.style.overflow = 'hidden'
+                    body.style.overflow = 'hidden'
+                }
             }
         })
         backend.addListener('Keyboard', 'keyboardWillHide', async () => {
@@ -628,15 +633,19 @@ export async function loadMobile() {
                     tabBar.style.paddingBottom = ''
                 }
             }
-            // 调整整个 HTML 的高度
-            // PS：仅用于解决 Android 在全屏沉浸式下键盘遮挡问题
-            const html = document.getElementsByTagName('html')[0]
-            const body = document.getElementsByTagName('body')[0]
-            if(html && body && backend.platform == 'android') {
-                html.style.height = ''
-                body.style.height = ''
-                html.style.overflow = ''
-                body.style.overflow = ''
+            if(backend.platform == 'android') {
+                const baseApp = document.getElementById('base-app')
+                const safeArea = await backend.call('SafeArea', 'getSafeArea', true)
+                if (safeArea && baseApp) {
+                    baseApp.style.setProperty('--safe-area-bottom', safeArea.bottom + 'px')
+                }
+
+                const html = document.getElementsByTagName('html')[0]
+                const body = document.getElementsByTagName('body')[0]
+                if(html && body) {
+                    html.style.overflow = ''
+                    body.style.overflow = ''
+                }
             }
         })
         // 状态栏（Android）
