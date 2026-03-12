@@ -93,5 +93,5 @@ jobs:
               env:
                 GH_TOKEN: ${{ secrets.ACCESS_TOKEN }}
               run: |
-                gh release view v${{ needs.init.outputs.version }} || gh release create v${{ needs.init.outputs.version }} --title "Release v${{ needs.init.outputs.version }}" --notes "Automated release"
+                gh release view v${{ needs.init.outputs.version }} || gh release create v${{ needs.init.outputs.version }} --title "Release v${{ needs.init.outputs.version }}" --generate-notes
                 gh release upload v${{ needs.init.outputs.version }} artifacts/**/* --clobber

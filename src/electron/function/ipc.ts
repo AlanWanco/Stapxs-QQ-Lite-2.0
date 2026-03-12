@@ -1,6 +1,7 @@
 import Store from 'electron-store'
 import path from 'path'
 import os from 'os'
+import fs from 'fs'
 import log4js from 'log4js'
 import axios from 'axios'
 
@@ -669,9 +670,7 @@ export function regIpcListener() {
     })
 
     // 获取默认表情路径
-    ipcMain.handle('sys:getDefaultFacePath', async () => {
-        const path = await import('path')
-        const fs = await import('fs')
+    ipcMain.handle('sys:getDefaultFacePath', () => {
         const facePath = path.join(app.getPath('userData'), 'qface')
         if (!fs.existsSync(facePath)) {
             fs.mkdirSync(facePath, { recursive: true })
@@ -681,9 +680,6 @@ export function regIpcListener() {
 
     // 下载并解压 zip
     ipcMain.handle('sys:downloadAndExtractZip', async (_, args: { url: string; dest?: string; proxy?: string }) => {
-        const fs = await import('fs')
-        const path = await import('path')
-        const axios = (await import('axios')).default
         const extract = (await import('extract-zip')).default
 
         const destPath = args.dest || path.join(app.getPath('userData'), 'qface')
