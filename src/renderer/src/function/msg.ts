@@ -441,12 +441,14 @@ const msgFunctions = {
                 action: 'label',
                 value: data.nickname,
             })
-            const title = `${data.nickname} `
-            if (backend.platform == 'web') {
-                document.title = title + '- Stapxs QQ Lite'
-            } else {
-                document.title = title
-                backend.call(undefined, 'win:setTitle', false, title)
+            if (!Option.get('opt_title_text_custom')) {
+                const title = `${data.nickname} `
+                if (backend.platform == 'web') {
+                    document.title = title + '- Stapxs QQ Lite'
+                } else {
+                    document.title = title
+                    backend.call(undefined, 'win:setTitle', false, title)
+                }
             }
             // 结束登录页面的水波动画
             clearInterval(runtimeData.tags.loginWaveTimer)

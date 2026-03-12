@@ -257,6 +257,31 @@
         </div>
         <div class="ss-card">
             <header>{{ $t('页面') }}</header>
+            <div v-if="backend.isDesktop()" class="opt-item">
+                <div :class="checkDefault('opt_title_text_custom')" />
+                <font-awesome-icon :icon="['fas', 'pen-nib']" />
+                <div>
+                    <span>{{ $t('自定义标题栏文字') }}</span>
+                    <span>{{ $t('修改顶部标题栏显示的文字内容（仅限桌面端）') }}</span>
+                </div>
+                <label class="ss-switch">
+                    <input v-model="runtimeData.sysConfig.opt_title_text_custom"
+                        type="checkbox" name="opt_title_text_custom" @change="save">
+                    <div>
+                        <div />
+                    </div>
+                </label>
+            </div>
+            <div v-if="backend.isDesktop() && runtimeData.sysConfig.opt_title_text_custom" class="opt-item">
+                <div :class="checkDefault('custom_title_text')" />
+                <font-awesome-icon :icon="['fas', 'i-cursor']" />
+                <div>
+                    <span>{{ $t('标题内容模板') }}</span>
+                    <span>{{ $t('支持占位符：{version} 版本号, {nickname} 昵称') }}</span>
+                </div>
+                <input v-model="runtimeData.sysConfig.custom_title_text" class="ss-input"
+                    style="width: 250px" type="text" name="custom_title_text" @keyup.enter="save">
+            </div>
             <div class="opt-item">
                 <div :class="checkDefault('chatview_name')" />
                 <font-awesome-icon :icon="['fas', 'table-columns']" />

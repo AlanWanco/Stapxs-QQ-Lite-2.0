@@ -11,6 +11,9 @@
         data-tauri-drag-region="true"
         @mousedown="handleAppbarMouseDown">
         <div class="bar-button" @click="barMainClick()" />
+        <span v-if="runtimeData.sysConfig.opt_title_text_custom" class="top-bar-title">
+            {{ processedTitle }}
+        </span>
         <div class="space" />
         <div class="controller">
             <div class="min" @click="controllWin('minimize')">
@@ -260,6 +263,17 @@ export default defineComponent({
                 ticks: 0,
                 value: 0,
             },
+        }
+    },
+    computed: {
+        processedTitle() {
+            if (runtimeData.sysConfig.opt_title_text_custom) {
+                let title = runtimeData.sysConfig.custom_title_text
+                title = title.replace('{version}', packageInfo.version)
+                title = title.replace('{nickname}', runtimeData.loginInfo.nickname || '')
+                return title
+            }
+            return ''
         }
     },
     mounted() {
@@ -578,19 +592,32 @@ export default defineComponent({
                 updateBaseOnMsgList()
             }, { deep: true })
             // 更新标题
-            const titleList = [
-                '也试试 Icalingua Plus Plus 吧！',
-                '点击阅读《社交功能限制提醒》',
-                '登录失败，Code 45',
-                '你好世界！',
-                '这只是个普通的彩蛋！'
-            ]
-            const title = titleList[Math.floor(Math.random() * titleList.length)]
-            if(backend.platform == 'web') {
-                document.title = title + '- Stapxs QQ Lite'
-            } else {
-                document.title = title
-                backend.call(undefined, 'win:setTitle', false, title)
+            this.$watch(() => this.processedTitle, (newVal) => {
+                if (runtimeData.sysConfig.opt_title_text_custom && newVal) {
+                    if (backend.platform == 'web') {
+                        document.title = newVal + '- Stapxs QQ Lite'
+                    } else {
+                        document.title = newVal
+                        backend.call(undefined, 'win:setTitle', false, newVal)
+                    }
+                }
+            }, { immediate: true })
+
+            if (!runtimeData.sysConfig.opt_title_text_custom) {
+                const titleList = [
+                    '也试试 Icalingua Plus Plus 吧！',
+                    '点击阅读《社交功能限制提醒》',
+                    '登录失败，Code 45',
+                    '你好世界！',
+                    '这只是个普通的彩蛋！'
+                ]
+                const title = titleList[Math.floor(Math.random() * titleList.length)]
+                if(backend.platform == 'web') {
+                    document.title = title + '- Stapxs QQ Lite'
+                } else {
+                    document.title = title
+                    backend.call(undefined, 'win:setTitle', false, title)
+                }
             }
         }
         // 页面关闭前

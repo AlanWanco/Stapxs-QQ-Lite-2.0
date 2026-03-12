@@ -46,10 +46,9 @@ export const optDefault: { [key: string]: any } = {
     local_emoji_folder: null,
     global_proxy: '',
     url_parse_auto: true,
+    custom_title_text: 'Stapxs QQ Lite v{version} - Hello, {nickname}',
+    opt_title_text_custom: false,
     // View
-    language: 'zh-CN',
-    opt_dark: false,
-    opt_auto_dark: true,
     theme_color: 0,
     opt_auto_win_color: false,
     chat_background: '',

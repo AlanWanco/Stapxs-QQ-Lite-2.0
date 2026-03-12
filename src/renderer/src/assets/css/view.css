@@ -105,6 +105,17 @@ textarea:focus {
 .top-bar > div.space {
     flex: 1;
 }
+.top-bar-title {
+    margin-left: 10px;
+    font-size: 0.8rem;
+    color: var(--color-font-2);
+    pointer-events: none;
+    align-self: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 200px);
+}
 .top-bar > div.controller {
     -webkit-app-region: no-drag;
     display: flex;
