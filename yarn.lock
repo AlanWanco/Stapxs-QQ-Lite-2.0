@@ -10976,6 +10976,7 @@ __metadata:
     electron-window-state: "npm:^5.0.3"
     eslint: "npm:^8.57.0"
     eslint-plugin-vue: "npm:^9.26.0"
+    extract-zip: "npm:^2.0.1"
     js-file-downloader: "npm:^1.1.25"
     jsonpath: "npm:^1.1.1"
     log4js: "npm:^6.9.1"
