@@ -46,24 +46,29 @@ input {
     height: calc(100% - 17px) !important;
 }
 
+/* Windows 平板/中等窗口模式 - 80px/300px 可切换侧边栏 */
 @media (max-width: 700px) {
     .friend-list {
-        width: 60px !important;
+        transition: width 0.3s;
+        width: 80px !important;
+    }
+    .friend-list.open {
+        width: 300px !important;
     }
     .opt-main > div:last-child {
         padding-top: 25px !important;
         height: calc(100% - 37px) !important;
     }
     .chat-pan.withBar {
-        left: 60px !important;
+        left: 80px !important;
         height: calc(100% - 35px);
         padding-top: 35px;
     }
     .chat-pan.open.withBar {
-        left: 80px !important;
+        left: 300px !important;
     }
     .chat-info {
-        width: calc(100% - 70px);
+        width: calc(100% - 90px);
         margin: calc(50vh - 20px) 0 0 20px !important;
     }
     .chat-info-pan {
