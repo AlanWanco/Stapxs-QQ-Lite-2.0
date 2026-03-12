@@ -685,12 +685,14 @@ export async function loadAppendStyle() {
 
         const width = window.innerWidth
         if(cssStype) {
-            // 根据宽度加载互斥的布局，不再拼接字符串
             if(width > 750) {
+                // 桌面或平板模式，只加载横向样式
                 cssStype.innerHTML = horizontalCss + appendCss
             } else {
-                cssStype.innerHTML = verticalCss + appendCss
+                // 手机模式，加载为手机优化的样式组合
+                cssStype.innerHTML = horizontalCss + verticalCss + appendCss
             }
+        }
         }
 
         if(backend.isDesktop()) {
