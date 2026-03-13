@@ -4,5 +4,5 @@
 	branch = master
 [submodule "src/renderer/public/bcui"]
 	path = src/renderer/public/bcui
-	url = https://github.com/Stapxs/Border-Card-UI.git
-	branch = js-bcui
+	url = https://github.com/AlanWanco/Border-Card-UI.git
+	branch = main
