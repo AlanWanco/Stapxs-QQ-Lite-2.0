@@ -294,11 +294,11 @@
         .main > div {
             width: 100%;
             margin-right: 0;
-            margin-bottom: 20px;
+            margin-bottom: 1.25rem;
         }
         .main > div:first-child {
             height: 25vh;
-            margin-bottom: 10px;
+            margin-bottom: 0.625rem;
         }
         .power-by > img {
             width: 60%;

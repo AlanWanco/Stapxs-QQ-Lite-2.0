@@ -737,10 +737,10 @@ span.user-title.robot {
         display: unset !important;
     }
     .message.me > img {
-        margin: 10px 15px 0 0;
+        margin: 0.625rem 0.9rem 0 0;
     }
     .message-body {
-        max-width: calc(100% - 50px);
+        max-width: calc(100% - 3.125rem);
     }
     .message-body > a:first-child {
         color: var(--color-font-1) !important;

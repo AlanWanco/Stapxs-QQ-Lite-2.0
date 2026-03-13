@@ -1204,8 +1204,8 @@
 @media (max-width: 500px) {
     .umami-info-pan {
         flex-direction: column-reverse !important;
-        margin: -46px -20px -20px -20px !important;
-        height: calc(100% + 40px) !important;
+        margin: -2.875rem -1.25rem -1.25rem -1.25rem !important;
+        height: calc(100% + 2.5rem) !important;
     }
     .umami-info-pan > div:last-child {
         overflow-x: hidden;
@@ -1220,14 +1220,14 @@
     .type-list {
         background: var(--color-card-1) !important;
         flex-direction: row !important;
-        padding: 10px !important;
+        padding: 0.625rem !important;
         justify-content: space-evenly;
     }
     .type-list > svg {
         margin: 0;
-        padding: 13px;
-        height: 20px;
-        width: 20px;
+        padding: 0.8125rem;
+        height: 1.25rem;
+        width: 1.25rem;
     }
     .type-list > svg:first-child {
         display: none !important;
@@ -1242,14 +1242,14 @@
         background: var(--color-bg) !important;
     }
     .time-select > div {
-        height: 35px;
+        height: 2.1875rem;
     }
     .time-select > div > select {
-        height: 35px;
+        height: 2.1875rem;
     }
 
     .view-pan {
-        min-width: calc(100% - 40px) !important;
+        min-width: calc(100% - 2.5rem) !important;
         margin-top: 1.5rem;
         justify-content: start;
     }
@@ -1257,8 +1257,8 @@
         display: block !important;
         color: var(--color-font-r);
         background: var(--color-main);
-        padding: 13px;
-        border-radius: 7px;
+        padding: 0.8125rem;
+        border-radius: 0.4375rem;
         margin-top: 1.3rem;
     }
 
@@ -1267,8 +1267,8 @@
     }
 
     .overview-time-select {
-        bottom: 100px !important;
-        right: 20px !important;
+        bottom: 6.25rem !important;
+        right: 1.25rem !important;
         width: 30% !important;
     }
 }

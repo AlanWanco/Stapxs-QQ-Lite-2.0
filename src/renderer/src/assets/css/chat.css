@@ -1980,27 +1980,27 @@ div.tiny-session-body > div:nth-child(3) > div > svg {
 @media (max-width: 700px) {
     /* 消息面板 */
     .chat-pan {
-        height: calc(100% - 75px - var(--safe-area-bottom));
-        left: 80px !important;
+        height: calc(100% - var(--mobile-tab-bar-height) - var(--safe-area-bottom));
+        left: var(--mobile-sidebar-collapsed) !important;
     }
 .chat-pan.withBar {
     top: var(--top-bar-height) !important;
     height: calc(100% - var(--top-bar-height)) !important;
 }
     .chat-pan.open {
-        transform: translateX(220px);
+        transform: translateX(13.75rem);
     }
     /* 群信息面板 */
     .chat-info {
-        width: calc(100% - 80px);
-        margin: calc(50vh - 20px) 0 0 20px !important;
+        width: calc(100% - var(--mobile-sidebar-collapsed));
+        margin: calc(50vh - 1.25rem) 0 0 1.25rem !important;
         transform: unset;
         min-width: unset;
-        bottom: 75px;
+        bottom: var(--mobile-tab-bar-height);
     }
     .chat-info-pan {
-        height: calc(100% + 55px);
-        margin-top: -20px;
+        height: calc(100% + 3.4rem);
+        margin-top: -1.25rem;
     }
     /* AT 信息悬浮面板 */
     .mumber-info > div:first-child {
@@ -2012,47 +2012,47 @@ div.tiny-session-body > div:nth-child(3) > div > svg {
     }
     /* 发送图片面板 */
     .img-sender > div.card {
-        width: calc(100% - 80px);
+        width: calc(100% - var(--mobile-sidebar-collapsed));
     }
     /* 转发面板 */
     .forward-pan > div.card {
-        width: calc(100% - 120px);
+        width: calc(100% - 7.5rem);
     }
 }
 
 @media (max-width: 500px) {
     /* 群信息面板 */
     .chat-info {
-        width: calc(100% - 40px);
-        margin: calc(50vh - 20px) 0 0 20px !important;
+        width: calc(100% - 2.5rem);
+        margin: calc(50vh - 1.25rem) 0 0 1.25rem !important;
         max-height: unset;
         min-width: unset;
     }
     .chat-info-pan {
-        height: calc(100% + 95px);
+        height: calc(100% + 5.9rem);
     }
     .chat-info:hover {
         box-shadow: none;
     }
     /* 表情面板 */
     .face-pan {
-        width: calc(100% - 40px);
-        height: 330px;
+        width: calc(100% - 2.5rem);
+        height: clamp(17.5rem, 45vh, 22.5rem);
     }
     .face-stickers {
-        height: calc(330px - 120px);
+        height: calc(clamp(17.5rem, 45vh, 22.5rem) - 7.5rem);
     }
     .base-face > div {
-        height: 50px;
-        width: 50px;
+        height: 3.125rem;
+        width: 3.125rem;
     }
     .base-face > div > img {
-        height: 30px;
-        width: 30px;
+        height: 1.875rem;
+        width: 1.875rem;
     }
     .face-stickers > img {
-        height: 60px;
-        width: 60px;
+        height: 3.75rem;
+        width: 3.75rem;
     }
     /* 合并转发消息面板 */
     .merge-pan.show > div:last-child {
@@ -2063,8 +2063,8 @@ div.tiny-session-body > div:nth-child(3) > div > svg {
     }
     /* 图片发送器 */
     .img-sender > div.card {
-        height: calc(100% - 40px);
-        width: calc(100% - 40px);
+        height: calc(100% - 2.5rem);
+        width: calc(100% - 2.5rem);
         border-radius: 0;
         transform: unset;
         box-shadow: none;
@@ -2072,8 +2072,8 @@ div.tiny-session-body > div:nth-child(3) > div > svg {
     }
     /* 转发面板 */
     .forward-pan > div.card {
-        height: calc(100% - 40px);
-        width: calc(100% - 40px);
+        height: calc(100% - 2.5rem);
+        width: calc(100% - 2.5rem);
         border-radius: 0;
         transform: unset;
         box-shadow: none;

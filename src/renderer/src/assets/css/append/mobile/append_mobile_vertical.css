@@ -1,20 +1,20 @@
 /* 移动端附加样式（纵向） */
 @media (max-width: 500px) {
     .main-body > div {
-        height: calc(100% - 75px - var(--safe-area-top) - var(--safe-area-bottom));
-        padding-bottom: calc(75px + var(--safe-area-bottom));
+        height: calc(100% - var(--mobile-tab-bar-height) - var(--safe-area-top) - var(--safe-area-bottom));
+        padding-bottom: calc(var(--mobile-tab-bar-height) + var(--safe-area-bottom));
         margin-top: var(--safe-area-top);
     }
 
     .opt-main-tab,
     .main-body > div > div#homeTab {
         margin-top: calc(1px - var(--safe-area-top)) !important;
-        height: calc(100% + var(--safe-area-top) + var(--safe-area-bottom) - 20px) !important;
+        height: calc(100% + var(--safe-area-top) + var(--safe-area-bottom) - 1.25rem) !important;
     }
 
     .main-body > div > div#messageTab,
     .main-body > div > div#friendTab {
-        height: calc(100% + var(--safe-area-top) + var(--safe-area-bottom) - 20px) !important;
+        height: calc(100% + var(--safe-area-top) + var(--safe-area-bottom) - 1.25rem) !important;
     }
 
     .chat-pan {
@@ -29,7 +29,7 @@
     }
     
     .chat-pan > div.more > div:nth-child(2) {
-        padding-bottom: calc(20px + var(--safe-area-bottom));
+        padding-bottom: calc(1.25rem + var(--safe-area-bottom));
     }
 
     /* 联系人列表 */
@@ -60,8 +60,8 @@
         padding-top: 0;
     }
     .friend-list > div:first-child label {
-        height: calc(1rem + 25px);
-        margin-top: 10px;
+        height: 2.5rem;
+        margin-top: 0.625rem;
         display: flex;
     }
     .friend-list > div:first-child label > input {
@@ -101,31 +101,31 @@
     }
 
     .chat-info {
-        width: calc(100% - 40px) !important;
-        margin: calc(50vh - 20px) 0 0 20px !important;
+        width: calc(100% - 2.5rem) !important;
+        margin: calc(50vh - 1.25rem) 0 0 1.25rem !important;
         max-height: unset !important;
         min-width: unset !important;
     }
     .chat-info-pan {
-        height: calc(100% + 95px) !important;
+        height: calc(100% + 5.9rem) !important;
     }
 
     .chat-info > header {
         margin-top: calc(var(--safe-area-top));
         flex-direction: row-reverse;
         overflow: hidden;
-        transform: translateX(20px);
+        transform: translateX(1.25rem);
     }
     .chat-info>header>span {
         font-size: 1.5rem;
         font-weight: bold;
-        margin-bottom: 20px;
+        margin-bottom: 1.25rem;
     }
     .chat-info>header>svg {
         width: 2.2rem;
         height: 2.2rem;
         transform: translateX(calc(-50% + 0.5px));
-        margin-right: -10px;
+        margin-right: -0.625rem;
     }
 
     .msg-img {
@@ -142,7 +142,7 @@
     }
 
     .pop-box-body.full.window {
-        height: calc(100vh - calc(var(--safe-area-top) + 80px + var(--safe-area-bottom)));
+        height: calc(100vh - calc(var(--safe-area-top) + 5rem + var(--safe-area-bottom)));
         margin-bottom: var(--safe-area-bottom);
     }
 }

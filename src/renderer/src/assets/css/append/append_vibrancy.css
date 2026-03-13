@@ -105,6 +105,6 @@ body {
 
 @media (max-width: 500px) {
     .chat-pan > div.info {
-        margin-top: 35px;
+        margin-top: var(--mobile-title-bar-mac);
     }
 }

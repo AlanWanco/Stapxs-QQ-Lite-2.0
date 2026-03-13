@@ -890,7 +890,7 @@
         .function {
             overflow-y: scroll;
             overflow-x: hidden;
-            margin: 30px 0;
+            margin: 1.875rem 0;
         }
         .function > div.config {
             flex-direction: column;
@@ -904,7 +904,7 @@
             width: 80%;
         }
         .theme_color {
-            margin-left: 35px;
+            margin-left: 2.1875rem;
         }
     }
 </style>

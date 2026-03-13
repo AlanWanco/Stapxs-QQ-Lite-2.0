@@ -16,6 +16,15 @@ body {
     height: calc(100% / var(--scale-custom, 1));
     /* 字体缩放 */
     font-size: var(--font-size-custom, 14px);
+
+    /* 移动端响应式布局变量 */
+    --mobile-tab-bar-height: 4.7rem;
+    --mobile-sidebar-collapsed: 5rem;
+    --mobile-sidebar-expanded: clamp(15.625rem, 45vw, 18.75rem);
+    --mobile-sidebar-wide: clamp(17.5rem, 35vw, 22.8rem);
+    --mobile-avatar-size: 2.8rem;
+    --mobile-title-bar-mac: 1.875rem;
+    --mobile-title-bar-win: 2.2rem;
 }
 html,
 body {
@@ -1551,12 +1560,12 @@ textarea:focus {
         flex-direction: column-reverse;
     }
     .main-body > div {
-        height: calc(100% - 75px);
+        height: calc(100% - var(--mobile-tab-bar-height));
     }
     .main-body > ul {
         padding-top: 0 !important;
         justify-content: center;
-        height: 75px !important;
+        height: var(--mobile-tab-bar-height) !important;
         align-items: center;
         flex-direction: row;
         min-width: 100% !important;
@@ -1575,10 +1584,10 @@ textarea:focus {
     /* 二级侧栏 */
     .friend-list {
         transition: width 0.3s;
-        width: 80px;
+        width: var(--mobile-sidebar-collapsed);
     }
     .friend-list.open {
-        width: 300px;
+        width: var(--mobile-sidebar-expanded);
     }
     .friend-list.open .small {
         display: flex;
@@ -1589,7 +1598,7 @@ textarea:focus {
     .friend-list > div:first-child > div.small {
         align-items: center;
         display: flex;
-        height: 50px;
+        height: 3.125rem;
         width: 100%;
     }
     .friend-list > div:first-child > div.small > div.reload {
@@ -1598,7 +1607,7 @@ textarea:focus {
     .friend-list.open > div:first-child > div.small > div.reload {
         background: var(--color-card-2);
         display: flex !important;
-        margin-right: 10px;
+        margin-right: 0.625rem;
     }
     .friend-list.open > div:first-child > div.small > div.reload > svg {
         color: var(--color-font);
@@ -1611,11 +1620,11 @@ textarea:focus {
         cursor: pointer;
         display: flex;
         height: 100%;
-        width: 50px;
+        width: 3.125rem;
     }
     .friend-list > div:first-child > div.small > label {
-        margin-right: 10px;
-        height: 46px;
+        margin-right: 0.625rem;
+        height: 2.875rem;
         flex: 1;
     }
     .friend-list.open > div:first-child > div.small > label {
@@ -1623,11 +1632,11 @@ textarea:focus {
     }
 
     .friend-list.open > div:first-child > div.small > div:last-child {
-        margin-left: 10px;
+        margin-left: 0.625rem;
     }
     .friend-list > div:first-child > div.small > div > svg {
         color: var(--color-font-r);
-        height: 17px;
+        height: 1.06rem;
         opacity: 1;
     }
     .friend-list > div:first-child label {
@@ -1636,8 +1645,8 @@ textarea:focus {
     }
     .friend-list > div:last-child.open > div:not(.list),
     .friend-list > div:last-child.open > div.list > div > div {
-        padding: 10px !important;
-        margin: 10px !important;
+        padding: 0.625rem !important;
+        margin: 0.625rem !important;
     }
     .friend-list > div:last-child.open > div > div,
     .friend-list > div:last-child.open > div.list > div > div > div {
@@ -1661,12 +1670,12 @@ textarea:focus {
         top: 0 !important; /* Web 没有 title bar */
         bottom: 0 !important;
         height: 100vh !important;
-        width: 80px !important;
+        width: var(--mobile-sidebar-collapsed) !important;
         z-index: 100 !important;
         margin: 0 !important;
     }
     .group-assist-message-list.show.open {
-        width: 300px !important;
+        width: var(--mobile-sidebar-expanded) !important;
     }
     
     /* Web 平台群收纳盒折叠状态按钮竖排 - 与群头像对齐 */
@@ -1680,55 +1689,55 @@ textarea:focus {
         align-items: center !important;
     }
     .group-assist-message-list.show:not(.open) > div > .small > span {
-        margin-bottom: 8px;
+        margin-bottom: 0.5rem;
         font-size: 0.7rem;
     }
     .group-assist-message-list.show:not(.open) > div > .small > div {
-        margin: 10px 0 !important;
-        width: 45px !important;
-        height: 45px !important;
+        margin: 0.625rem 0 !important;
+        width: var(--mobile-avatar-size) !important;
+        height: var(--mobile-avatar-size) !important;
         border-radius: 7px !important;
     }
     
     /* Web 平台群收纳盒展开状态横排 */
     .group-assist-message-list.show.open > div > .small {
         flex-direction: row !important;
-        height: 45px !important;
-        padding: 0 10px !important;
+        height: var(--mobile-avatar-size) !important;
+        padding: 0 0.625rem !important;
         align-items: center !important;
     }
     .group-assist-message-list.show.open > div > .small > span {
         width: auto !important;
         flex: 0 0 auto !important;
-        margin-right: 30px !important;
-        height: 45px !important;
+        margin-right: 1.875rem !important;
+        height: var(--mobile-avatar-size) !important;
         display: flex !important;
         align-items: center !important;
         white-space: nowrap;
     }
     .group-assist-message-list.show.open > div > .small > div {
-        margin: 0 5px !important;
-        width: 45px !important;
-        height: 45px !important;
+        margin: 0 0.3rem !important;
+        width: var(--mobile-avatar-size) !important;
+        height: var(--mobile-avatar-size) !important;
         flex-shrink: 0 !important;
     }
 
     .friend-body {
         background: transparent !important;
         justify-content: center;
-        padding: 10px 0;
+        padding: 0.625rem 0;
         margin: 0;
     }
     .friend-body > div {
         display: none;
     }
     .friend-body img {
-        height: 45px;
-        width: 45px;
+        height: var(--mobile-avatar-size);
+        width: var(--mobile-avatar-size);
     }
     .friend-body > svg {
-        height: 20px;
-        width: 20px;
+        height: 1.25rem;
+        width: 1.25rem;
     }
     .friend-body.active:hover {
         background: var(--color-card-2) !important;
@@ -1744,41 +1753,41 @@ textarea:focus {
     .friend-body > div:nth-child(1).new {
         border-radius: 100%;
         display: block !important;
-        height: 15px;
-        width: 15px;
+        height: 0.9rem;
+        width: 0.9rem;
         right: -3px;
         top: 4px;
     }
     /* 应用消息 */
     .app-msg {
-        height: calc(100% - 90px - var(--safe-area-bottom));
-        padding-left: 20px;
+        height: calc(100% - 5.6rem - var(--safe-area-bottom));
+        padding-left: 1.25rem;
     }
     .app-msg > div {
-        max-width: calc(100% - 80px);
+        max-width: calc(100% - var(--mobile-sidebar-collapsed));
     }
     /* 右击菜单 */
     .msg-menu-body {
         width: 30%;
     }
     .msg-menu-body > div {
-        padding: 5px 15px;
+        padding: 0.3rem 0.9rem;
     }
 }
 
 @media (max-width: 500px) {
     /* 全局通用弹窗 */
     .pop-box-body {
-        max-height: calc(100vh - 80px);
+        max-height: calc(100vh - 5rem);
         transform: unset !important;
-        width: calc(100% - 80px);
+        width: calc(100% - 5rem);
         min-width: unset;
-        margin: 20px;
+        margin: 1.25rem;
         bottom: 0;
     }
     .pop-box-body.full {
-        width: calc(100% - 70px) !important;
-        margin-bottom: 20px !important;
+        width: calc(100% - 4.375rem) !important;
+        margin-bottom: 1.25rem !important;
     }
     .pop-box-more {
         display: none;
@@ -1810,8 +1819,8 @@ textarea:focus {
     }
     .friend-list > div:last-child > div:not(.list),
     .friend-list > div:last-child > div.list > div > div {
-        padding: 10px !important;
-        margin: 10px !important;
+        padding: 0.625rem !important;
+        margin: 0.625rem !important;
     }
     .friend-list-space {
         overflow: hidden;
@@ -1837,8 +1846,8 @@ textarea:focus {
     }
 
     .viewer-bar {
-        width: 25px;
-        margin: 20px;
+        width: 1.5rem;
+        margin: 1.25rem;
     }
     .viewer-button-bar {
         top: var(--safe-area--viewer-top);
@@ -1846,18 +1855,18 @@ textarea:focus {
         flex-direction: column;
     }
     .viewer-button-bar > svg {
-        margin: 5px 0;
+        margin: 0.3rem 0;
     }
     .viewer-button-bar > hr {
-        margin:  10px 0;
-        transform: translate(calc(-25px / 4), 0);
-        width: 25px;
+        margin:  0.625rem 0;
+        transform: translate(calc(-1.5rem / 4), 0);
+        width: 1.5rem;
         height: 0;
     }
 
     .viewer-button-enter-from,
     .viewer-button-leave-to {
-        transform: translate(75px, 0);
+        transform: translate(4.7rem, 0);
         opacity: 1;
     }
 

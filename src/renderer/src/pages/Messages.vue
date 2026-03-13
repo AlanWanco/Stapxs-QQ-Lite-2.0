@@ -677,7 +677,7 @@
 
     @media (max-width: 700px) {
         .menu {
-            width: 140px !important;
+            width: 8.75rem !important;
         }
     }
 </style>

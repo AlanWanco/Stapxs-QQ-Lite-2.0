@@ -46,10 +46,10 @@ input {
 @media (min-width: 501px) and (max-width: 700px) {
     /* 默认显示折叠状态（80px），展开时 300px */
     .friend-list {
-        width: 80px !important;
+        width: var(--mobile-sidebar-collapsed) !important;
     }
     .friend-list.open {
-        width: 300px !important;
+        width: var(--mobile-sidebar-expanded) !important;
     }
     
     /* 汉堡按钮一直显示 */
@@ -59,10 +59,10 @@ input {
     
     /* chat-pan 根据侧边栏状态调整位置 */
     .chat-pan {
-        left: 80px !important;
+        left: var(--mobile-sidebar-collapsed) !important;
     }
     .chat-pan.withBar {
-        left: 80px !important;
+        left: var(--mobile-sidebar-collapsed) !important;
         height: 100% !important;
         padding-top: 0 !important;
     }
@@ -70,7 +70,7 @@ input {
     /* 当侧边栏展开时，chat-pan 也移动 */
     .friend-list.open ~ .chat-pan,
     .friend-list.open ~ .chat-pan.withBar {
-        left: 300px !important;
+        left: var(--mobile-sidebar-expanded) !important;
     }
     
     /* 防止 friend-list-space 占据整个空间 */
@@ -84,16 +84,16 @@ input {
         position: fixed !important;
         left: 0 !important;
         top: 0 !important; 
-        padding-top: 30px; /* 避开红绿灯区域 */
+        padding-top: var(--mobile-title-bar-mac); /* 避开红绿灯区域 */
         bottom: 0 !important;
-        height: calc(100vh - 30px) !important;
-        width: 80px !important;
+        height: calc(100vh - var(--mobile-title-bar-mac)) !important;
+        width: var(--mobile-sidebar-collapsed) !important;
         z-index: 100 !important;
         margin: 0 !important;
     }
     /* 群收纳盒展开时 */
     .group-assist-message-list.show.open {
-        width: 300px !important;
+        width: var(--mobile-sidebar-expanded) !important;
     }
     
     /* 平板模式下群收纳盒折叠状态的按钮竖排布局 - 与群头像对齐 */
@@ -110,51 +110,51 @@ input {
         padding: 0 1px 0 3px !important;
     }
     .group-assist-message-list.show:not(.open) > div > .small > span {
-        margin-bottom: 8px;
+        margin-bottom: 0.5rem;
         font-size: 0.7rem;
     }
     .group-assist-message-list.show:not(.open) > div > .small > div {
-        margin: 10px 0 !important;
-        width: 45px !important;
-        height: 45px !important;
-        border-radius: 7px !important;
+        margin: 0.625rem 0 !important;
+        width: var(--mobile-avatar-size) !important;
+        height: var(--mobile-avatar-size) !important;
+        border-radius: 0.4375rem !important;
     }
     
     /* 平板模式下群收纳盒展开状态恢复横排 */
     .group-assist-message-list.show.open > div > .small {
         flex-direction: row !important;
-        height: 45px !important;
-        padding: 0 10px !important;
+        height: var(--mobile-avatar-size) !important;
+        padding: 0 0.625rem !important;
         align-items: center !important;
     }
     .group-assist-message-list.show.open > div > .small > span {
         width: auto !important;
         flex: 0 0 auto !important;
-        margin-right: 30px !important;
-        height: 45px !important;
+        margin-right: 1.875rem !important;
+        height: var(--mobile-avatar-size) !important;
         display: flex !important;
         align-items: center !important;
         white-space: nowrap;
     }
     .group-assist-message-list.show.open > div > .small > div {
-        margin: 0 5px !important;
-        width: 45px !important;
-        height: 45px !important;
+        margin: 0 0.3125rem !important;
+        width: var(--mobile-avatar-size) !important;
+        height: var(--mobile-avatar-size) !important;
         flex-shrink: 0 !important;
     }
     
     /* 其他样式调整 */
     .opt-main > div:last-child {
-        padding-top: 25px !important;
-        height: calc(100% - 37px) !important;
+        padding-top: 1.5625rem !important;
+        height: calc(100% - 2.3125rem) !important;
     }
     .chat-info {
-        width: calc(100% - 90px);
-        margin: calc(50vh - 20px) 0 0 20px !important;
+        width: calc(100% - 5.625rem);
+        margin: calc(50vh - 1.25rem) 0 0 1.25rem !important;
     }
     .chat-info-pan {
-        height: calc(100% + 55px);
-        margin-top: -20px;
+        height: calc(100% + 3.4375rem);
+        margin-top: -1.25rem;
     }
 }
 
@@ -176,7 +176,7 @@ input {
         position: absolute !important;
         left: 0 !important;
         top: 0 !important;
-        padding-top: 30px; /* 避开红绿灯区域 */
+        padding-top: var(--mobile-title-bar-mac); /* 避开红绿灯区域 */
         width: 100% !important;
         height: 100% !important;
         z-index: 5 !important;
@@ -198,7 +198,7 @@ input {
     }
     /* 移动端聊天顶栏需要避开红绿灯区域 */
     .chat-pan > div.info {
-        padding-top: 30px !important;
+        padding-top: var(--mobile-title-bar-mac) !important;
     }
     
     /* 当没有选中聊天时，显示 message-list */
@@ -218,15 +218,15 @@ input {
     
     /* 其他样式调整 */
     .opt-main > div:last-child {
-        padding-top: 25px !important;
-        height: calc(100% - 37px) !important;
+        padding-top: 1.5625rem !important;
+        height: calc(100% - 2.3125rem) !important;
     }
     .chat-info {
-        width: calc(100% - 40px);
-        margin: calc(50vh - 20px) 0 0 20px !important;
+        width: calc(100% - 2.5rem);
+        margin: calc(50vh - 1.25rem) 0 0 1.25rem !important;
     }
     .chat-info-pan {
-        height: calc(100% + 95px);
+        height: calc(100% + 5.9375rem);
     }
     .friend-list-space {
         display: none !important;

@@ -728,30 +728,30 @@
     .opt-item {
         flex-wrap: wrap;
         height: auto;
-        padding: 10px 15px 10px 20px;
+        padding: 0.625rem 0.9rem 0.625rem 1.25rem;
     }
     .opt-about {
         display: block !important;
     }
 
     .opt-item > div.select-wrapper {
-        margin-left: calc(1.1rem + 20px);
+        margin-left: calc(1.1rem + 1.25rem);
         max-width: unset !important;
         width: 100% !important;
-        height: 35px;
-        margin-top: 10px;
+        height: 2.2rem;
+        margin-top: 0.625rem;
         flex:unset;
     }
     .opt-item div.ss-range,
     .opt-item input[type='password'],
     .opt-item input[type='text'],
     .opt-item input[type='number'] {
-        margin-left: calc(1.1rem + 20px);
+        margin-left: calc(1.1rem + 1.25rem);
         width: 100% !important;
-        margin-top: 10px;
+        margin-top: 0.625rem;
     }
     .opt-item div.ss-range {
-        min-width: calc(100% - 40px);
+        min-width: calc(100% - 2.5rem);
     }
 
     .opt-tab .tab-bar > span {
@@ -762,6 +762,6 @@
 @media (max-width: 500px) {
     .account-not-login {
         margin: 0 auto;
-        width: calc(100% - 40px);
+        width: calc(100% - 2.5rem);
     }
 }

@@ -96,10 +96,10 @@ body {
 
 @media (min-width: 501px) {
     .group-assist-message-list {
-        margin-right: -220px;
+        margin-right: -13.75rem;
     }
     .group-assist-message-list.show {
-        margin-left: -220px;
+        margin-left: -13.75rem;
         margin-right: 0;
     }
 }
@@ -779,16 +779,16 @@ body {
 @media (max-width: 700px) {
     .main-body > ul {
         background: var(--color-card-2) !important;
-        height: 60px !important;
+        height: 3.75rem !important;
     }
     .friend-list {
-        width: 9-px;
+        width: var(--mobile-sidebar-collapsed);
     }
     .chat-pan {
-        height: calc(100% - 60px);
+        height: calc(100% - 3.75rem);
     }
     .chat-info {
-        width: calc(100% - 70px);
+        width: calc(100% - 4.375rem);
     }
     .friend-list {
         background: var(--color-card-1) !important;
@@ -800,18 +800,18 @@ body {
         padding: 0px !important;
     }
     .friend-list > div:first-child > div.small {
-        height: 46px;
+        height: 2.875rem;
     }
     .friend-list > div:first-child > div.small > div {
         /* margin-right: 10px; */
-        width: 46px;
+        width: 2.875rem;
     }
     .friend-list > div:first-child > div.small > div > svg {
-        height: 14px;
+        height: 0.875rem;
     }
     .friend-list > div:first-child > div.small > label {
         margin-top: 1px;
-        height: 46px;
+        height: 2.875rem;
     }
 }
 @media (max-width: 500px) {
@@ -822,12 +822,12 @@ body {
         left: 0 !important;
     }
     .chat-info {
-        width: calc(100% - 30px);
-        height: calc(100% - 125px);
-        padding-top: 40px;
+        width: calc(100% - 1.875rem);
+        height: calc(100% - 7.8125rem);
+        padding-top: 2.5rem;
     }
     .account-not-login {
         margin: 0 auto;
-        width: calc(100% - 20px);
+        width: calc(100% - 1.25rem);
     }
 }
