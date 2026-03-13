@@ -106,11 +106,12 @@
                             {{ $t('群收纳盒') }}
                             <a v-if="runtimeData.newMsgCount > 0">{{ runtimeData.newMsgCount }}</a>
                         </span>
-                        <div v-if="showGroupAssist"
-                            style="margin-right: -5px;margin-left: 5px;"
-                            @click="showGroupAssist = !showGroupAssist">
-                            <font-awesome-icon :icon="['fas', 'angle-left']" />
+                        <!-- 返回主消息列表按钮（平板/移动端） -->
+                        <div style="margin-right: -5px;margin-left: 5px;"
+                            @click="backToMainList">
+                            <font-awesome-icon :icon="['fas', 'arrow-left']" />
                         </div>
+                        <!-- 展开/收起侧边栏按钮 -->
                         <div @click="openLeftBar">
                             <font-awesome-icon :icon="['fas', 'bars-staggered']" />
                         </div>
@@ -245,6 +246,11 @@
                 if (!this.trRead && id != this.chat.show.id) {
                     if (this.runtimeData.tags.openSideBar) {
                         this.openLeftBar()
+                    }
+                    // 平板/移动端：如果从群收纳盒选择群聊，折叠群收纳盒（但保持显示）
+                    const width = window.innerWidth
+                    if (width <= 700 && this.showGroupAssist) {
+                        runtimeData.tags.openSideBar = false
                     }
                     const back = {
                         // 临时会话标志
@@ -562,22 +568,45 @@
 
             /**
              * 显示群收纳盒
+             * 平板/移动端：显示群收纳盒列表，不自动打开第一个
+             * 桌面端：保持原有逻辑
              */
             showGroupAssistCheck() {
-                if(!this.showGroupAssist && runtimeData.chatInfo.show.id == 0 && backend.type != 'capacitor' ) {
-                    // 如果没有打开聊天框，打开收纳盒中的第一个群；这么做主要是为了防止动画穿帮 😭
-                    const assistGroup = document.getElementById('group-assist-message-list-body')
-                    if(assistGroup && assistGroup.children.length > 0) {
-                        (assistGroup.children[0] as HTMLDivElement).click()
-                        setTimeout(() => {
+                const width = window.innerWidth
+                const isTabletOrMobile = width <= 700
+                
+                if (isTabletOrMobile) {
+                    // 平板/移动端：直接切换显示群收纳盒列表，不自动打开第一个
+                    this.showGroupAssist = !this.showGroupAssist
+                    // 如果正在显示群收纳盒，关闭主侧边栏展开状态
+                    if (this.showGroupAssist) {
+                        runtimeData.tags.openSideBar = false
+                    }
+                } else {
+                    // 桌面端：保持原有逻辑（防止动画穿帮）
+                    if(!this.showGroupAssist && runtimeData.chatInfo.show.id == 0 && backend.type != 'capacitor' ) {
+                        const assistGroup = document.getElementById('group-assist-message-list-body')
+                        if(assistGroup && assistGroup.children.length > 0) {
+                            (assistGroup.children[0] as HTMLDivElement).click()
+                            setTimeout(() => {
+                                this.showGroupAssist = !this.showGroupAssist
+                            }, 500)
+                        } else {
                             this.showGroupAssist = !this.showGroupAssist
-                        }, 500)
+                        }
                     } else {
                         this.showGroupAssist = !this.showGroupAssist
                     }
-                } else {
-                    this.showGroupAssist = !this.showGroupAssist
                 }
+            },
+            
+            /**
+             * 返回主消息列表（从群收纳盒返回）
+             */
+            backToMainList() {
+                this.showGroupAssist = false
+                // 确保主侧边栏在折叠状态
+                runtimeData.tags.openSideBar = false
             },
 
             showMenuStart(
