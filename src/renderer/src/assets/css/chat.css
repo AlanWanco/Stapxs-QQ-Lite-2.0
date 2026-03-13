@@ -203,7 +203,7 @@ input {
 }
 .chat-pan > div.more > div:nth-child(2) > div > form > input {
     padding-top: 0 !important;
-    height: 50px !important;
+    height: 45px !important;
     margin: 0 !important;
 }
 .chat-pan > div.more > div:nth-child(2) > div > form > input,

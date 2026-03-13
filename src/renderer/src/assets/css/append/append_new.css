@@ -796,7 +796,7 @@ body {
         margin: 5px 15px 5px 0;
     }
     .friend-list > div:last-child {
-        padding: 0 7px 0 5px !important;
+        padding: 0px !important;
     }
     .friend-list > div:first-child > div.small {
         height: 44px;
