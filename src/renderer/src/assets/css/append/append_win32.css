@@ -110,9 +110,12 @@ input {
     .group-assist-message-list.show:not(.open) > div > .small {
         flex-direction: column !important;
         height: auto !important;
-        padding: 10px 0 !important;
         min-height: auto !important;
         align-items: center !important;
+    }
+    /* 同步 web 端细节调整 */
+    .friend-list > div:last-child {
+        padding: 0 1px 0 3px !important;
     }
     .group-assist-message-list.show:not(.open) > div > .small > span {
         margin-bottom: 8px;
