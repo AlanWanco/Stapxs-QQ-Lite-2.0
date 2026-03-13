@@ -126,7 +126,7 @@ body {
     font-size: 0.7rem;
 }
 .friend-body > svg {
-    padding: 10px;
+    padding: 15px;
     height: 14px;
     width: 14px;
 }
@@ -152,7 +152,7 @@ body {
 }
 
 .chat-pan {
-    left: 280px;
+    left: 270px;
 }
 .chat-pan > div.info {
     padding: 10px;
@@ -799,8 +799,6 @@ body {
         padding: 0 7px 0 5px !important;
     }
     .friend-list > div:first-child > div.small {
-        margin-left: 15px;
-        margin-top: 10px;
         height: 44px;
     }
     .friend-list > div:first-child > div.small > div {
