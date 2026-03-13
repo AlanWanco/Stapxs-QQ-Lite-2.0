@@ -1814,15 +1814,18 @@ textarea:focus {
         width: 0;
     }
 
-    /* 移动端群收纳盒：全屏显示，由文档流控制 */
+    /* 移动端群收纳盒：全屏显示，由 z-index 控制层级 */
     .group-assist-message-list {
         margin-right: -100% !important;
     }
     .group-assist-message-list.show {
         display: flex !important;
-        position: relative !important; /* 不再覆盖 */
+        position: absolute !important; /* 使用绝对定位以覆盖全屏 */
+        left: 0 !important;
+        top: 0 !important;
         width: 100% !important;
-        z-index: 1 !important; /* 确保低于 chat-pan */
+        height: 100% !important;
+        z-index: 5 !important; /* 确保低于 chat-pan (通常 > 20) */
         margin: 0 !important;
     }
 
