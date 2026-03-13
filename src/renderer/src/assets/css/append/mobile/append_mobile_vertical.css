@@ -20,12 +20,16 @@
     .chat-pan {
         box-shadow: 0 0 5px var(--color-shader);
     }
+    
+    .chat-pan > div.more > div:nth-child(2) {
+        padding-bottom: calc(20px + var(--safe-area-bottom));
+    }
 
     /* 联系人列表 */
-    .friend-list .small {
+    .friend-list > div:first-child > div.small {
         display: none !important;
     }
-    .friend-list .base {
+    .friend-list > div:first-child > div.base {
         display: flex !important;
     }
     .friend-list .base > span {

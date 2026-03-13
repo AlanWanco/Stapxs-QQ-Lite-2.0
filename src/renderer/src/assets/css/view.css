@@ -1784,8 +1784,15 @@ textarea:focus {
     .friend-list {
         width: 100% !important;
     }
-    .friend-list .small {
+    /* 移动端模式：完全隐藏折叠状态的 small 头，并恢复显示 base 头及桌面版搜索框 */
+    .friend-list > div:first-child > div.base {
         display: flex !important;
+    }
+    .friend-list > div:first-child > label {
+        display: flex !important;
+    }
+    .friend-list > div:first-child > div.small {
+        display: none !important;
     }
     .friend-body > div {
         display: block !important;
@@ -1797,17 +1804,6 @@ textarea:focus {
     .friend-list > div:last-child > div.list > div > div {
         padding: 10px !important;
         margin: 10px !important;
-    }
-    .friend-list > div:first-child > div.small > span {
-        display: flex !important;
-        margin-right: 0;
-    }
-    .friend-list > div:first-child > div.small > div.reload,
-    .friend-list > div:first-child > div.small > label {
-        display: flex !important;
-    }
-    .friend-list > div:first-child > div.small > div:last-child {
-        margin-left: 10px;
     }
     .friend-list-space {
         overflow: hidden;
