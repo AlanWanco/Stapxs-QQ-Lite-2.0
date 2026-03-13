@@ -82,6 +82,18 @@ input {
         display: none !important;
     }
     
+    /* 修复：隐藏非激活状态的群收纳盒，避免影响布局 */
+    .group-assist-message-list {
+        display: none !important;
+    }
+    .group-assist-message-list.show {
+        display: flex !important;
+        width: 80px !important;
+    }
+    .group-assist-message-list.show.open {
+        width: 300px !important;
+    }
+    
     /* 其他样式调整 */
     .opt-main > div:last-child {
         padding-top: 25px !important;
