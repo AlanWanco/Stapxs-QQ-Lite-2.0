@@ -89,20 +89,18 @@ input {
     /* 群收纳盒激活时：从左边弹出，盖住 chat-pan */
     .group-assist-message-list.show {
         display: flex !important;
-        position: absolute !important;
+        position: fixed !important;
         left: 0 !important;
         top: 0 !important;
-        height: 100% !important;
+        bottom: 0 !important;
+        height: 100vh !important;
         width: 80px !important;
-        z-index: 30 !important;
+        z-index: 100 !important;
+        margin: 0 !important;
     }
     /* 群收纳盒展开时 */
     .group-assist-message-list.show.open {
         width: 300px !important;
-    }
-    /* 选择群聊后，群收纳盒像主消息列表一样折叠 */
-    .group-assist-message-list.show:not(.open) {
-        width: 80px !important;
     }
     
     /* 其他样式调整 */

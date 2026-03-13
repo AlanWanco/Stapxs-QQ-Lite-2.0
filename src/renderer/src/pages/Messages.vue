@@ -111,8 +111,8 @@
                             @click="backToMainList">
                             <font-awesome-icon :icon="['fas', 'arrow-left']" />
                         </div>
-                        <!-- 展开/收起侧边栏按钮 -->
-                        <div @click="openLeftBar">
+                        <!-- 展开/收起侧边栏按钮（仅平板模式显示，移动端隐藏） -->
+                        <div v-if="windowWidth > 500" @click="openLeftBar">
                             <font-awesome-icon :icon="['fas', 'bars-staggered']" />
                         </div>
                     </div>
@@ -231,10 +231,15 @@
                 showMenu: false,
                 loginInfo: loginInfo,
                 showGroupAssist: false,
+                windowWidth: window.innerWidth,
             }
         },
         mounted() {
             library.add(faCheckToSlot, faThumbTack, faTrashCan, faGripLines, faBroom)
+            window.addEventListener('resize', this.handleWindowResize)
+        },
+        beforeUnmount() {
+            window.removeEventListener('resize', this.handleWindowResize)
         },
         methods: {
             /**
@@ -342,6 +347,13 @@
                 this.$emit('userClick', back)
                 runtimeData.sysConfig.chatview_name = 'SystemNotice'
                 runOpt('chatview_name', 'SystemNotice')
+            },
+
+            /**
+             * 窗口大小变化处理
+             */
+            handleWindowResize() {
+                this.windowWidth = window.innerWidth
             },
 
             /**
