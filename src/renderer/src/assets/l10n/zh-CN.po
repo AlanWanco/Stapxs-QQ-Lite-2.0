@@ -306,6 +306,12 @@ msgstr ""
 msgid "是五彩斑斓的黑色！"
 msgstr ""
 
+msgid "深黑模式"
+msgstr ""
+
+msgid "更深邃的黑色，色调跟随主题色"
+msgstr ""
+
 msgid "本土化"
 msgstr ""
 

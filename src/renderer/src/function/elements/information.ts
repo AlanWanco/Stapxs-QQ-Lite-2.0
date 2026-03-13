@@ -34,6 +34,7 @@ export interface RunTimeDataElem {
         classes: any[]
         sw?: boolean
         darkMode: boolean
+        deeperDarkMode: boolean
         default_face_path?: string
     }
     watch: {

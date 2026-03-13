@@ -25,6 +25,8 @@ import {
 import {
     getPortableFileLang,
     getTrueLang,
+    rgbToHsl,
+    hslToRgb,
 } from '@renderer/function/utils/systemUtil'
 import { updateBaseOnMsgList } from './utils/msgUtil'
 import { backend } from '@renderer/runtime/backend'
@@ -50,6 +52,7 @@ export const optDefault: { [key: string]: any } = {
     opt_title_text_custom: false,
     opt_dark: false,
     opt_auto_dark: true,
+    opt_deeper_dark: false,
     // View
     theme_color: 0,
     opt_auto_win_color: false,
@@ -123,6 +126,7 @@ const configFunction: { [key: string]: (value: any) => void } = {
     language: setLanguage,
     opt_dark: setDarkMode,
     opt_auto_dark: setAutoDark,
+    opt_deeper_dark: setDeeperDark,
     theme_color: changeTheme,
     chatview_name: changeChatView,
     initial_scale: changeInitialScale,
@@ -290,7 +294,12 @@ function setLanguage(name: string) {
  */
 function setDarkMode(value = true) {
     if (value === true) {
-        changeColorMode('dark')
+        // 如果启用了深黑模式，则使用 deeper-dark
+        if (get('opt_deeper_dark')) {
+            changeColorMode('deeper-dark')
+        } else {
+            changeColorMode('dark')
+        }
     } else {
         changeColorMode('light')
     }
@@ -338,8 +347,24 @@ function setAutoDark(value: boolean) {
 }
 
 /**
+ * 设置深黑模式
+ * @param value 是否启用深黑模式
+ */
+function setDeeperDark(value: boolean) {
+    // 仅当当前处于深色模式时才立即切换
+    const isDark = runtimeData.tags.darkMode
+    if (isDark) {
+        if (value) {
+            changeColorMode('deeper-dark')
+        } else {
+            changeColorMode('dark')
+        }
+    }
+}
+
+/**
  * 修改颜色模式
- * @param mode 颜色模式
+ * @param mode 颜色模式 ('light' | 'dark' | 'deeper-dark')
  */
 function changeColorMode(mode: string) {
     if (!runtimeData.tags.firstLoad) {
@@ -349,41 +374,33 @@ function changeColorMode(mode: string) {
     } else {
         runtimeData.tags.firstLoad = false
     }
-    // 切换颜色
+    // 切换颜色：使用正则匹配，支持 light / dark / deeper-dark 三种模式
+    const modePattern = /(light|deeper-dark|dark)/
     const match_list = ['color-.*.css', 'prism-.*.css', 'append-.*.css']
     const css_list = document.getElementsByTagName('link')
     for (let i = 0; i < css_list.length; i++) {
         const name = css_list[i].href
         match_list.forEach((value) => {
             if (name.match(value) != null) {
+                // 构建目标文件名：将当前模式替换为目标模式
+                const newName = name.replace(modePattern, mode)
+                if (newName === name) return // 已经是目标模式，跳过
                 // 检查切换的文件是否可以被访问到
-                if (name != undefined) {
-                    let newName = name
-                    if (name.indexOf('dark') > -1) {
-                        newName = name.replace('dark', 'light')
-                    } else {
-                        newName = name.replace('light', 'dark')
-                    }
-                    const xhr = new XMLHttpRequest()
-                    xhr.open('HEAD', newName, false)
-                    xhr.send()
-                    if (xhr.status != 200) {
-                        // 无法访问到对应的颜色模式文件，放弃切换
-                        new PopInfo().add(
-                            PopType.ERR,
-                            '无法切换颜色模式：访问颜色模式文件失败。',
-                        )
-                        return
-                    }
+                const xhr = new XMLHttpRequest()
+                xhr.open('HEAD', newName, false)
+                xhr.send()
+                if (xhr.status != 200) {
+                    // 无法访问到对应的颜色模式文件，放弃切换
+                    new PopInfo().add(
+                        PopType.ERR,
+                        '无法切换颜色模式：访问颜色模式文件失败。',
+                    )
+                    return
                 }
                 const newLink = document.createElement('link')
                 newLink.setAttribute('rel', 'stylesheet')
                 newLink.setAttribute('type', 'text/css')
-                if (mode === 'dark') {
-                    newLink.setAttribute('href', name.replace('light', 'dark'))
-                } else {
-                    newLink.setAttribute('href', name.replace('dark', 'light'))
-                }
+                newLink.setAttribute('href', newName)
                 const head = document.getElementsByTagName('head').item(0)
                 if (head !== null) {
                     head.replaceChild(newLink, css_list[i])
@@ -406,17 +423,88 @@ function changeColorMode(mode: string) {
         ).getPropertyValue('--color-main')
     }
     // 记录
-    runtimeData.tags.darkMode = mode === 'dark'
+    const isDark = mode === 'dark' || mode === 'deeper-dark'
+    runtimeData.tags.darkMode = isDark
+    runtimeData.tags.deeperDarkMode = mode === 'deeper-dark'
+    // 深黑模式：应用主题色色调到背景色
+    if (mode === 'deeper-dark') {
+        // 等待 CSS 加载后再应用色调
+        setTimeout(() => applyDeeperDarkTint(), 50)
+    } else {
+        // 非深黑模式：清除动态色调覆盖
+        clearDeeperDarkTint()
+    }
     // Capacitor: 状态栏颜色（Android）
     if(backend.isMobile()) {
-        backend.call('StatusBar', 'setStyle', false, { style: mode.toUpperCase() })
+        // deeper-dark 也使用 DARK 样式
+        const statusStyle = isDark ? 'DARK' : 'LIGHT'
+        backend.call('StatusBar', 'setStyle', false, { style: statusStyle })
     }
     // Capacitor: VConsole 颜色
     if(backend.function && 'vConsole' in backend.function && backend.function.vConsole) {
-        backend.function.vConsole.setOption('theme', mode)
+        backend.function.vConsole.setOption('theme', isDark ? 'dark' : 'light')
     }
     // 刷新图标
     refreshFavicon()
+}
+
+/**
+ * 深黑模式：根据当前主题色色调为背景色施加微弱色调
+ * 读取 --color-main 的计算值，提取其色相，然后以极低饱和度应用到 bg/card 变量上
+ */
+function applyDeeperDarkTint() {
+    const mainColor = getComputedStyle(document.documentElement)
+        .getPropertyValue('--color-main').trim()
+    if (!mainColor) return
+
+    // 解析主题色为 RGB
+    let r = 0, g = 0, b = 0
+    if (mainColor.startsWith('#')) {
+        const hex = mainColor.replace('#', '')
+        r = parseInt(hex.substring(0, 2), 16)
+        g = parseInt(hex.substring(2, 4), 16)
+        b = parseInt(hex.substring(4, 6), 16)
+    } else if (mainColor.startsWith('rgb')) {
+        const match = mainColor.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)
+        if (match) {
+            r = parseInt(match[1])
+            g = parseInt(match[2])
+            b = parseInt(match[3])
+        }
+    } else {
+        return
+    }
+
+    const hsl = rgbToHsl(r, g, b)
+    const hue = hsl[0] // 色相 [0, 1]
+
+    // 定义各层级的基础亮度和饱和度（极微弱的色调）
+    const tintSaturation = 0.15 // 低饱和度
+    const layers = [
+        { prop: '--color-bg',       lightness: 0.05 },
+        { prop: '--color-card',     lightness: 0.08 },
+        { prop: '--color-card-1',   lightness: 0.10 },
+        { prop: '--color-card-2',   lightness: 0.13 },
+    ]
+
+    const style = document.documentElement.style
+    layers.forEach(({ prop, lightness }) => {
+        const rgb = hslToRgb(hue, tintSaturation, lightness)
+        style.setProperty(prop, `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`)
+        style.setProperty(prop + '-rgb', `${rgb[0]}, ${rgb[1]}, ${rgb[2]}`)
+    })
+}
+
+/**
+ * 清除深黑模式的动态色调覆盖
+ */
+function clearDeeperDarkTint() {
+    const style = document.documentElement.style
+    const props = [
+        '--color-bg', '--color-card', '--color-card-1', '--color-card-2',
+        '--color-bg-rgb', '--color-card-rgb', '--color-card-1-rgb', '--color-card-2-rgb',
+    ]
+    props.forEach((prop) => style.removeProperty(prop))
 }
 
 /**
@@ -438,6 +526,10 @@ function changeTheme(id: number) {
     } else {
         const color = ('000000' + Number(id).toString(16)).slice(-6)
         updateWinColor(color, 'windows')
+    }
+    // 深黑模式下切换主题色时，重新应用色调
+    if (runtimeData.tags.deeperDarkMode) {
+        setTimeout(() => applyDeeperDarkTint(), 50)
     }
     // 避免 css 未加载完
     setTimeout(refreshFavicon, 10)

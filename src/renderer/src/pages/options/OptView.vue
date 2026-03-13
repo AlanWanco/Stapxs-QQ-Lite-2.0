@@ -60,6 +60,21 @@
                         </div>
                     </label>
                 </div>
+                <div v-if="runtimeData.sysConfig.opt_dark || runtimeData.sysConfig.opt_auto_dark" class="opt-item">
+                    <div :class="checkDefault('opt_deeper_dark')" />
+                    <font-awesome-icon :icon="['fas', 'circle-half-stroke']" />
+                    <div>
+                        <span>{{ $t('深黑模式') }}</span>
+                        <span>{{ $t('更深邃的黑色，色调跟随主题色') }}</span>
+                    </div>
+                    <label class="ss-switch">
+                        <input v-model="runtimeData.sysConfig.opt_deeper_dark"
+                            type="checkbox" name="opt_deeper_dark" @change="save">
+                        <div>
+                            <div />
+                        </div>
+                    </label>
+                </div>
                 <div class="opt-item">
                     <div :class="checkDefault('opt_auto_dark')" />
                     <font-awesome-icon :icon="['fas', 'toggle-on']" />

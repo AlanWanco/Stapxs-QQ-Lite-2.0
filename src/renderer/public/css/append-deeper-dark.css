@@ -1,0 +1,13 @@
+:root {
+    --color-blue: #6291fd;
+    --color-green: #6cd892;
+    --color-red: #f56269;
+    --color-yellow: #f6c344;
+
+    --color-bg-blue: #1a1e28;
+    --color-bg-green: #1a2820;
+    --color-bg-red: #281a1c;
+    --color-bg-yellow: #28251a;
+
+    --color-issue-close: #a47ff1;
+}
