@@ -119,7 +119,7 @@ input {
         margin: 10px 0 !important;
         width: 45px !important;
         height: 45px !important;
-        border-radius: 50% !important;
+        border-radius: 7px !important;
     }
     
     /* 平板模式下群收纳盒展开状态恢复横排 */

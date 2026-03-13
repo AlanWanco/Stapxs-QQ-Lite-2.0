@@ -1682,7 +1682,7 @@ textarea:focus {
         margin: 10px 0 !important;
         width: 45px !important;
         height: 45px !important;
-        border-radius: 50% !important;
+        border-radius: 7px !important;
     }
     
     /* Web 平台群收纳盒展开状态横排 */
