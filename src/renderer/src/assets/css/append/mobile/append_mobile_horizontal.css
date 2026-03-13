@@ -76,8 +76,8 @@
     }
 
     /* 聊天面板 */
-    .chat-pan > div.info > svg {
-        display: none;
+    .chat-pan > div.info > svg.back {
+        display: none !important;
     }
     .main-body > ul > li > span {
         display: block !important;
@@ -307,6 +307,15 @@
     }
     .chat-pan {
         left: 250px !important;
+    }
+    .chat-info {
+        width: calc(100% - 90px) !important;
+        margin: calc(50vh - 20px) 0 0 20px !important;
+        min-width: unset !important;
+    }
+    .chat-info-pan {
+        height: calc(100% + 55px) !important;
+        margin-top: -20px !important;
     }
     .home-body {
         width: calc(100% - 250px) !important;
