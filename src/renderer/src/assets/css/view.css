@@ -557,7 +557,7 @@ textarea:focus {
 }
 .friend-list > div:last-child {
     width: calc(100% - 5px);
-    padding: 0 1px 0 5px;
+    padding: 0 1px 0 3px;
     -webkit-box-flex: 1;
     overflow-y: scroll;
     font-size: 1rem;
@@ -1673,7 +1673,6 @@ textarea:focus {
     .group-assist-message-list.show:not(.open) > div > .small {
         flex-direction: column !important;
         height: auto !important;
-        padding: 10px 0 !important;
         min-height: auto !important;
         align-items: center !important;
     }

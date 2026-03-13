@@ -101,7 +101,7 @@
                         </span>
                         <a v-if="runtimeData.newMsgCount > 0">{{ runtimeData.newMsgCount }}</a>
                     </div>
-                    <div class="small" style="flex-direction: column; height: auto; padding: 8px 0;">
+                    <div class="small" style="flex-direction: column; height: auto;">
                         <span style="cursor: pointer;">
                             {{ $t('群收纳盒') }}
                             <a v-if="runtimeData.newMsgCount > 0">{{ runtimeData.newMsgCount }}</a>
