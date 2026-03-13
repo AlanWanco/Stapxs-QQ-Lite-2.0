@@ -1667,6 +1667,9 @@ textarea:focus {
     }
     
     /* Web 平台群收纳盒折叠状态按钮竖排 - 与群头像对齐 */
+    .group-assist-message-list.show:not(.open) > div:first-child {
+        margin: 0 !important;
+    }
     .group-assist-message-list.show:not(.open) > div > .small {
         flex-direction: column !important;
         height: auto !important;

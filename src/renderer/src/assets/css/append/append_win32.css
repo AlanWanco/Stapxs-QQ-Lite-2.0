@@ -104,6 +104,9 @@ input {
     }
     
     /* 平板模式下群收纳盒折叠状态的按钮竖排布局 - 与群头像对齐 */
+    .group-assist-message-list.show:not(.open) > div:first-child {
+        margin: 0 !important;
+    }
     .group-assist-message-list.show:not(.open) > div > .small {
         flex-direction: column !important;
         height: auto !important;
