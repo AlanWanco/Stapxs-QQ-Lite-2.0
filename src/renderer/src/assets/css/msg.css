@@ -184,6 +184,7 @@
 
 .msg-inline {
     display: inline-block;
+    font-weight: 700;
 }
 
 .msg-text {
