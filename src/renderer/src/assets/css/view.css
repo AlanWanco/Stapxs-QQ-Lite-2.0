@@ -1824,6 +1824,9 @@ textarea:focus {
         z-index: 5 !important; /* 确保低于 chat-pan (通常 > 20) */
         margin: 0 !important;
     }
+    .group-assist-message-list.show.open {
+        width: 100% !important;
+    }
 
     .viewer-bar {
         width: 25px;

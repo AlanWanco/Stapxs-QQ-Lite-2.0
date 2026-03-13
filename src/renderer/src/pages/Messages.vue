@@ -93,12 +93,13 @@
                     (runtimeData.tags.openSideBar ? ' open' : '') +
                     (showGroupAssist ? ' show' : '')">
                 <div>
-                    <div class="base only">
+                    <div class="base only" style="justify-content: flex-start;">
+                        <font-awesome-icon style="margin-right: 10px; cursor: pointer; padding: 5px; height: 1.1rem; width: 1.1rem;" :icon="['fas', 'angle-left']" @click="backToMainList" />
                         <span style="cursor: pointer;"
-                            @click="showGroupAssist = !showGroupAssist">
-                            <font-awesome-icon style="margin-right: 5px;" :icon="['fas', 'angle-left']" />
+                            @click="backToMainList">
                             {{ $t('群收纳盒') }}
                         </span>
+                        <div style="flex: 1" />
                         <a v-if="runtimeData.newMsgCount > 0">{{ runtimeData.newMsgCount }}</a>
                     </div>
                     <div class="small" style="flex-direction: column; height: auto;">

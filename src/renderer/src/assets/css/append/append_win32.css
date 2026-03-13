@@ -35,6 +35,10 @@ input {
     height: 100% !important;
     padding-top: 0 !important;
 }
+/* 合并转发侧栏避让 title bar */
+.chat-pan.withBar .merge-pan > div:last-child {
+    padding-top: 35px;
+}
 .card-info-pan-bg {
     margin-top: -20px;
 }
@@ -188,6 +192,9 @@ input {
         height: 100% !important;
         z-index: 5 !important;
         margin: 0 !important;
+    }
+    .group-assist-message-list.show.open {
+        width: 100% !important;
     }
     /* chat-pan 默认全屏覆盖 */
     .chat-pan {
