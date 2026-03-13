@@ -110,8 +110,27 @@ input {
         padding: 15px 0 !important;
         min-height: 120px !important;
     }
+    .group-assist-message-list.show:not(.open) > div > .small > span {
+        margin-bottom: 10px;
+    }
     .group-assist-message-list.show:not(.open) > div > .small > div {
-        margin: 8px 0 !important;
+        margin: 5px 0 !important;
+        width: 44px !important;
+        height: 44px !important;
+    }
+    
+    /* 平板模式下群收纳盒展开状态恢复横排 */
+    .group-assist-message-list.show.open > div > .small {
+        flex-direction: row !important;
+        height: 50px !important;
+        padding: 0 10px !important;
+    }
+    .group-assist-message-list.show.open > div > .small > span {
+        flex: 1;
+        margin-right: 10px;
+    }
+    .group-assist-message-list.show.open > div > .small > div {
+        margin: 0 5px !important;
         width: 44px !important;
         height: 44px !important;
     }
