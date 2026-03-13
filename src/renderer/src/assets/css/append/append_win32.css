@@ -103,6 +103,19 @@ input {
         width: 300px !important;
     }
     
+    /* 平板模式下群收纳盒折叠状态的按钮竖排布局 */
+    .group-assist-message-list.show:not(.open) > div > .small {
+        flex-direction: column !important;
+        height: auto !important;
+        padding: 15px 0 !important;
+        min-height: 120px !important;
+    }
+    .group-assist-message-list.show:not(.open) > div > .small > div {
+        margin: 8px 0 !important;
+        width: 44px !important;
+        height: 44px !important;
+    }
+    
     /* 其他样式调整 */
     .opt-main > div:last-child {
         padding-top: 25px !important;
