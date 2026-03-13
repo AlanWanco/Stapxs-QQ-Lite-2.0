@@ -107,8 +107,8 @@ body {
     margin-top: 0;
 }
 .friend-body img {
-    height: 30px;
-    width: 30px;
+    height: 45px;
+    width: 45px;
 }
 .friend-body > div:nth-child(1) {
     height: 34px;
@@ -274,8 +274,8 @@ body {
 
 .message > img {
     border: 1px solid var(--color-card-2);
-    height: 30px;
-    width: 30px;
+    height: 45px;
+    width: 45px;
 }
 .message-body > span {
     font-size: 0.6rem;
