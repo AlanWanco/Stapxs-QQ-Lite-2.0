@@ -31,6 +31,9 @@
   "workspaces": [
     "ssqq.capacitor-onebot-connector"
   ],
+  "resolutions": {
+    "sharp": "^0.33.2"
+  },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
