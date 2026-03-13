@@ -110,9 +110,9 @@ body {
     height: 45px;
     width: 45px;
 }
-.friend-body > div:nth-child(1) {
+/* .friend-body > div:nth-child(1) {
     height: 34px;
-}
+} */
 .friend-body > div p {
     font-size: 0.8rem;
 }
