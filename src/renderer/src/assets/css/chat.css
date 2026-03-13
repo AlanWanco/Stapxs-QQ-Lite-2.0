@@ -2088,3 +2088,7 @@ div.tiny-session-body > div:nth-child(3) > div > svg {
         display: block;
     }
 }
+
+textarea#main-input-ex {
+    font-family: Helvetica, Arial, Verdana, Tahoma, sans-serif;
+}
