@@ -189,6 +189,12 @@ input {
         z-index: 5 !important;
         margin: 0 !important;
     }
+    /* chat-pan 默认全屏覆盖 */
+    .chat-pan {
+        left: 0 !important;
+        width: 100% !important;
+        z-index: 20 !important;
+    }
     .chat-pan.withBar {
         left: 0 !important;
         height: calc(100% - 35px);
