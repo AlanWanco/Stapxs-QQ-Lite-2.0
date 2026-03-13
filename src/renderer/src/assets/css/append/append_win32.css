@@ -103,20 +103,23 @@ input {
         width: 300px !important;
     }
     
-    /* 平板模式下群收纳盒折叠状态的按钮竖排布局 */
+    /* 平板模式下群收纳盒折叠状态的按钮竖排布局 - 与群头像对齐 */
     .group-assist-message-list.show:not(.open) > div > .small {
         flex-direction: column !important;
         height: auto !important;
-        padding: 8px 0 !important;
+        padding: 10px 0 !important;
         min-height: auto !important;
+        align-items: center !important;
     }
     .group-assist-message-list.show:not(.open) > div > .small > span {
         margin-bottom: 8px;
+        font-size: 0.7rem;
     }
     .group-assist-message-list.show:not(.open) > div > .small > div {
-        margin: 4px 0 !important;
-        width: 50px !important;
-        height: 50px !important;
+        margin: 10px 0 !important;
+        width: 45px !important;
+        height: 45px !important;
+        border-radius: 50% !important;
     }
     
     /* 平板模式下群收纳盒展开状态恢复横排 */
