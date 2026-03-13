@@ -1612,7 +1612,7 @@ textarea:focus {
     }
     .friend-list > div:first-child > div.small > label {
         margin-right: 10px;
-        height: 50px;
+        height: 46px;
         flex: 1;
     }
     .friend-list.open > div:first-child > div.small > label {
@@ -1818,8 +1818,15 @@ textarea:focus {
         margin-right: -100% !important;
     }
     .group-assist-message-list.show {
-        margin-left: -100% !important;
-        margin-right: 0;
+        display: flex !important;
+        position: fixed !important;
+        left: 0 !important;
+        top: 35px !important; /* 避开 title bar */
+        bottom: 0 !important;
+        height: calc(100vh - 35px) !important;
+        width: 80px !important;
+        z-index: 100 !important;
+        margin: 0 !important;
     }
 
     .viewer-bar {

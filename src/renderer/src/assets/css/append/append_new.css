@@ -91,7 +91,7 @@ body {
     color: var(--color-font);
     font-weight: bold;
     padding: 10px;
-    height: 44px;
+    height: 46px;
 }
 
 .group-assist-message-list {
@@ -127,8 +127,8 @@ body {
 }
 .friend-body > svg {
     padding: 15px;
-    height: 14px;
-    width: 14px;
+    height: 16px;
+    width: 16px;
 }
 
 .mumber-info > div:first-child {
@@ -784,7 +784,6 @@ body {
     }
     .chat-pan {
         height: calc(100% - 60px);
-        left: 75px !important;
     }
     .chat-info {
         width: calc(100% - 70px);
@@ -799,18 +798,18 @@ body {
         padding: 0px !important;
     }
     .friend-list > div:first-child > div.small {
-        height: 44px;
+        height: 46px;
     }
     .friend-list > div:first-child > div.small > div {
-        margin-right: 10px;
-        width: 44px;
+        /* margin-right: 10px; */
+        width: 46px;
     }
     .friend-list > div:first-child > div.small > div > svg {
         height: 14px;
     }
     .friend-list > div:first-child > div.small > label {
         margin-top: 1px;
-        height: 44px;
+        height: 46px;
     }
 }
 @media (max-width: 500px) {
