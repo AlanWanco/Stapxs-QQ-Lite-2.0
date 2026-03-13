@@ -79,7 +79,7 @@ body {
 }
 
 .friend-list {
-    width: 220px;
+    width: 275px;
 }
 .friend-list > div:first-child label {
     height: 30px;
@@ -154,7 +154,7 @@ body {
 }
 
 .chat-pan {
-    left: 270px;
+    left: 325px;
 }
 .chat-pan > div.info {
     padding: 10px;
