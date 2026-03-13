@@ -126,13 +126,16 @@ input {
         padding: 0 10px !important;
     }
     .group-assist-message-list.show.open > div > .small > span {
-        flex: 1;
-        margin-right: 10px;
+        width: auto !important;
+        flex: 0 0 auto !important;
+        margin-right: 20px;
+        white-space: nowrap;
     }
     .group-assist-message-list.show.open > div > .small > div {
         margin: 0 5px !important;
         width: 44px !important;
         height: 44px !important;
+        flex-shrink: 0 !important;
     }
     
     /* 其他样式调整 */
