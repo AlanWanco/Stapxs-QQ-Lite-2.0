@@ -101,18 +101,18 @@
                         </span>
                         <a v-if="runtimeData.newMsgCount > 0">{{ runtimeData.newMsgCount }}</a>
                     </div>
-                    <div class="small" style="flex-direction: column; height: auto; padding: 10px 0;">
-                        <span style="cursor: pointer; margin-bottom: 10px;">
+                    <div class="small" style="flex-direction: column; height: auto; padding: 8px 0;">
+                        <span style="cursor: pointer;">
                             {{ $t('群收纳盒') }}
                             <a v-if="runtimeData.newMsgCount > 0">{{ runtimeData.newMsgCount }}</a>
                         </span>
                         <!-- 返回主消息列表按钮 -->
-                        <div style="margin: 5px 0;"
+                        <div style="margin: 4px 0;"
                             @click="backToMainList">
                             <font-awesome-icon :icon="['fas', 'arrow-left']" />
                         </div>
                         <!-- 展开/收起侧边栏按钮 -->
-                        <div style="margin: 5px 0;" @click="openLeftBar">
+                        <div style="margin: 4px 0;" @click="openLeftBar">
                             <font-awesome-icon :icon="['fas', 'bars-staggered']" />
                         </div>
                     </div>

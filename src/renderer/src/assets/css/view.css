@@ -1678,8 +1678,8 @@ textarea:focus {
     }
     .group-assist-message-list.show:not(.open) > div > .small > div {
         margin: 4px 0 !important;
-        width: 44px !important;
-        height: 44px !important;
+        width: 50px !important;
+        height: 50px !important;
     }
     
     /* Web 平台群收纳盒展开状态横排 */
@@ -1693,15 +1693,15 @@ textarea:focus {
         width: auto !important;
         flex: 0 0 auto !important;
         margin-right: 50px !important;
-        height: 44px !important;
+        height: 50px !important;
         display: flex !important;
         align-items: center !important;
         white-space: nowrap;
     }
     .group-assist-message-list.show.open > div > .small > div {
         margin: 0 5px !important;
-        width: 44px !important;
-        height: 44px !important;
+        width: 50px !important;
+        height: 50px !important;
         flex-shrink: 0 !important;
     }
 
