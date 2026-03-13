@@ -63,6 +63,7 @@ export function configFactory(outPath: string): UserConfigFnObject {
             base: process.env.BUILD_ENV == 'github-actions' ? '/Stapxs-QQ-Lite-2.0/' : './',
             server: {
                 port: parseInt(process.env.VITE_PORT || '8080'),
+                host: '0.0.0.0',
                 proxy: {
                     '/api': {
                         target: 'http://localhost:3000',
