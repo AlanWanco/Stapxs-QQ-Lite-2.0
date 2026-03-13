@@ -144,7 +144,7 @@
     .chat-pan > div.more > div:nth-child(2) {
         background: rgba(var(--color-card-rgb), 0.7);
         backdrop-filter: blur(35px);
-        padding-bottom: calc(20px + var(--safe-area-bottom));
+        padding-bottom: calc(11px + var(--safe-area-bottom));
     }
     .chat-pan > div.more > div:nth-child(2) > div:first-child {
         border-radius: 999px;
