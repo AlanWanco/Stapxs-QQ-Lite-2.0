@@ -94,12 +94,14 @@ body {
     height: 46px;
 }
 
-.group-assist-message-list {
-    margin-right: -220px;
-}
-.group-assist-message-list.show {
-    margin-left: -220px;
-    margin-right: 0;
+@media (min-width: 501px) {
+    .group-assist-message-list {
+        margin-right: -220px;
+    }
+    .group-assist-message-list.show {
+        margin-left: -220px;
+        margin-right: 0;
+    }
 }
 
 .friend-body {
