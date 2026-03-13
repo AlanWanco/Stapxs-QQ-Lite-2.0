@@ -130,4 +130,7 @@
     .friend-list > div:first-child {
         margin: 15px 15px 0 0 !important;
     }
+    .group-assist-message-list.show {
+        padding-top: 35px; /* 避开移动端全屏时的 title bar */
+    }
 }
