@@ -107,16 +107,16 @@ input {
     .group-assist-message-list.show:not(.open) > div > .small {
         flex-direction: column !important;
         height: auto !important;
-        padding: 15px 0 !important;
-        min-height: 120px !important;
+        padding: 8px 0 !important;
+        min-height: auto !important;
     }
     .group-assist-message-list.show:not(.open) > div > .small > span {
-        margin-bottom: 10px;
+        margin-bottom: 8px;
     }
     .group-assist-message-list.show:not(.open) > div > .small > div {
-        margin: 5px 0 !important;
-        width: 44px !important;
-        height: 44px !important;
+        margin: 4px 0 !important;
+        width: 50px !important;
+        height: 50px !important;
     }
     
     /* 平板模式下群收纳盒展开状态恢复横排 */
@@ -124,17 +124,21 @@ input {
         flex-direction: row !important;
         height: 50px !important;
         padding: 0 10px !important;
+        align-items: center !important;
     }
     .group-assist-message-list.show.open > div > .small > span {
         width: auto !important;
         flex: 0 0 auto !important;
-        margin-right: 20px;
+        margin-right: 50px !important;
+        height: 50px !important;
+        display: flex !important;
+        align-items: center !important;
         white-space: nowrap;
     }
     .group-assist-message-list.show.open > div > .small > div {
         margin: 0 5px !important;
-        width: 44px !important;
-        height: 44px !important;
+        width: 50px !important;
+        height: 50px !important;
         flex-shrink: 0 !important;
     }
     
