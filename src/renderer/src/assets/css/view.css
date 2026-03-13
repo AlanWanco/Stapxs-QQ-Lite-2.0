@@ -1569,6 +1569,9 @@ textarea:focus {
     .side-bar-space {
         display: none;
     }
+    .friend-list-space {
+        display: none !important;
+    }
     /* 二级侧栏 */
     .friend-list {
         transition: width 0.3s;
@@ -1782,6 +1785,11 @@ textarea:focus {
     }
     /* 二级侧栏 */
     .friend-list {
+        width: 100% !important;
+        position: relative !important;
+        z-index: 10 !important;
+    }
+    .friend-list:only-child {
         width: 100% !important;
     }
     /* 移动端模式：完全隐藏折叠状态的 small 头，并恢复显示 base 头及桌面版搜索框 */

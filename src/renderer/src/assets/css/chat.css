@@ -1993,13 +1993,14 @@ div.tiny-session-body > div:nth-child(3) > div > svg {
     /* 群信息面板 */
     .chat-info {
         width: calc(100% - 80px);
+        margin: calc(50vh - 20px) 0 0 20px !important;
         transform: unset;
         min-width: unset;
-        margin: 20px;
         bottom: 75px;
     }
     .chat-info-pan {
-        height: calc(100% + 75px);
+        height: calc(100% + 55px);
+        margin-top: -20px;
     }
     /* AT 信息悬浮面板 */
     .mumber-info > div:first-child {
@@ -2022,12 +2023,13 @@ div.tiny-session-body > div:nth-child(3) > div > svg {
 @media (max-width: 500px) {
     /* 群信息面板 */
     .chat-info {
-        height: calc(100% - 115px);
         width: calc(100% - 40px);
+        margin: calc(50vh - 20px) 0 0 20px !important;
         max-height: unset;
-        border-radius: 0;
         min-width: unset;
-        margin: 0;
+    }
+    .chat-info-pan {
+        height: calc(100% + 95px);
     }
     .chat-info:hover {
         box-shadow: none;
@@ -2080,12 +2082,17 @@ div.tiny-session-body > div:nth-child(3) > div > svg {
     /* 聊天面板（二级侧栏） */
     .chat-pan {
         left: 0 !important;
+        width: 100% !important;
+        z-index: 20 !important;
     }
     .chat-pan.open {
         transform: translateX(100%);
     }
-    .chat-pan > div.info > svg {
-        display: block;
+    .chat-pan > div.info > svg.back {
+        display: block !important;
+    }
+    .chat-pan > div.info > svg:not(.back) {
+        display: none !important;
     }
 }
 
