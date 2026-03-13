@@ -234,8 +234,23 @@
         },
         mounted() {
             library.add(faCheckToSlot, faThumbTack, faTrashCan, faGripLines, faBroom)
+            
+            // 调试：输出初始状态
+            this.logLayoutState('组件挂载')
+            
+            // 监听窗口大小变化
+            window.addEventListener('resize', this.handleResize)
+        },
+        beforeUnmount() {
+            window.removeEventListener('resize', this.handleResize)
         },
         methods: {
+            /**
+             * 窗口大小变化处理
+             */
+            handleResize() {
+                this.logLayoutState('窗口大小变化')
+            },
             /**
              * 联系人点击事件
              * @param data 联系人对象
@@ -343,6 +358,26 @@
              */
             openLeftBar() {
                 runtimeData.tags.openSideBar = !runtimeData.tags.openSideBar
+                this.logLayoutState('汉堡按钮点击')
+            },
+            
+            /**
+             * 输出当前布局状态（调试用）
+             */
+            logLayoutState(trigger: string) {
+                const width = window.innerWidth
+                let mode = '桌面窗口模式'
+                if (width <= 500) mode = '移动端模式'
+                else if (width <= 700) mode = '平板模式'
+                
+                const messageListState = runtimeData.tags.openSideBar ? '展开' : '折叠'
+                const hasHamburger = width > 500 // 平板模式有汉堡按钮，移动端没有
+                
+                console.log(`[Layout Debug] 触发: ${trigger}`)
+                console.log(`  宽度: ${width}px`)
+                console.log(`  模式: ${mode}`)
+                console.log(`  message-list: ${messageListState}`)
+                console.log(`  汉堡按钮: ${hasHamburger ? '显示' : '隐藏'}`)
             },
 
             /**
