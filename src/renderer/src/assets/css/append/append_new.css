@@ -780,7 +780,7 @@ body {
         height: 60px !important;
     }
     .friend-list {
-        width: 75px;
+        width: 9-px;
     }
     .chat-pan {
         height: calc(100% - 60px);
@@ -792,9 +792,9 @@ body {
     .friend-list {
         background: var(--color-card-1) !important;
     }
-    .friend-list > div:first-child {
+    /* .friend-list > div:first-child {
         margin: 5px 15px 5px 0;
-    }
+    } */
     .friend-list > div:last-child {
         padding: 0px !important;
     }
