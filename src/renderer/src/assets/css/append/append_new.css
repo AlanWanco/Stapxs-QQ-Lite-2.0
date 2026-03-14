@@ -1,5 +1,9 @@
 /* 桌面端基本样式 */
 
+:root {
+    --sidebar-ul-width: 50px; /* 桌面端 UI 2.0 ul 宽度，覆盖 view.css 的 75px */
+}
+
 html,
 body {
     background: none;
