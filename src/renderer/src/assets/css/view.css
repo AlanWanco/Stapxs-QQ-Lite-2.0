@@ -19,7 +19,7 @@ body {
     overscroll-behavior: none; /* 防止安卓页面滚动 */
 
     --desktop-friend-list-width: 300px;
-    --sidebar-ul-width: 75px;         /* Web 端 ul 宽度；桌面端由 append_new.css 覆盖为 50px */
+    --sidebar-ul-width: 75px;         /* Web 端 ul 宽度；桌面端由 append_new/platform.css body 块覆盖为 50px */
     /* 移动端响应式布局变量 */
     --mobile-tab-bar-height: 5rem;
     --mobile-sidebar-collapsed: 5rem;

@@ -1,6 +1,6 @@
 /* linux 桌面端基本样式 */
 
-:root {
+body {
     --sidebar-ul-width: 50px;
 }
 

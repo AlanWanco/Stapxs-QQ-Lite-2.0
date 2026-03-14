@@ -1,11 +1,8 @@
 /* Windows 桌面端附加样式 */
 
-:root {
-    --sidebar-ul-width: 50px;
-}
-
 body,
 input {
+    --sidebar-ul-width: 50px;
     font: 14px "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", Arial, sans-serif !important;
 }
 
