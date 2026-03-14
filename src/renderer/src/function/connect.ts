@@ -194,7 +194,7 @@ export class Connector {
      */
     private static ReMap: Map<string, any> = new Map()
 
-    private static waitReturn(echo: string, timeout: number=5000): Promise<any> {
+    static waitReturn(echo: string, timeout: number=5000): Promise<any> {
         return new Promise((resolve, reject) => {
             const startTime = Date.now()
 
@@ -280,6 +280,39 @@ export class Connector {
      * @param args 参数
      * @returns undefined 表示无此API, null表示调用失败, 其余为经getMsgData过滤的返回值
      */
+    /**
+     * 调用 api（支持自定义超时）
+     * @param api     api名称
+     * @param args    参数
+     * @param timeout 超时毫秒数（默认 5000ms）
+     */
+    static async callApiWithTimeout(api: string, args: {[key: string]: any}, timeout: number): Promise<any|undefined|null>{
+        const echo = uuid()
+        const apiMap = runtimeData.jsonMap[api]
+        if (!apiMap) {
+            logger.debug(`${runtimeData.jsonMap.name} 未适配 API ${api}`)
+            return undefined
+        }
+
+        if(import.meta.env.VITE_APP_SSE_MODE == 'true') {
+            this.sendSeeMod(apiMap.name, args, echo)
+        } else {
+            this.sendRaw(apiMap.name, args, echo)
+        }
+
+        try{
+            const re = await this.waitReturn(echo, timeout)
+            return getMsgData(api, re, apiMap)
+        }catch (e) {
+            if (e instanceof TimeoutError) {
+                logger.error(e, `API ${api} 请求超时`)
+            }else {
+                logger.error(e as Error, `API ${api} 请求失败`)
+            }
+        }
+        return null
+    }
+
     static async callApi(api: string, args: {[key: string]: any}): Promise<any|undefined|null>{
         // 组建信息
         const echo = uuid()

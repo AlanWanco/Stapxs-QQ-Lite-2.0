@@ -1699,6 +1699,64 @@ input {
     color: var(--color-font-1);
 }
 
+/* 文件上传进度条 */
+.upload-progress-enter-active,
+.upload-progress-leave-active {
+    transition: all 0.3s;
+}
+.upload-progress-enter-from,
+.upload-progress-leave-to {
+    opacity: 0;
+    height: 0;
+    margin: 0 20px;
+    padding: 0;
+}
+
+.upload-progress-bar {
+    background: var(--color-card-1);
+    border-radius: 7px;
+    margin: 10px 20px -5px 20px;
+    padding: 6px 10px 8px;
+    overflow: hidden;
+}
+.upload-progress-info {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 5px;
+    font-size: 0.75rem;
+    color: var(--color-font-2);
+    overflow: hidden;
+}
+.upload-progress-info svg {
+    flex-shrink: 0;
+    height: 0.75rem;
+    color: var(--color-main);
+}
+.upload-progress-info > span:first-of-type {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.upload-progress-pct {
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+}
+.upload-progress-track {
+    height: 3px;
+    background: var(--color-card-2);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.upload-progress-fill {
+    height: 100%;
+    background: var(--color-main);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
 .at-tag {
     background: var(--color-card-1);
     transform-origin: bottom;

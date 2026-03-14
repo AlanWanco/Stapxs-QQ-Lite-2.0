@@ -355,7 +355,20 @@
                     </div>
                 </div>
             </div>
-            <!-- 消息发送框 -->
+                <!-- 文件上传进度条 -->
+                <Transition name="upload-progress">
+                    <div v-if="fileUploadProgress >= 0" class="upload-progress-bar">
+                        <div class="upload-progress-info">
+                            <font-awesome-icon :icon="['fas', 'file-arrow-up']" />
+                            <span>{{ fileUploadName }}</span>
+                            <span class="upload-progress-pct">{{ fileUploadProgress }}%</span>
+                        </div>
+                        <div class="upload-progress-track">
+                            <div class="upload-progress-fill" :style="{ width: fileUploadProgress + '%' }"></div>
+                        </div>
+                    </div>
+                </Transition>
+                <!-- 消息发送框 -->
             <div>
                 <div v-menu.prevent="_=>moreFunClick()"
                     @click="moreFunClick(runtimeData.sysConfig.quick_send)">
@@ -751,7 +764,9 @@ import { Img } from '@renderer/function/model/img'
                 chatImg: undefined as any,
                 sentHistory: new Map<number, string[]>(),
                 historyIndex: -1,
-                lastUpKeyTime: 0
+                lastUpKeyTime: 0,
+                fileUploadProgress: -1,
+                fileUploadName: ''
             }
         },
         watch: {
@@ -2260,7 +2275,15 @@ import { Img } from '@renderer/function/model/img'
                 ) {
                     const item = event.clipboardData.items[i]
                     if (item.kind === 'file') {
-                        this.setImg(item.getAsFile())
+                        const file = item.getAsFile()
+                        if (!file) continue
+                        if (file.type.includes('image/')) {
+                            // 图片：走原有缓存逻辑
+                            this.setImg(file)
+                        } else if (!backend.isMobile()) {
+                            // 非图片文件（桌面/Web）：流式上传
+                            this.uploadFileStream(file, file.name || this.$t('未知文件'))
+                        }
                         // 阻止默认行为
                         event.preventDefault()
                     }
@@ -2331,17 +2354,19 @@ import { Img } from '@renderer/function/model/img'
                 }
             },
             sendFile(file: File, fileName: string | null) {
-                // 将 file 转换为 base64
-                const reader = new FileReader()
+                if (!backend.isMobile()) {
+                    // 非移动端：使用流式上传
+                    this.uploadFileStream(file, fileName ?? file.name ?? this.$t('未知文件'))
+                } else {
+                    // 移动端降级：整文件 base64 上传（原逻辑）
+                    const reader = new FileReader()
                     reader.readAsDataURL(file)
                     reader.onloadend = () => {
                         let base64data = reader.result as string
-                        // 找到第一个逗号，截取后面的内容
                         base64data = base64data.substring(
                             base64data.indexOf('base64,') + 7,
                             base64data.length,
                         )
-                        // 发送文件不能包含任何其他内容
                         this.sendCache = []
                         this.imgCache.clear()
                         this.msg = ''
@@ -2353,9 +2378,7 @@ import { Img } from '@renderer/function/model/img'
                                 name: fileName ?? this.$t('未知文件'),
                             },
                         })
-                        // 直接触发发送消息
                         this.sendMsg('sendFileBack')
-                        // 提示
                         const popInfo = {
                             title: this.$t('提醒'),
                             html: `<span>${this.$t('正在发送文件中……')}</span>`,
@@ -2363,6 +2386,134 @@ import { Img } from '@renderer/function/model/img'
                         }
                         runtimeData.popBoxList.push(popInfo)
                     }
+                }
+            },
+
+            /**
+             * 流式上传文件（upload_file_stream 协议）
+             * 分片大小 512KB，每片超时 30s
+             * 上传完成后调 upload_group_file / upload_private_file 发送
+             */
+            async uploadFileStream(file: File, fileName: string) {
+                const CHUNK_SIZE = 512 * 1024   // 512 KB
+                const CHUNK_TIMEOUT = 30000      // 30s
+                const popInfo = new PopInfo()
+                const streamId = uuid()
+                const chatType = runtimeData.chatInfo.show.type
+                const chatId = runtimeData.chatInfo.show.id
+
+                // 读取整个文件为 ArrayBuffer
+                let buffer: ArrayBuffer
+                try {
+                    buffer = await file.arrayBuffer()
+                } catch (e) {
+                    popInfo.add(PopType.ERR, this.$t('读取文件失败'))
+                    return
+                }
+
+                // 计算 SHA256
+                let sha256 = ''
+                try {
+                    const hashBuf = await crypto.subtle.digest('SHA-256', buffer)
+                    sha256 = Array.from(new Uint8Array(hashBuf))
+                        .map(b => b.toString(16).padStart(2, '0'))
+                        .join('')
+                } catch (e) {
+                    popInfo.add(PopType.ERR, this.$t('计算文件校验值失败'))
+                    return
+                }
+
+                const totalSize = buffer.byteLength
+                const totalChunks = Math.ceil(totalSize / CHUNK_SIZE)
+
+                // 显示进度条
+                this.fileUploadName = fileName
+                this.fileUploadProgress = 0
+
+                // 逐片发送
+                for (let i = 0; i < totalChunks; i++) {
+                    const start = i * CHUNK_SIZE
+                    const end = Math.min(start + CHUNK_SIZE, totalSize)
+                    const chunkBytes = new Uint8Array(buffer, start, end - start)
+
+                    // ArrayBuffer -> base64
+                    let binary = ''
+                    for (let j = 0; j < chunkBytes.length; j++) {
+                        binary += String.fromCharCode(chunkBytes[j])
+                    }
+                    const chunkBase64 = btoa(binary)
+
+                    const echo = uuid()
+                    Connector.sendRaw('upload_file_stream', {
+                        stream_id: streamId,
+                        chunk_data: chunkBase64,
+                        chunk_index: i,
+                        total_chunks: totalChunks,
+                        file_size: totalSize,
+                        expected_sha256: sha256,
+                        filename: fileName,
+                        file_retention: 30000,
+                    }, echo)
+
+                    try {
+                        await Connector.waitReturn(echo, CHUNK_TIMEOUT)
+                    } catch (e) {
+                        this.fileUploadProgress = -1
+                        popInfo.add(PopType.ERR, this.$t('文件上传超时（第 {n} 片）', { n: i + 1 }))
+                        return
+                    }
+
+                    this.fileUploadProgress = Math.round(((i + 1) / totalChunks) * 95)
+                }
+
+                // 发送完成信号
+                const completeEcho = uuid()
+                Connector.sendRaw('upload_file_stream', {
+                    stream_id: streamId,
+                    is_complete: true,
+                }, completeEcho)
+
+                let completeResp: any
+                try {
+                    completeResp = await Connector.waitReturn(completeEcho, CHUNK_TIMEOUT)
+                } catch (e) {
+                    this.fileUploadProgress = -1
+                    popInfo.add(PopType.ERR, this.$t('文件上传完成确认超时'))
+                    return
+                }
+
+                // 检查响应
+                const serverPath: string | undefined =
+                    completeResp?.data?.file_path ?? completeResp?.file_path
+                if (!serverPath) {
+                    this.fileUploadProgress = -1
+                    popInfo.add(PopType.ERR, this.$t('服务端未返回文件路径'))
+                    return
+                }
+
+                this.fileUploadProgress = 98
+
+                // 调用群/私聊文件发送 API
+                if (chatType === 'group') {
+                    Connector.sendRaw('upload_group_file', {
+                        group_id: chatId,
+                        file: serverPath,
+                        name: fileName,
+                    }, uuid())
+                } else {
+                    Connector.sendRaw('upload_private_file', {
+                        user_id: chatId,
+                        file: serverPath,
+                        name: fileName,
+                    }, uuid())
+                }
+
+                this.fileUploadProgress = 100
+                setTimeout(() => {
+                    this.fileUploadProgress = -1
+                }, 1500)
+
+                popInfo.add(PopType.INFO, this.$t('文件发送成功：{name}', { name: fileName }))
             },
 
             /**
