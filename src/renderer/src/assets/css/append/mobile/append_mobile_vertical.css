@@ -8,7 +8,6 @@
 
     .main-body > div {
         height: calc(100% - var(--mobile-tab-bar-height) - var(--safe-area-top) - var(--safe-area-bottom));
-        padding-bottom: calc(var(--mobile-tab-bar-height) + var(--safe-area-bottom));
         margin-top: var(--safe-area-top);
     }
 
@@ -180,5 +179,30 @@
     /* A7: 设置标签头安全区域 */
     .opt-tab > div:first-child {
         padding-top: calc(var(--safe-area-top) + 0.625rem);
+    }
+
+    /* icon-list 图标选择器 */
+    .icon-list {
+        display: flex;
+    }
+    .icon-list > div {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0.5rem;
+    }
+    .icon-list > div.selected > img {
+        border: 0.1875rem solid var(--color-main);
+    }
+    .icon-list img {
+        width: 3.4rem;
+        transition: border .3s;
+        border: 0.1875rem solid var(--color-card-2);
+        border-radius: 0.9rem;
+    }
+    .icon-list span {
+        font-size: 0.85rem;
+        color: var(--color-font-1);
+        margin-top: 0.3rem;
     }
 }

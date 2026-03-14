@@ -230,12 +230,6 @@ textarea:focus {
     color: var(--color-font);
     display: none;
 }
-.main-body > ul > li:first-child {
-    margin-top: 10px;
-}
-.main-body > ul > li:last-child {
-    margin-bottom: 10px;
-}
 .main-body > ul > li::after {
     display: none;
 }
@@ -1538,6 +1532,16 @@ textarea:focus {
     cursor: crosshair;
 }
 
+
+/* 桌面端/Web 宽屏：ul 竖向排列，首尾 li 需要留白 */
+@media (min-width: 750px) {
+    .main-body > ul > li:first-child {
+        margin-top: 10px;
+    }
+    .main-body > ul > li:last-child {
+        margin-bottom: 10px;
+    }
+}
 
 @media (max-width: 700px) {
     /* 侧栏及主布局自适应 */

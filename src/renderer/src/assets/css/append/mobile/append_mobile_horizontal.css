@@ -240,6 +240,10 @@
         background: var(--color-card);
     }
 
+    .friend-list-container {
+        margin-bottom: 48px;
+    }
+
     .opt-main {
         padding-top: 0;
     }
@@ -339,10 +343,6 @@
     }
     .friend-list.open ~ .chat-pan {
         left: var(--mobile-sidebar-expanded) !important;
-    }
-    /* BUG1: 输入框底部让出标签栏空间（覆盖 ≥751px 的值） */
-    .chat-pan > div.more > div:nth-child(2) {
-        padding-bottom: calc(var(--mobile-tab-bar-height) + var(--safe-area-bottom));
     }
     /* A12: 聊天面板信息栏安全区域 */
     .chat-pan > div.info {
