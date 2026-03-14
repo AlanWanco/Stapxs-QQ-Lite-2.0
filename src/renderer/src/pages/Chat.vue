@@ -60,9 +60,20 @@
                 <font-awesome-icon :icon="['fas', 'ellipsis-vertical']" @click="openChatInfoPan" />
             </div>
         </div>
-        <!-- 文件上传进度条 -->
+        <!-- 文件上传进度条 / 粘贴确认框 -->
         <Transition name="upload-progress">
-            <div v-if="fileUploadProgress >= 0" class="upload-progress-bar">
+            <div v-if="fileUploadPending" class="upload-progress-bar upload-confirm-bar">
+                <div class="upload-confirm-info">
+                    <font-awesome-icon :icon="['fas', 'file-arrow-up']" />
+                    <span class="upload-confirm-name">{{ fileUploadPending.name }}</span>
+                    <span class="upload-confirm-size">{{ (fileUploadPending.size / 1024).toFixed(0) }} KB</span>
+                </div>
+                <div class="upload-confirm-actions">
+                    <button class="upload-confirm-cancel" @click="cancelPasteUpload">{{ $t('取消') }}</button>
+                    <button class="upload-confirm-ok" @click="confirmPasteUpload">{{ $t('发送') }}</button>
+                </div>
+            </div>
+            <div v-else-if="fileUploadProgress >= 0" class="upload-progress-bar">
                 <div class="upload-progress-info">
                     <font-awesome-icon :icon="['fas', 'file-arrow-up']" />
                     <span>{{ fileUploadName }}</span>
@@ -766,7 +777,8 @@ import { Img } from '@renderer/function/model/img'
                 historyIndex: -1,
                 lastUpKeyTime: 0,
                 fileUploadProgress: -1,
-                fileUploadName: ''
+                fileUploadName: '',
+                fileUploadPending: null as File | null
             }
         },
         watch: {
@@ -781,6 +793,7 @@ import { Img } from '@renderer/function/model/img'
                 this.historyIndex = -1
                 this.fileUploadProgress = -1
                 this.fileUploadName = ''
+                this.fileUploadPending = null
                 this.initMenuDisplay()
                 this.$nextTick(() => {
                     this.resizeMainInput()
@@ -2283,8 +2296,8 @@ import { Img } from '@renderer/function/model/img'
                             // 图片：走原有缓存逻辑
                             this.setImg(file)
                         } else if (!backend.isMobile()) {
-                            // 非图片文件（桌面/Web）：流式上传
-                            this.uploadFileStream(file, file.name || this.$t('未知文件'))
+                            // 非图片文件（桌面/Web）：先弹确认，防止误粘贴
+                            this.fileUploadPending = file
                         }
                         // 阻止默认行为
                         event.preventDefault()
@@ -2309,8 +2322,21 @@ import { Img } from '@renderer/function/model/img'
                 }
             },
 
-            runSelectFile() {
-                const input = document.getElementById('choice-file')
+            /** 确认粘贴文件上传 */
+            confirmPasteUpload() {
+                const file = this.fileUploadPending
+                this.fileUploadPending = null
+                if (file) {
+                    this.uploadFileStream(file, file.name || this.$t('未知文件'))
+                }
+            },
+
+            /** 取消粘贴文件上传 */
+            cancelPasteUpload() {
+                this.fileUploadPending = null
+            },
+
+            runSelectFile() {                const input = document.getElementById('choice-file')
                 if (input) {
                     input.click()
                 }

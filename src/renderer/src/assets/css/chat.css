@@ -1760,6 +1760,66 @@ input {
     transition: width 0.3s ease;
 }
 
+/* 粘贴文件确认框 */
+.upload-confirm-bar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+}
+.upload-confirm-info {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    overflow: hidden;
+    font-size: 0.8rem;
+    color: var(--color-font-2);
+}
+.upload-confirm-info > svg {
+    flex-shrink: 0;
+    height: 0.8rem;
+    color: var(--color-main);
+}
+.upload-confirm-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.upload-confirm-size {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    color: var(--color-font-3);
+}
+.upload-confirm-actions {
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.upload-confirm-actions button {
+    border: none;
+    border-radius: 5px;
+    padding: 3px 10px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+.upload-confirm-actions button:hover {
+    opacity: 0.8;
+}
+.upload-confirm-cancel {
+    background: var(--color-card-2);
+    color: var(--color-font-2);
+}
+.upload-confirm-ok {
+    background: var(--color-main);
+    color: var(--color-font-r);
+}
+
 .at-tag {
     background: var(--color-card-1);
     transform-origin: bottom;
