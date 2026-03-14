@@ -1692,13 +1692,13 @@ textarea:focus {
         align-items: center !important;
     }
     .group-assist-message-list.show.open > div > .small > span {
-        width: auto !important;
-        flex: 0 0 auto !important;
-        margin-right: 1.875rem !important;
+        flex: 1 !important;
         height: var(--mobile-avatar-size) !important;
         display: flex !important;
         align-items: center !important;
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .group-assist-message-list.show.open > div > .small > div {
         margin: 0 0.3rem !important;

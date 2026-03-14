@@ -216,7 +216,7 @@ input {
     line-height: 20px;
     max-height: 40vh;
     min-height: 20px;
-    padding: 0 20px;
+    padding: 0 20px;   /* 垂直 padding 为 0，覆盖浏览器 UA 默认的 2px，消除高度偏差 */
     margin: 10px 0;
     height: 20px;
     resize: none;
@@ -407,16 +407,13 @@ input {
 
 .msg-menu {
 	pointer-events: none;
-    position: absolute;
-    overflow: hidden;
-    height: calc(100% - var(--safe-area-top) - var(--safe-area-bottom)) !important;
-    top: var(--safe-area-top);
+    position: fixed;
+    overflow: visible;
+    height: 100%;
+    top: 0;
+    left: 0;
     width: 100%;
     z-index: 30;
-}
-.msg-menu.withBar {
-    height: calc(100% + 40px);
-    margin-top: -40px;
 }
 .msg-menu-bg {
     pointer-events: all;
@@ -1978,15 +1975,10 @@ div.tiny-session-body > div:nth-child(3) > div > svg {
 }
 
 @media (max-width: 700px) {
-    /* 消息面板 */
+    /* 消息面板：高度适配底部标签栏，left 由各平台 append 文件控制 */
     .chat-pan {
         height: calc(100% - var(--mobile-tab-bar-height) - var(--safe-area-bottom));
-        left: var(--mobile-sidebar-collapsed) !important;
     }
-.chat-pan.withBar {
-    top: var(--top-bar-height) !important;
-    height: calc(100% - var(--top-bar-height)) !important;
-}
     .chat-pan.open {
         transform: translateX(13.75rem);
     }

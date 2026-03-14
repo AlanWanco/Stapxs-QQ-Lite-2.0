@@ -140,19 +140,24 @@ input {
         align-items: center !important;
     }
     .group-assist-message-list.show.open > div > .small > span {
-        width: auto !important;
-        flex: 0 0 auto !important;
-        margin-right: 1.875rem !important;
+        flex: 1 !important;
         height: var(--mobile-avatar-size) !important;
         display: flex !important;
         align-items: center !important;
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .group-assist-message-list.show.open > div > .small > div {
         margin: 0 0.3125rem !important;
         width: var(--mobile-avatar-size) !important;
         height: var(--mobile-avatar-size) !important;
         flex-shrink: 0 !important;
+    }
+    
+    /* 输入框底部需让出标签栏空间 */
+    .chat-pan > div.more > div:nth-child(2) {
+        padding-bottom: calc(var(--mobile-tab-bar-height) + var(--safe-area-bottom));
     }
     
     /* 其他样式调整 */

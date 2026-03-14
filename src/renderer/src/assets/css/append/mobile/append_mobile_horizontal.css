@@ -53,9 +53,6 @@
         background: var(--color-card);
         width: var(--mobile-sidebar-wide);
     }
-    .chat-pan {
-        left: var(--mobile-sidebar-wide);
-    }
     .friend-body img {
         height: var(--mobile-avatar-size);
         width: var(--mobile-avatar-size);
@@ -76,22 +73,8 @@
     }
 
     /* 聊天面板 */
-    .chat-pan > div.info > svg.back {
-        display: none !important;
-    }
-    .main-body > ul > li > span {
-        display: block !important;
-    }
-    .main-body > ul > li {
-        margin-top: 1.25rem !important;
-        margin-bottom: 0 !important;
-    }
-    .main-body > ul > li.active > span,
-    .main-body > ul > li.active > svg {
-        background-color: transparent;
-        color: var(--color-main);
-    }
     .chat-pan {
+        left: var(--mobile-sidebar-collapsed);
         z-index: 21;
         height: calc(100% + 2.2rem - var(--safe-area-bottom));
         border-left: 1px solid var(--color-card-2);
@@ -129,11 +112,8 @@
         height: calc(100% - 2.125rem - var(--append-fs-adaptation));
     }
     .chat-pan > div.chat {
-        margin-bottom: -3.75rem;
-        padding-bottom: 3.75rem;
-    }
-    .chat-pan > div.chat {
         margin-bottom: -1.875rem;
+        padding-bottom: 3.75rem;
     }
     .chat-pan > div.more > div:first-child {
         padding-bottom: 1.25rem;
@@ -327,11 +307,19 @@
     .friend-list.open {
         width: var(--mobile-sidebar-expanded) !important;
     }
+    /* FL: chat-pan 跟随侧栏状态 */
     .chat-pan {
         left: var(--mobile-sidebar-collapsed) !important;
     }
     .chat-pan.open {
         left: var(--mobile-sidebar-expanded) !important;
+    }
+    .friend-list.open ~ .chat-pan {
+        left: var(--mobile-sidebar-expanded) !important;
+    }
+    /* 输入框底部需让出标签栏空间 */
+    .chat-pan > div.more > div:nth-child(2) {
+        padding-bottom: calc(var(--mobile-tab-bar-height) + var(--safe-area-bottom));
     }
     /* A12: 聊天面板信息栏安全区域 */
     .chat-pan > div.info {
