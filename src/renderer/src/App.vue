@@ -337,10 +337,13 @@ export default defineComponent({
             }
         }, true)
 
-        // Ctrl+↑/↓ 切换聊天框（非移动端）
+        // Ctrl+↑/↓ 切换聊天框（非移动端；macOS 用 Cmd+↑/↓）
         window.addEventListener('keydown', (e: KeyboardEvent) => {
             if (backend.isMobile()) return
-            if (!e.ctrlKey) return
+            const isMac = backend.platform === 'darwin' ||
+                (backend.platform === 'web' && /Mac OS X/.test(navigator.userAgent))
+            const modifierPressed = isMac ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey
+            if (!modifierPressed) return
             if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
             const list = runtimeData.onMsgList
             if (!list || list.length === 0) return
