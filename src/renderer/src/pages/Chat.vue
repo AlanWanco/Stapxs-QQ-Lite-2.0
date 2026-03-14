@@ -749,8 +749,9 @@ import { Img } from '@renderer/function/model/img'
                 isDev: import.meta.env.DEV,
                 chatMoveOptions,
                 chatImg: undefined as any,
-                sentHistory: [] as string[],
-                historyIndex: -1
+                sentHistory: new Map<number, string[]>(),
+                historyIndex: -1,
+                lastUpKeyTime: 0
             }
         },
         watch: {
@@ -1019,13 +1020,15 @@ import { Img } from '@renderer/function/model/img'
                     !this.tags.onAtFind
                 ) {
                     event.preventDefault()
-                    if (this.sentHistory.length === 0) return
+                    const chatId = this.chat.show.id
+                    const history = this.sentHistory.get(chatId) ?? []
+                    if (history.length === 0) return
                     if (event.keyCode === 38) {
                         // 向上：取更旧的历史
                         if (this.historyIndex === -1) {
                             // 首次按上键，先保存当前输入内容
                             this.oldMsg = this.msg
-                            this.historyIndex = this.sentHistory.length - 1
+                            this.historyIndex = history.length - 1
                         } else {
                             this.historyIndex = Math.max(0, this.historyIndex - 1)
                         }
@@ -1033,13 +1036,13 @@ import { Img } from '@renderer/function/model/img'
                         // 向下：取更新的历史，或恢复草稿
                         if (this.historyIndex === -1) return
                         this.historyIndex++
-                        if (this.historyIndex >= this.sentHistory.length) {
+                        if (this.historyIndex >= history.length) {
                             this.historyIndex = -1
                             this.msg = this.oldMsg
                             return
                         }
                     }
-                    this.msg = this.sentHistory[this.historyIndex]
+                    this.msg = history[this.historyIndex]
                     return
                 }
 
@@ -1093,6 +1096,32 @@ import { Img } from '@renderer/function/model/img'
                 }
 
                 if(this.tags.onAtFind) return
+
+                // 双击↑：撤回上一条自己发的消息并重新编辑（300ms 内连按两次，输入框须为空）
+                if (
+                    event.keyCode === 38 &&
+                    !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey &&
+                    this.msg.trim() === ''
+                ) {
+                    const now = Date.now()
+                    if (now - this.lastUpKeyTime <= 300) {
+                        this.lastUpKeyTime = 0
+                        // 找最后一条自己发的、未撤回的消息
+                        const myId = runtimeData.loginInfo.uin
+                        const lastMyMsg = [...this.list].reverse().find(
+                            (m: any) => m.sender?.user_id === myId && !m.revoke
+                        )
+                        if (lastMyMsg) {
+                            event.preventDefault()
+                            Connector.callApi('delete_msg', { message_id: lastMyMsg.message_id })
+                            this.reedit(lastMyMsg)
+                        }
+                    } else {
+                        this.lastUpKeyTime = now
+                    }
+                    return
+                }
+
                 if (event.key !== 'Enter') return
                 let canSend = false
                 switch (runtimeData.sysConfig.send_key) {
@@ -2451,12 +2480,13 @@ import { Img } from '@renderer/function/model/img'
                 }
                 // 发送后事务
                 this.tags.checkNewLineFlag = true
-                // 保存发送历史（opt_send_history 开启时，最多 50 条）
+                // 保存发送历史（opt_send_history 开启时，每个会话最多 50 条）
                 if (runtimeData.sysConfig.opt_send_history && this.msg.trim() !== '') {
-                    this.sentHistory.push(this.msg)
-                    if (this.sentHistory.length > 50) {
-                        this.sentHistory.shift()
-                    }
+                    const chatId = this.chat.show.id
+                    const history = this.sentHistory.get(chatId) ?? []
+                    history.push(this.msg)
+                    if (history.length > 50) history.shift()
+                    this.sentHistory.set(chatId, history)
                     this.historyIndex = -1
                     this.oldMsg = ''
                 }
