@@ -18,7 +18,7 @@ body {
     font-size: calc(16px * var(--scale-font, 1));
     overscroll-behavior: none; /* 防止安卓页面滚动 */
 
-    --desktop-friend-list-width: 275px;
+    --desktop-friend-list-width: 300px;
     /* 移动端响应式布局变量 */
     --mobile-tab-bar-height: 5rem;
     --mobile-sidebar-collapsed: 5rem;
