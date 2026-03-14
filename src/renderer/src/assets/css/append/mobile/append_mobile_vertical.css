@@ -1,5 +1,11 @@
 /* 移动端附加样式（纵向） */
 @media (max-width: 500px) {
+    /* BUG5/BUG6: 防止 safe-area-top/margin-top 区域透出主题色 */
+    #app,
+    .main-body {
+        background: var(--color-card);
+    }
+
     .main-body > div {
         height: calc(100% - var(--mobile-tab-bar-height) - var(--safe-area-top) - var(--safe-area-bottom));
         padding-bottom: calc(var(--mobile-tab-bar-height) + var(--safe-area-bottom));

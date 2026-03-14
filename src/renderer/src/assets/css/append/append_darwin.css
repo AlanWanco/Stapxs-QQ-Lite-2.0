@@ -1,5 +1,9 @@
 /* macOS 桌面端样式 */
 
+:root {
+    --sidebar-ul-width: 50px;
+}
+
 body,
 input {
     font: 14px -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif !important;

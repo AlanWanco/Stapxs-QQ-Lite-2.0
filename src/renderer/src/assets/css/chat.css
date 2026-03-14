@@ -217,7 +217,7 @@ input {
     max-height: 40vh;
     min-height: 20px;
     padding: 0 20px;   /* 垂直 padding 为 0，覆盖浏览器 UA 默认的 2px，消除高度偏差 */
-    margin: 10px 0;
+    margin: 8.5px 0;
     height: 20px;
     resize: none;
     border: 0;

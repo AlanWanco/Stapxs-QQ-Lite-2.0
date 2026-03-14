@@ -17,6 +17,10 @@
     #app {
         background: var(--color-card);
     }
+    /* BUG6: 防止 safe-area-top margin-top 区域透出主题色 */
+    .main-body {
+        background: var(--color-card);
+    }
     .main-body > ul {
         background: rgba(var(--color-card-rgb), 0.7);
         backdrop-filter: blur(2.1875rem);
@@ -74,7 +78,7 @@
 
     /* 聊天面板 */
     .chat-pan {
-        left: var(--mobile-sidebar-collapsed);
+        left: var(--mobile-sidebar-wide);
         z-index: 21;
         height: calc(100% + 2.2rem - var(--safe-area-bottom));
         border-left: 1px solid var(--color-card-2);
@@ -297,6 +301,11 @@
     .main-body {
         flex-direction: column-reverse;
     }
+    /* BUG4/BUG6: main-body 背景用卡片色，防止 safe-area-top 区域透出主题色 */
+    #app,
+    .main-body {
+        background: var(--color-card);
+    }
     .main-body > ul {
         justify-content: center;
         height: var(--mobile-tab-bar-height) !important;
@@ -331,7 +340,7 @@
     .friend-list.open ~ .chat-pan {
         left: var(--mobile-sidebar-expanded) !important;
     }
-    /* 输入框底部需让出标签栏空间 */
+    /* BUG1: 输入框底部让出标签栏空间（覆盖 ≥751px 的值） */
     .chat-pan > div.more > div:nth-child(2) {
         padding-bottom: calc(var(--mobile-tab-bar-height) + var(--safe-area-bottom));
     }
@@ -378,5 +387,38 @@
     }
     .group-assist-message-list.show.open {
         width: var(--mobile-sidebar-expanded) !important;
+    }
+    /* BUG3: friend-list-space 设置背景色，防止露出主题色 */
+    .friend-list-space {
+        background: var(--color-card);
+        border-left: 1px solid var(--color-card-2);
+    }
+    /* BUG1: 平板横屏高度有限，textarea 限制更小 */
+    .chat-pan > div.more > div:nth-child(2) > div > form > textarea {
+        max-height: 20vh;
+    }
+    /* BUG2: icon-list img 补充样式（同 ≥751px） */
+    .icon-list {
+        display: flex;
+    }
+    .icon-list > div {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0.5rem;
+    }
+    .icon-list > div.selected > img {
+        border: 0.1875rem solid var(--color-main);
+    }
+    .icon-list img {
+        width: 3.4rem;
+        transition: border .3s;
+        border: 0.1875rem solid var(--color-card-2);
+        border-radius: 0.9rem;
+    }
+    .icon-list span {
+        font-size: 0.85rem;
+        color: var(--color-font-1);
+        margin-top: 0.3rem;
     }
 }
