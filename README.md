@@ -56,14 +56,17 @@
       - [Electron/tauri/web]按shift+↑/↓切换上一条下一条发送消息
       - [Electron/tauri/web]ctrl+↑/↓切换聊天框
       - [Electron/tauri/web]在聊天框内双击↑键撤回消息并重新编辑
+    - **2026-03-15**
+      - 实现新版onebot ws流式协议传输文件
+      - [Electron/tauri/web]剪贴板里有文件时在聊天窗口粘贴文件可以传输文件
       
 ## TODO Features
-- [ ] 使用新版onebot ws流式协议传输文件
-- [ ] [Electron/tauri/web]剪贴板里有文件时在聊天窗口粘贴文件可以调用onebot ws流式协议传输文件
 - [ ] [Android]安卓版icon符合Google制定的APK ICON规范
 - [ ] **对齐Stapxs-QQ-lite-X的相关新功能与重构**
 
 ## Known Bugs
+- [(min-width: 501px) and (max-width: 750px)]也就是平板模式的时候 如果消息主页里的消息处于折叠状态且chatpan出现 点击汉堡按钮展开消息列表时 消息主页会展开 但是会在chat pan的下面（这里的正常情况应该是把chatpan收回去）
+- [(min-width: 501px) and (max-width: 750px)]平板模式下 在群收纳盒里且chatpan已出现 点击汉堡按钮展开群收纳盒列表的时候 消息主页会展开 会在chat pan的上面 但是背景颜色是透明的 
 - [低优先级]单条回复有点问题（图片太高？寻求更多错误样本）
 
 ---

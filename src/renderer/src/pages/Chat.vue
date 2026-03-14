@@ -60,6 +60,19 @@
                 <font-awesome-icon :icon="['fas', 'ellipsis-vertical']" @click="openChatInfoPan" />
             </div>
         </div>
+        <!-- 文件上传进度条 -->
+        <Transition name="upload-progress">
+            <div v-if="fileUploadProgress >= 0" class="upload-progress-bar">
+                <div class="upload-progress-info">
+                    <font-awesome-icon :icon="['fas', 'file-arrow-up']" />
+                    <span>{{ fileUploadName }}</span>
+                    <span class="upload-progress-pct">{{ fileUploadProgress }}%</span>
+                </div>
+                <div class="upload-progress-track">
+                    <div class="upload-progress-fill" :style="{ width: fileUploadProgress + '%' }"></div>
+                </div>
+            </div>
+        </Transition>
         <!-- 加载中指示器 -->
         <div :class=" 'loading' + (tags.nowGetHistroy && runtimeData.tags.canLoadHistory ? ' show' : '')">
             <font-awesome-icon :icon="['fas', 'spinner']" />
@@ -355,19 +368,6 @@
                     </div>
                 </div>
             </div>
-                <!-- 文件上传进度条 -->
-                <Transition name="upload-progress">
-                    <div v-if="fileUploadProgress >= 0" class="upload-progress-bar">
-                        <div class="upload-progress-info">
-                            <font-awesome-icon :icon="['fas', 'file-arrow-up']" />
-                            <span>{{ fileUploadName }}</span>
-                            <span class="upload-progress-pct">{{ fileUploadProgress }}%</span>
-                        </div>
-                        <div class="upload-progress-track">
-                            <div class="upload-progress-fill" :style="{ width: fileUploadProgress + '%' }"></div>
-                        </div>
-                    </div>
-                </Transition>
                 <!-- 消息发送框 -->
             <div>
                 <div v-menu.prevent="_=>moreFunClick()"
@@ -779,6 +779,8 @@ import { Img } from '@renderer/function/model/img'
                 this.imgCache.clear()
                 this.multipleSelectList = []
                 this.historyIndex = -1
+                this.fileUploadProgress = -1
+                this.fileUploadName = ''
                 this.initMenuDisplay()
                 this.$nextTick(() => {
                     this.resizeMainInput()

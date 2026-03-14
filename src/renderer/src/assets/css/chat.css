@@ -1708,23 +1708,22 @@ input {
 .upload-progress-leave-to {
     opacity: 0;
     height: 0;
-    margin: 0 20px;
-    padding: 0;
+    padding-top: 0;
+    padding-bottom: 0;
 }
 
 .upload-progress-bar {
     background: var(--color-card-1);
-    border-radius: 7px;
-    margin: 10px 20px -5px 20px;
-    padding: 6px 10px 8px;
+    padding: 5px 20px 6px;
     overflow: hidden;
+    flex-shrink: 0;
 }
 .upload-progress-info {
     display: flex;
     flex-direction: row;
     align-items: center;
     gap: 6px;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
     font-size: 0.75rem;
     color: var(--color-font-2);
     overflow: hidden;
