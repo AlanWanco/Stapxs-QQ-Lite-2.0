@@ -762,7 +762,6 @@ import { Img } from '@renderer/function/model/img'
                 this.sendCache = []
                 this.imgCache.clear()
                 this.multipleSelectList = []
-                this.sentHistory = []
                 this.historyIndex = -1
                 this.initMenuDisplay()
                 this.$nextTick(() => {
