@@ -20,6 +20,8 @@
             v-html="View.buildXML(item.data, item.id, id)" />
         <div v-else>
             <div v-if="info?.type == 'default'"
+                style="cursor: pointer;"
+                @click="View.cardClick('json-' + id)"
                 v-html="buildJSON(info, id)" />
             <div v-else-if="info?.type == 'tencent.map'"
                 v-once
@@ -73,11 +75,12 @@
                     const div = document.createElement('div')
                     div.id = 'json-' + id
                     div.innerHTML = html
-                    
-                    // 点击卡片容器整体打开链接
-                    div.onclick = (e) => {
-                        e.stopPropagation()
-                        ViewFuns.cardClick(div.id)
+                    // 存储链接信息供 cardClick 使用
+                    if (info.url) {
+                        div.dataset.url = info.url
+                    }
+                    if (info.urlOpenType) {
+                        div.dataset.urlOpenType = info.urlOpenType
                     }
 
                     // 附加信息

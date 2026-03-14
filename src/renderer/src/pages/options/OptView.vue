@@ -210,7 +210,8 @@
                     <div class="ss-range">
                         <input v-model="runtimeData.sysConfig.chat_background_blur"
                             :style="`background-size: ${runtimeData.sysConfig.chat_background_blur}% 100%;`"
-                            type="range" name="chat_background_blur" @input="save">
+                            type="range" name="chat_background_blur" @input="save"
+                            @wheel.prevent="rangeWheel">
                         <span :style="`color: var(--color-font${ runtimeData.sysConfig.chat_background_blur > 50 ? '-r' : ''})`">
                             {{ runtimeData.sysConfig.chat_background_blur }}
                             px</span>
@@ -227,7 +228,8 @@
                         <input v-model="runtimeData.sysConfig.custom_scale"
                             :style="`background-size: ${(runtimeData.sysConfig.custom_scale - 0.5) * 100}% 100%;`"
                             type="range" min="0.5" max="1.5"
-                            step="0.05" name="custom_scale" @input="save">
+                            step="0.05" name="custom_scale" @input="save"
+                            @wheel.prevent="rangeWheel">
                         <span>{{ Math.round(runtimeData.sysConfig.custom_scale * 100) }}%</span>
                     </div>
                 </div>
@@ -253,7 +255,8 @@
                         <input v-model="runtimeData.sysConfig.font_scale"
                             :style="`background-size: ${(runtimeData.sysConfig.font_scale - 0.5) * 100}% 100%;`"
                             type="range" min="0.5" max="1.5"
-                            step="0.05" name="font_scale" @input="save">
+                            step="0.05" name="font_scale" @input="save"
+                            @wheel.prevent="rangeWheel">
                         <span>{{ Math.round(runtimeData.sysConfig.font_scale * 100) }}%</span>
                     </div>
                 </div>
@@ -390,7 +393,8 @@
                         step="0.01"
                         name="initial_scale"
                         @change="scaleSave"
-                        @input="setInitialScaleShow">
+                        @input="setInitialScaleShow"
+                        @wheel.prevent="rangeWheel">
                     <span :style="`color: var(--color-font${initialScaleShow / 0.05 })`">
                         {{ initialScaleShow }}</span>
                 </div>
@@ -413,7 +417,8 @@
                         step="10"
                         name="fs_adaptation"
                         @change="save"
-                        @input="setFsAdaptationShow">
+                        @input="setFsAdaptationShow"
+                        @wheel.prevent="rangeWheel">
                     <span :style="`color: var(--color-font${fsAdaptationShow / 50 > 0.5 ? '-r' : ''})`">
                         {{ fsAdaptationShow }} px
                     </span>
@@ -798,6 +803,27 @@
                     }
                     runtimeData.popBoxList.push(popInfo)
                 }
+            },
+
+            /**
+             * 滚轮调整 range 滑块
+             */
+            rangeWheel(event: WheelEvent) {
+                const input = event.currentTarget as HTMLInputElement
+                const step = parseFloat(input.step) || 1
+                const min = parseFloat(input.min) || 0
+                const max = parseFloat(input.max) || 100
+                let value = parseFloat(input.value)
+                // 向上滚动（deltaY < 0）增大值，向下滚动减小值
+                if (event.deltaY < 0) {
+                    value = Math.min(value + step, max)
+                } else {
+                    value = Math.max(value - step, min)
+                }
+                // 修正浮点精度
+                const precision = step.toString().split('.')[1]?.length || 0
+                input.value = value.toFixed(precision)
+                input.dispatchEvent(new Event('input', { bubbles: true }))
             },
         },
     })

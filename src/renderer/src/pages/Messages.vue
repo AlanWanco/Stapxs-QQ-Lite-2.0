@@ -164,6 +164,12 @@
                 <li id="notice_close" icon="fa-solid fa-volume-xmark">
                     {{ $t('关闭通知') }}
                 </li>
+                <li id="group_box_add" icon="fa-solid fa-box-archive">
+                    {{ $t('移入群收纳盒') }}
+                </li>
+                <li id="group_box_remove" icon="fa-solid fa-box-open">
+                    {{ $t('移出群收纳盒') }}
+                </li>
                 <li id="clear_system_notice" icon="fa-solid fa-broom">
                     {{ $t('清空通知') }}
                 </li>
@@ -197,12 +203,12 @@
         UserGroupElem,
     } from '@renderer/function/elements/information'
     import { getRaw as getOpt, run as runOpt } from '@renderer/function/option'
-    import { changeGroupNotice, loadHistoryMessage } from '@renderer/function/utils/appUtil'
+    import { changeGroupNotice, changeGroupBoxOverride, loadHistoryMessage } from '@renderer/function/utils/appUtil'
     import { PopInfo, PopType } from '@renderer/function/base'
     import { MenuStatue } from 'vue3-bcui/packages/dist/types'
     import { library } from '@fortawesome/fontawesome-svg-core'
     import { login as loginInfo } from '@renderer/function/connect'
-    import { canGroupNotice, getShowName } from '@renderer/function/utils/msgUtil'
+    import { canGroupNotice, isInGroupBox, getShowName, updateBaseOnMsgList } from '@renderer/function/utils/msgUtil'
 
     import {
         faThumbTack,
@@ -210,6 +216,8 @@
         faCheckToSlot,
         faGripLines,
         faBroom,
+        faBoxArchive,
+        faBoxOpen,
     } from '@fortawesome/free-solid-svg-icons'
     import { Notify } from '@renderer/function/notify'
     import { refreshFavicon } from '@renderer/function/favicon'
@@ -236,7 +244,7 @@
             }
         },
         mounted() {
-            library.add(faCheckToSlot, faThumbTack, faTrashCan, faGripLines, faBroom)
+            library.add(faCheckToSlot, faThumbTack, faTrashCan, faGripLines, faBroom, faBoxArchive, faBoxOpen)
             window.addEventListener('resize', this.handleWindowResize)
         },
         beforeUnmount() {
@@ -458,10 +466,22 @@
                             break
                         case 'notice_open': {
                             changeGroupNotice(item.group_id, true)
+                            updateBaseOnMsgList()
                             break
                         }
                         case 'notice_close': {
                             changeGroupNotice(item.group_id, false)
+                            updateBaseOnMsgList()
+                            break
+                        }
+                        case 'group_box_add': {
+                            changeGroupBoxOverride(item.group_id, true)
+                            updateBaseOnMsgList()
+                            break
+                        }
+                        case 'group_box_remove': {
+                            changeGroupBoxOverride(item.group_id, false)
+                            updateBaseOnMsgList()
                             break
                         }
                         case 'clear_system_notice': {
@@ -492,7 +512,7 @@
                 // 操作
                 if (value) {
                     if (topList) {
-                        if (topList.indexOf(this.chat.show.id) < 0) {
+                        if (topList.indexOf(upId) < 0) {
                             topList.push(upId)
                         }
                     } else {
@@ -554,6 +574,14 @@
                         info.list.push('notice_close')
                     } else {
                         info.list.push('notice_open')
+                    }
+                    // 群收纳盒功能开启时显示移入/移出选项
+                    if (runtimeData.sysConfig.bubble_sort_user) {
+                        if (isInGroupBox(item.group_id)) {
+                            info.list.push('group_box_remove')
+                        } else {
+                            info.list.push('group_box_add')
+                        }
                     }
                 }
                 this.listMenu = info

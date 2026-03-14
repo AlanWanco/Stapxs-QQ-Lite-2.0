@@ -798,6 +798,12 @@ msgstr ""
 msgid "关闭通知"
 msgstr ""
 
+msgid "移入群收纳盒"
+msgstr ""
+
+msgid "移出群收纳盒"
+msgstr ""
+
 msgid "已被禁言至：{time}"
 msgstr ""
 

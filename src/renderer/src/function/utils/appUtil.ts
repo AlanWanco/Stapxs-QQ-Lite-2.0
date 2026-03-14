@@ -1286,6 +1286,25 @@ export function changeGroupNotice(group_id: number, open: boolean) {
 }
 
 /**
+ * 设置群组的群收纳盒覆盖状态
+ * @param group_id 群组 ID
+ * @param inBox true = 强制放入收纳盒，false = 强制移出收纳盒，undefined = 清除覆盖（恢复默认）
+ */
+export function changeGroupBoxOverride(group_id: number, inBox: boolean | undefined) {
+    const overrideInfo = option.get('group_box_override') ?? {}
+    if (!overrideInfo[runtimeData.loginInfo.uin]) {
+        overrideInfo[runtimeData.loginInfo.uin] = {}
+    }
+    const overrides = overrideInfo[runtimeData.loginInfo.uin]
+    if (inBox === undefined) {
+        delete overrides[group_id]
+    } else {
+        overrides[group_id] = inBox
+    }
+    option.save('group_box_override', overrideInfo)
+}
+
+/**
  * 是否应该自动聚焦输入框
  * @returns
  */

@@ -566,11 +566,11 @@ export function updateBaseOnMsgList() {
     if (runtimeData.sysConfig.bubble_sort_user) {
         // 将 normalList 进行拆分
         onMsgList = topList.concat(normalList.filter((item) => {
-            return item.group_id && canGroupNotice(item.group_id) ||
+            return item.group_id && !isInGroupBox(item.group_id) ||
                 item.user_id || item.new_msg || item.highlight
         }))
         groupAssistList = normalList.filter((item) => {
-            return item.group_id && !canGroupNotice(item.group_id)
+            return item.group_id && isInGroupBox(item.group_id)
         })
     } else {
         onMsgList = topList.concat(normalList)
@@ -592,6 +592,24 @@ export function canGroupNotice(id: number) {
         return list.indexOf(id) >= 0
     }
     return false
+}
+
+/**
+ * 判断群组是否应在群收纳盒中
+ * 优先检查用户显式覆盖（group_box_override），
+ * 无覆盖时回退到默认逻辑：通知关闭的群组归入收纳盒
+ * @param id 群号
+ * @returns 是否在群收纳盒中
+ */
+export function isInGroupBox(id: number): boolean {
+    const overrideInfo = option.get('group_box_override') ?? {}
+    const overrides = overrideInfo[runtimeData.loginInfo.uin] as
+        { [key: number]: boolean } | undefined
+    if (overrides && overrides[id] !== undefined) {
+        return overrides[id]
+    }
+    // 默认：通知关闭的群组归入收纳盒
+    return !canGroupNotice(id)
 }
 
 /**

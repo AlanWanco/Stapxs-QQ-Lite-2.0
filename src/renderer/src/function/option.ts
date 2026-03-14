@@ -41,6 +41,7 @@ export const optDefault: { [key: string]: any } = {
     top_info: {},
     save_password: '',
     notice_group: {},
+    group_box_override: {},
     auto_connect: false,
     official_face_folder: null,
     official_face_folder_custom: false,

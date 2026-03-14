@@ -798,6 +798,12 @@ msgstr "啟用通知"
 msgid "关闭通知"
 msgstr "停用通知"
 
+msgid "移入群收纳盒"
+msgstr "移入群組收納盒"
+
+msgid "移出群收纳盒"
+msgstr "移出群組收納盒"
+
 msgid "已被禁言至：{time}"
 msgstr "已被禁言直到：{time}"
 
