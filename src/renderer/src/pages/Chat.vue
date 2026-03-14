@@ -2388,39 +2388,7 @@ import { Img } from '@renderer/function/model/img'
                 }
             },
             sendFile(file: File, fileName: string | null) {
-                if (!backend.isMobile()) {
-                    // 非移动端：使用流式上传
-                    this.uploadFileStream(file, fileName ?? file.name ?? this.$t('未知文件'))
-                } else {
-                    // 移动端降级：整文件 base64 上传（原逻辑）
-                    const reader = new FileReader()
-                    reader.readAsDataURL(file)
-                    reader.onloadend = () => {
-                        let base64data = reader.result as string
-                        base64data = base64data.substring(
-                            base64data.indexOf('base64,') + 7,
-                            base64data.length,
-                        )
-                        this.sendCache = []
-                        this.imgCache.clear()
-                        this.msg = ''
-                        this.addSpecialMsg({
-                            addText: true,
-                            msgObj: {
-                                type: 'file',
-                                file: 'base64://' + base64data,
-                                name: fileName ?? this.$t('未知文件'),
-                            },
-                        })
-                        this.sendMsg('sendFileBack')
-                        const popInfo = {
-                            title: this.$t('提醒'),
-                            html: `<span>${this.$t('正在发送文件中……')}</span>`,
-                            allowClose: false
-                        }
-                        runtimeData.popBoxList.push(popInfo)
-                    }
-                }
+                this.uploadFileStream(file, fileName ?? file.name ?? this.$t('未知文件'))
             },
 
             /**

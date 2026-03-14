@@ -694,7 +694,7 @@ function getUserById(id: number): IUser | undefined {
                 // 链接判定
                 const reg = /(http|https):\/\/[\w\-_]+(\.[\w\-_]+)+([\w\-.,@?^=%&:/~+#]*[\w\-@?^=%&/~+#])?/gi
                 const linkList = text.match(reg)
-                text = text.replaceAll(reg, '<a href="" data-link="$&" onclick="return false">$&</a>')
+                text = text.replaceAll(reg, '<a href="" data-link="$&">$&</a>')
                 
                 if (linkList !== null && !this.gotLink) {
                     queueMicrotask(async() => {
