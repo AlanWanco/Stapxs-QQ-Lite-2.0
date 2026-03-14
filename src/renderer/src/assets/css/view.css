@@ -20,7 +20,7 @@ body {
 
     /* 移动端响应式布局变量 */
     --mobile-tab-bar-height: 4.7rem;
-    --mobile-sidebar-collapsed: 2rem;
+    --mobile-sidebar-collapsed: 5rem;
     --mobile-sidebar-expanded: clamp(15.625rem, 45vw, 18.75rem);
     --mobile-sidebar-wide: clamp(17.5rem, 35vw, 22.8rem);
     --mobile-avatar-size: 2.8rem;
@@ -1578,8 +1578,9 @@ textarea:focus {
     }
     .friend-list > div:first-child > div.small {
         align-items: center;
+        justify-content: center;
         display: flex;
-        height: 3.125rem;
+        height: calc(var(--mobile-avatar-size) + 1.25rem);
         width: 100%;
     }
     .friend-list > div:first-child > div.small > div.reload {
@@ -1600,8 +1601,8 @@ textarea:focus {
         border-radius: 7px;
         cursor: pointer;
         display: flex;
-        height: 100%;
-        width: 3.125rem;
+        height: var(--mobile-avatar-size);
+        width: var(--mobile-avatar-size);
     }
     .friend-list > div:first-child > div.small > label {
         margin-right: 0.625rem;
@@ -1610,6 +1611,9 @@ textarea:focus {
     }
     .friend-list.open > div:first-child > div.small > label {
         display: flex !important;
+    }
+    .friend-list.open > div:first-child > div.small {
+        justify-content: flex-start;
     }
 
     .friend-list.open > div:first-child > div.small > div:last-child {

@@ -57,6 +57,11 @@ input {
         display: flex !important;
     }
     
+    /* 侧边栏顶部避开红绿灯区域 */
+    .friend-list > div:first-child {
+        padding-top: var(--mobile-title-bar-mac);
+    }
+    
     /* chat-pan 根据侧边栏状态调整位置 */
     .chat-pan {
         left: var(--mobile-sidebar-collapsed) !important;
@@ -83,8 +88,7 @@ input {
         display: flex !important;
         position: fixed !important;
         left: 0 !important;
-        top: 0 !important; 
-        padding-top: var(--mobile-title-bar-mac); /* 避开红绿灯区域 */
+        top: var(--mobile-title-bar-mac) !important;
         bottom: 0 !important;
         height: calc(100vh - var(--mobile-title-bar-mac)) !important;
         width: var(--mobile-sidebar-collapsed) !important;
@@ -175,10 +179,9 @@ input {
         display: flex !important;
         position: absolute !important;
         left: 0 !important;
-        top: 0 !important;
-        padding-top: var(--mobile-title-bar-mac); /* 避开红绿灯区域 */
+        top: var(--mobile-title-bar-mac) !important;
         width: 100% !important;
-        height: 100% !important;
+        height: calc(100% - var(--mobile-title-bar-mac)) !important;
         z-index: 5 !important;
         margin: 0 !important;
     }

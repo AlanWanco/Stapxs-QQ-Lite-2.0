@@ -362,4 +362,19 @@
     .wave-pan {
         display: none;
     }
+    /* 群收纳盒：fixed 定位全高显示 */
+    .group-assist-message-list.show {
+        display: flex !important;
+        position: fixed !important;
+        left: 0 !important;
+        top: var(--safe-area-top) !important;
+        bottom: var(--safe-area-bottom) !important;
+        height: calc(100vh - var(--safe-area-top) - var(--safe-area-bottom)) !important;
+        width: var(--mobile-sidebar-collapsed) !important;
+        z-index: 100 !important;
+        margin: 0 !important;
+    }
+    .group-assist-message-list.show.open {
+        width: var(--mobile-sidebar-expanded) !important;
+    }
 }
