@@ -23,7 +23,7 @@
         :data-sender="data.sender.user_id"
         :data-time="data.time"
         @mouseleave="hiddenUserInfo">
-        <img v-menu.prevent="event => $emit('showMenu', event, data)"
+        <img v-menu.prevent.stop="event => $emit('showMenu', event, data)"
             v-user-tooltip="() => getUserById(data.sender.user_id)"
             name="avatar"
             :src="'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + data.sender.user_id"
