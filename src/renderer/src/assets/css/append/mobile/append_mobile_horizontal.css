@@ -19,7 +19,7 @@
     }
     .main-body > ul {
         background: rgba(var(--color-card-rgb), 0.7);
-        backdrop-filter: blur(35px);
+        backdrop-filter: blur(2.1875rem);
     }
 
     .login-pan-card {
@@ -102,13 +102,13 @@
         padding: 0.9rem 1.5rem;
         padding-top: calc(var(--safe-area-top) + 0.9rem);
         background: rgba(var(--color-card-rgb), 0.7);
-        backdrop-filter: blur(35px);
+        backdrop-filter: blur(2.1875rem);
         box-shadow: unset;
         border-bottom: 1px solid var(--color-card-2);
         border-radius: 0;
     }
     .merge-pan {
-        box-shadow: 0 0 5px var(--color-shader);
+        box-shadow: 0 0 0.3125rem var(--color-shader);
     }
     .merge-pan>div:last-child>div:first-child {
         margin: calc(var(--safe-area-top) + 0.9rem) 2.2rem 0 2.2rem;
@@ -143,7 +143,7 @@
     }
     .chat-pan > div.more > div:nth-child(2) {
         background: rgba(var(--color-card-rgb), 0.7);
-        backdrop-filter: blur(35px);
+        backdrop-filter: blur(2.1875rem);
         padding-bottom: calc(0.7rem + var(--safe-area-bottom));
     }
     .chat-pan > div.more > div:nth-child(2) > div:first-child {
@@ -194,7 +194,7 @@
         width: calc(100% - 2.5rem);
     }
     .img-sender > div.card {
-        box-shadow: 0 0 5px var(--color-shader) !important;
+        box-shadow: 0 0 0.3125rem var(--color-shader) !important;
         border-radius: 0.4rem !important;
     }
     /* 消息 */
@@ -207,17 +207,17 @@
     }
     /* 设置面板 */
     .opt-tab {
-        height: calc(100% - 9rem);
+        height: calc(100% - 9rem - var(--safe-area-top) - var(--safe-area-bottom));
     }
     .opt-tab > div:first-child {
         box-shadow: unset !important;
         margin: 0 -0.625rem 0 -0.625rem !important;
         padding-top: calc(var(--safe-area-top) + 1.25rem);
         background: transparent;
-        backdrop-filter: blur(35px);
+        backdrop-filter: blur(2.1875rem);
     }
     .opt-tab > div:first-child > div {
-        box-shadow: 0 0 5px var(--color-shader);
+        box-shadow: 0 0 0.3125rem var(--color-shader);
         width: fit-content;
         margin: 0 auto 1.25rem auto;
         background: var(--color-card-2);
@@ -285,12 +285,12 @@
         padding: 0.5rem;
     }
     .icon-list > div.selected > img {
-        border: 3px solid var(--color-main);
+        border: 0.1875rem solid var(--color-main);
     }
     .icon-list img {
         width: 3.4rem;
         transition: border .3s;
-        border: 3px solid var(--color-card-2);
+        border: 0.1875rem solid var(--color-card-2);
         border-radius: 0.9rem;
     }
     .icon-list span {
@@ -298,15 +298,44 @@
         color: var(--color-font-1);
         margin-top: 0.3rem;
     }
+
+    /* A3: 全屏弹窗安全区域 */
+    .pop-box-body.full.window {
+        height: calc(100vh - calc(var(--safe-area-top) + 5rem + var(--safe-area-bottom)));
+        margin-top: calc(var(--safe-area-top) + 1.875rem);
+        margin-bottom: var(--safe-area-bottom);
+    }
+    /* A10: 聊天信息面板头部安全区域 */
+    .chat-info > header {
+        margin-top: var(--safe-area-top);
+    }
 }
 
 /* 移动端附加样式（横向 - 平板，缩减侧边栏） */
 @media (min-width: 501px) and (max-width: 750px) {
-    .friend-list {
+    /* A1: 主内容区安全区域 */
+    .main-body > div {
+        height: calc(100% - var(--mobile-tab-bar-height) - var(--safe-area-top) - var(--safe-area-bottom));
+        padding-bottom: calc(var(--mobile-tab-bar-height) + var(--safe-area-bottom));
+        margin-top: var(--safe-area-top);
+    }
+    /* A2: 底部标签栏安全区域 */
+    .main-body > ul {
+        padding-bottom: var(--safe-area-bottom);
+    }
+    /* FL: 仅在展开状态使用 expanded 宽度，折叠状态使用 base 的 collapsed 宽度 */
+    .friend-list.open {
         width: var(--mobile-sidebar-expanded) !important;
     }
     .chat-pan {
+        left: var(--mobile-sidebar-collapsed) !important;
+    }
+    .chat-pan.open {
         left: var(--mobile-sidebar-expanded) !important;
+    }
+    /* A12: 聊天面板信息栏安全区域 */
+    .chat-pan > div.info {
+        padding-top: calc(var(--safe-area-top) + 0.9rem);
     }
     .chat-info {
         width: calc(100% - 5.6rem) !important;
@@ -317,8 +346,20 @@
         height: calc(100% + 3.4rem) !important;
         margin-top: -1.25rem !important;
     }
+    /* 聊天信息面板头部安全区域（同 A10） */
+    .chat-info > header {
+        margin-top: var(--safe-area-top);
+    }
     .home-body {
+        width: calc(100% - var(--mobile-sidebar-collapsed)) !important;
+        margin-left: var(--mobile-sidebar-collapsed) !important;
+    }
+    .home-body.open {
         width: calc(100% - var(--mobile-sidebar-expanded)) !important;
         margin-left: var(--mobile-sidebar-expanded) !important;
+    }
+    /* C2: 隐藏破损的波浪装饰 */
+    .wave-pan {
+        display: none;
     }
 }

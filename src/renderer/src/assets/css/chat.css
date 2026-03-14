@@ -409,8 +409,8 @@ input {
 	pointer-events: none;
     position: absolute;
     overflow: hidden;
-    height: calc(100% - var(--safe-area-bottom)) !important;
-    top: 0;
+    height: calc(100% - var(--safe-area-top) - var(--safe-area-bottom)) !important;
+    top: var(--safe-area-top);
     width: 100%;
     z-index: 30;
 }

@@ -53,7 +53,7 @@
             </ul>
             <div :style="get('fs_adaptation') > 0 ? `height: calc(100% - ${75 + Number(get('fs_adaptation'))}px);` : ''">
                 <div v-if="tags.page == 'Home'" id="homeTab" name="主页">
-                    <div class="home-body">
+                    <div :class="'home-body' + (runtimeData.tags.openSideBar ? ' open' : '')">
                         <div v-if="!napcat" class="login-pan-card ss-card">
                             <font-awesome-icon :icon="['fas', 'circle-nodes']" />
                             <p>{{ $t('连接到 OneBot') }}</p>
