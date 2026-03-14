@@ -43,6 +43,9 @@
     }
 
     /* 联系人列表 */
+    .friend-list-container {
+        margin-bottom: 48px;
+    }
     .friend-list {
         width: 100% !important;
         position: relative !important;
