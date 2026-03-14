@@ -1646,6 +1646,7 @@ textarea:focus {
     }
     .friend-list.open > div:first-child > div.small > span {
         display: flex;
+        height: var(--mobile-avatar-size);
     }
 
     /* Web 平台群收纳盒：使用 fixed 定位覆盖 */

@@ -30,12 +30,17 @@
         z-index: 20 !important;
     }
     
+    /* BUG-C: chat-pan 顶部让出系统导航栏/刘海区域 */
+    .chat-pan > div.info {
+        padding-top: calc(var(--safe-area-top) + 0.9rem);
+        margin-top: 0;
+    }
     .chat-pan > div.info > svg:not(.back) {
         display: none !important;
     }
     
     .chat-pan > div.more > div:nth-child(2) {
-        padding-bottom: calc(1.25rem + var(--safe-area-bottom));
+        padding-bottom: var(--safe-area-bottom);
     }
 
     /* 联系人列表 */

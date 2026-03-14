@@ -395,7 +395,7 @@
     }
     /* BUG1: 平板横屏高度有限，textarea 限制更小 */
     .chat-pan > div.more > div:nth-child(2) > div > form > textarea {
-        max-height: 20vh;
+        max-height: 12vh;
     }
     /* BUG2: icon-list img 补充样式（同 ≥751px） */
     .icon-list {
