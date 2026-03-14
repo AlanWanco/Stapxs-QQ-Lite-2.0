@@ -1710,11 +1710,15 @@ input {
     height: 0;
     padding-top: 0;
     padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
 .upload-progress-bar {
     background: var(--color-card-1);
-    padding: 5px 20px 6px;
+    border-radius: 7px;
+    margin: -8px 15px 8px 15px;
+    padding: 5px 14px 6px;
     overflow: hidden;
     flex-shrink: 0;
 }

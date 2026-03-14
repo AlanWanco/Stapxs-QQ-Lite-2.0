@@ -2404,6 +2404,9 @@ import { Img } from '@renderer/function/model/img'
                 const chatType = runtimeData.chatInfo.show.type
                 const chatId = runtimeData.chatInfo.show.id
 
+                // 检查当前会话是否仍是上传时的会话，切走后静默终止 UI 更新
+                const isSameChat = () => runtimeData.chatInfo.show.id === chatId
+
                 // 读取整个文件为 ArrayBuffer
                 let buffer: ArrayBuffer
                 try {
@@ -2412,6 +2415,7 @@ import { Img } from '@renderer/function/model/img'
                     popInfo.add(PopType.ERR, this.$t('读取文件失败'))
                     return
                 }
+                if (!isSameChat()) return
 
                 // 计算 SHA256
                 let sha256 = ''
@@ -2424,6 +2428,7 @@ import { Img } from '@renderer/function/model/img'
                     popInfo.add(PopType.ERR, this.$t('计算文件校验值失败'))
                     return
                 }
+                if (!isSameChat()) return
 
                 const totalSize = buffer.byteLength
                 const totalChunks = Math.ceil(totalSize / CHUNK_SIZE)
@@ -2434,6 +2439,11 @@ import { Img } from '@renderer/function/model/img'
 
                 // 逐片发送
                 for (let i = 0; i < totalChunks; i++) {
+                    if (!isSameChat()) {
+                        this.fileUploadProgress = -1
+                        return
+                    }
+
                     const start = i * CHUNK_SIZE
                     const end = Math.min(start + CHUNK_SIZE, totalSize)
                     const chunkBytes = new Uint8Array(buffer, start, end - start)
@@ -2460,12 +2470,16 @@ import { Img } from '@renderer/function/model/img'
                     try {
                         await Connector.waitReturn(echo, CHUNK_TIMEOUT)
                     } catch (e) {
-                        this.fileUploadProgress = -1
-                        popInfo.add(PopType.ERR, this.$t('文件上传超时（第 {n} 片）', { n: i + 1 }))
+                        if (isSameChat()) {
+                            this.fileUploadProgress = -1
+                            popInfo.add(PopType.ERR, this.$t('文件上传超时（第 {n} 片）', { n: i + 1 }))
+                        }
                         return
                     }
 
-                    this.fileUploadProgress = Math.round(((i + 1) / totalChunks) * 95)
+                    if (isSameChat()) {
+                        this.fileUploadProgress = Math.round(((i + 1) / totalChunks) * 95)
+                    }
                 }
 
                 // 发送完成信号
@@ -2479,8 +2493,10 @@ import { Img } from '@renderer/function/model/img'
                 try {
                     completeResp = await Connector.waitReturn(completeEcho, CHUNK_TIMEOUT)
                 } catch (e) {
-                    this.fileUploadProgress = -1
-                    popInfo.add(PopType.ERR, this.$t('文件上传完成确认超时'))
+                    if (isSameChat()) {
+                        this.fileUploadProgress = -1
+                        popInfo.add(PopType.ERR, this.$t('文件上传完成确认超时'))
+                    }
                     return
                 }
 
@@ -2488,12 +2504,14 @@ import { Img } from '@renderer/function/model/img'
                 const serverPath: string | undefined =
                     completeResp?.data?.file_path ?? completeResp?.file_path
                 if (!serverPath) {
-                    this.fileUploadProgress = -1
-                    popInfo.add(PopType.ERR, this.$t('服务端未返回文件路径'))
+                    if (isSameChat()) {
+                        this.fileUploadProgress = -1
+                        popInfo.add(PopType.ERR, this.$t('服务端未返回文件路径'))
+                    }
                     return
                 }
 
-                this.fileUploadProgress = 98
+                if (isSameChat()) this.fileUploadProgress = 98
 
                 // 调用群/私聊文件发送 API
                 if (chatType === 'group') {
@@ -2510,12 +2528,14 @@ import { Img } from '@renderer/function/model/img'
                     }, uuid())
                 }
 
-                this.fileUploadProgress = 100
-                setTimeout(() => {
-                    this.fileUploadProgress = -1
-                }, 1500)
+                if (isSameChat()) {
+                    this.fileUploadProgress = 100
+                    setTimeout(() => {
+                        if (isSameChat()) this.fileUploadProgress = -1
+                    }, 1500)
+                }
 
-                popInfo.add(PopType.INFO, this.$t('文件发送成功：{name}', { name: fileName }))
+                popInfo.add(PopType.INFO, `${this.$t('文件发送成功')}：${fileName}`)
             },
 
             /**
