@@ -1097,8 +1097,9 @@ import { Img } from '@renderer/function/model/img'
 
                 if(this.tags.onAtFind) return
 
-                // 双击↑：撤回上一条自己发的消息并重新编辑（300ms 内连按两次，输入框须为空）
+                // 双击↑：撤回上一条自己发的消息并重新编辑（300ms 内连按两次，输入框须为空，桌面端/Web 限定）
                 if (
+                    !backend.isMobile() &&
                     event.keyCode === 38 &&
                     !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey &&
                     this.msg.trim() === ''
