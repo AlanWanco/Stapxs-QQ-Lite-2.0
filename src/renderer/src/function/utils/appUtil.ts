@@ -750,8 +750,8 @@ export async function loadAppendStyle() {
     if(import.meta.env.VITE_NAPCAT) {
         import('@renderer/assets/css/append/append_full_vibrancy.css').then(() => {
                 logger.info('完全透明 UI 附加样式加载完成')
-            })
-        import('@renderer/assets/css/append/append_napcat.css').then(() => {
+                return import('@renderer/assets/css/append/append_napcat.css')
+            }).then(() => {
                 logger.info('napcat 插件模式附加样式加载完成')
             })
     }

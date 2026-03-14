@@ -79,7 +79,7 @@ body {
 }
 
 .friend-list {
-    width: 275px;
+    width: var(--desktop-friend-list-width);
 }
 .friend-list > div:first-child label {
     height: 30px;
@@ -94,7 +94,7 @@ body {
     height: 46px;
 }
 
-@media (min-width: 501px) {
+@media (min-width: 501px) and (max-width: 750px) {
     .group-assist-message-list {
         margin-right: -15rem;
     }
@@ -780,7 +780,7 @@ body {
     }
     .friend-list {
         width: var(--mobile-sidebar-collapsed);
-        background: var(--color-card-1) !important;
+        background: var(--color-card-1);
     }
     .chat-info {
         width: calc(100% - 4.375rem);

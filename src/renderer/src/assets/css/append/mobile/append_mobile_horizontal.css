@@ -293,6 +293,20 @@
 
 /* 移动端附加样式（横向 - 平板，缩减侧边栏） */
 @media (min-width: 501px) and (max-width: 750px) {
+    /* 补全 view.css @media(max-width:700px) 未覆盖的 701-750px 区间 */
+    .main-body {
+        flex-direction: column-reverse;
+    }
+    .main-body > ul {
+        justify-content: center;
+        height: var(--mobile-tab-bar-height) !important;
+        align-items: center;
+        flex-direction: row;
+        min-width: 100% !important;
+        position: fixed;
+        bottom: 0;
+        z-index: 10;
+    }
     /* A1: 主内容区安全区域 */
     .main-body > div {
         height: calc(100% - var(--mobile-tab-bar-height) - var(--safe-area-top) - var(--safe-area-bottom));

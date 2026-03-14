@@ -3,9 +3,15 @@ body,
 .main-body > ul,
 .friend-list,
 .friend-list-space,
-.chat-pan,
 .opt-main {
     background: transparent !important;
+}
+
+/* 仅桌面端宽度（>500px）透明化聊天面板，移动端需要不透明背景 */
+@media (min-width: 501px) {
+    .chat-pan {
+        background: transparent !important;
+    }
 }
 
 .friend-list-space > div.cd,

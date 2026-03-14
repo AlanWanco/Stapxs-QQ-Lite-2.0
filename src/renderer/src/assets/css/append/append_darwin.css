@@ -82,6 +82,10 @@ input {
         display: none !important;
     }
     
+    /* 修复：群收纳盒在平板模式下的显示逻辑 */
+    .group-assist-message-list {
+        display: none !important;
+    }
     /* 群收纳盒激活时：从左边弹出，盖住 chat-pan */
     .group-assist-message-list.show {
         display: flex !important;

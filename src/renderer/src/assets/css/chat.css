@@ -19,7 +19,7 @@ input {
     overflow: hidden;
     display: flex;
     height: 100%;
-    /* left: 371px; */
+    left: var(--desktop-friend-list-width);
     z-index: 2;
     right: 0;
     top: 0;
@@ -126,7 +126,7 @@ input {
     touch-action: pan-y;
 }
 .chat-pan > div.chat > div:last-child {
-    height: calc(100% - var(--safe-area-bottom));
+    height: calc(100% - var(--safe-area-bottom, 0px));
 }
 .chat-pan > div.chat::-webkit-scrollbar {
     background: transparent;
@@ -511,7 +511,7 @@ input {
     padding: 10px 20px 10px 10px;
     overflow: hidden;
     max-width: 55%;
-    max-height: calc(100% - var(--safe-area-bottom));
+    max-height: calc(100% - var(--safe-area-bottom, 0px));
 }
 .member-info span,
 .member-info a {
@@ -1975,12 +1975,10 @@ div.tiny-session-body > div:nth-child(3) > div > svg {
 }
 
 @media (max-width: 700px) {
-    /* 消息面板：高度适配底部标签栏，left 由各平台 append 文件控制 */
+    /* 消息面板：高度适配底部标签栏，left 由各平台 append 文件覆盖 */
     .chat-pan {
-        height: calc(100% - var(--mobile-tab-bar-height) - var(--safe-area-bottom));
-    }
-    .chat-pan.open {
-        transform: translateX(13.75rem);
+        left: var(--mobile-sidebar-collapsed);
+        height: calc(100% - var(--mobile-tab-bar-height) - var(--safe-area-bottom, 0px));
     }
     /* 群信息面板 */
     .chat-info {

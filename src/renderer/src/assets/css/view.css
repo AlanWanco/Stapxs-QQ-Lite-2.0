@@ -27,6 +27,8 @@ body {
     --mobile-avatar-size: 2.6rem;
     --mobile-title-bar-mac: 1.875rem;
     --mobile-title-bar-win: 2.2rem;
+    --mobile-title-bar-linux: 2.2rem;
+    --append-fs-adaptation: 0px;
 }
 input::placeholder {
     color: var(--color-font-2);
@@ -204,7 +206,7 @@ textarea:focus {
     height: 100%;
     border: none;
     min-width: 75px;
-    padding: 0 0 calc(var(--safe-area-bottom) + 10px) 0;
+    padding: 0 0 calc(var(--safe-area-bottom, 0px) + 10px) 0;
     margin: 0;
 }
 .side-bar-space {
@@ -823,7 +825,7 @@ textarea:focus {
 .app-msg {
     flex-direction: column-reverse;
     justify-content: flex-start;
-    height: calc(100% - 20px - var(--safe-area-bottom));
+    height: calc(100% - 20px - var(--safe-area-bottom, 0px));
     width: calc(100% - 20px);
     pointer-events: none;
     position: absolute;
@@ -1264,7 +1266,7 @@ textarea:focus {
 }
 
 .viewer-tool-config-bar {
-    bottom: calc(3% + 80px + var(--safe-area-bottom));
+    bottom: calc(3% + 80px + var(--safe-area-bottom, 0px));
 }
 
 .viewer-tool-config-bar > div.color {
@@ -1328,7 +1330,7 @@ textarea:focus {
 }
 
 .viewer-button-bar {
-    bottom: calc(3% + var(--safe-area-bottom));
+    bottom: calc(3% + var(--safe-area-bottom, 0px));
     opacity: 0;
 }
 
@@ -1653,9 +1655,9 @@ textarea:focus {
         display: flex !important;
         position: fixed !important;
         left: 0 !important;
-        top: var(--safe-area-top) !important;
-        bottom: var(--safe-area-bottom) !important;
-        height: calc(100vh - var(--safe-area-top) - var(--safe-area-bottom)) !important;
+        top: var(--safe-area-top, 0px) !important;
+        bottom: var(--safe-area-bottom, 0px) !important;
+        height: calc(100vh - var(--safe-area-top, 0px) - var(--safe-area-bottom, 0px)) !important;
         width: var(--mobile-sidebar-collapsed) !important;
         z-index: 100 !important;
         margin: 0 !important;
@@ -1746,7 +1748,7 @@ textarea:focus {
     }
     /* 应用消息 */
     .app-msg {
-        height: calc(100% - 5.6rem - var(--safe-area-bottom));
+        height: calc(100% - 5.6rem - var(--safe-area-bottom, 0px));
         padding-left: 1.25rem;
     }
     .app-msg > div {

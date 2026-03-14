@@ -35,9 +35,15 @@
 }
 
 .chat-pan {
-    background: transparent;
     box-shadow: unset !important;
-    border-left: 1px solid var(--color-shader);
+}
+
+/* 仅桌面宽度下透明化聊天面板，移动端需保留不透明背景 */
+@media (min-width: 501px) {
+    .chat-pan {
+        background: transparent;
+        border-left: 1px solid var(--color-shader);
+    }
 }
 .chat-pan > div.bg {
     background: unset;
