@@ -1606,7 +1606,7 @@ textarea:focus {
     }
     .friend-list > div:first-child > div.small > label {
         margin-right: 0.625rem;
-        height: 2.875rem;
+        /* height: 2.875rem; */
         flex: 1;
     }
     .friend-list.open > div:first-child > div.small > label {

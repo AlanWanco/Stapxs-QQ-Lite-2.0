@@ -96,10 +96,10 @@ body {
 
 @media (min-width: 501px) {
     .group-assist-message-list {
-        margin-right: -13.75rem;
+        margin-right: -15rem;
     }
     .group-assist-message-list.show {
-        margin-left: -13.75rem;
+        margin-left: -15rem;
         margin-right: 0;
     }
 }
@@ -799,20 +799,20 @@ body {
     .friend-list > div:last-child {
         padding: 0px !important;
     }
-    .friend-list > div:first-child > div.small {
+    /* .friend-list > div:first-child > div.small {
         height: 2.875rem;
-    }
-    .friend-list > div:first-child > div.small > div {
-        /* margin-right: 10px; */
+    } */
+    /* .friend-list > div:first-child > div.small > div {
+        margin-right: 10px;
         width: 2.875rem;
-    }
+    } */
     .friend-list > div:first-child > div.small > div > svg {
         height: 0.875rem;
     }
-    .friend-list > div:first-child > div.small > label {
+    /* .friend-list > div:first-child > div.small > label {
         margin-top: 1px;
         height: 2.875rem;
-    }
+    } */
 }
 @media (max-width: 500px) {
     .pop-box-body {
