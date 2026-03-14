@@ -1721,6 +1721,7 @@ input {
     padding: 5px 14px 6px;
     overflow: hidden;
     flex-shrink: 0;
+    pointer-events: all;
 }
 .upload-progress-info {
     display: flex;

@@ -62,7 +62,7 @@
         </div>
         <!-- 文件上传进度条 / 粘贴确认框 -->
         <Transition name="upload-progress">
-            <div v-if="fileUploadPending" class="upload-progress-bar upload-confirm-bar">
+            <div v-if="fileUploadPending && fileUploadChatId === chat.show.id" class="upload-progress-bar upload-confirm-bar">
                 <div class="upload-confirm-info">
                     <font-awesome-icon :icon="['fas', 'file-arrow-up']" />
                     <span class="upload-confirm-name">{{ fileUploadPending.name }}</span>
@@ -73,7 +73,7 @@
                     <button class="upload-confirm-ok" @click="confirmPasteUpload">{{ $t('发送') }}</button>
                 </div>
             </div>
-            <div v-else-if="fileUploadProgress >= 0" class="upload-progress-bar">
+            <div v-else-if="fileUploadProgress >= 0 && fileUploadChatId === chat.show.id" class="upload-progress-bar">
                 <div class="upload-progress-info">
                     <font-awesome-icon :icon="['fas', 'file-arrow-up']" />
                     <span>{{ fileUploadName }}</span>
@@ -778,11 +778,12 @@ import { Img } from '@renderer/function/model/img'
                 lastUpKeyTime: 0,
                 fileUploadProgress: -1,
                 fileUploadName: '',
-                fileUploadPending: null as File | null
+                fileUploadPending: null as File | null,
+                fileUploadChatId: -1,
             }
         },
         watch: {
-            chat() {
+            chat(newChat: any, oldChat: any) {
                 // 重置部分状态数据
                 const data = (this as any).$options.data(this)
                 this.tags = data.tags
@@ -791,9 +792,13 @@ import { Img } from '@renderer/function/model/img'
                 this.imgCache.clear()
                 this.multipleSelectList = []
                 this.historyIndex = -1
-                this.fileUploadProgress = -1
-                this.fileUploadName = ''
-                this.fileUploadPending = null
+                // 上传状态不在此重置：进度条通过 fileUploadChatId === chat.show.id 控制可见性
+                // 切换聊天时取消粘贴待确认（pending 文件属于旧聊天，不应带到新聊天）
+                if (newChat?.show?.id !== oldChat?.show?.id) {
+                    if (this.fileUploadChatId === oldChat?.show?.id) {
+                        this.fileUploadPending = null
+                    }
+                }
                 this.initMenuDisplay()
                 this.$nextTick(() => {
                     this.resizeMainInput()
@@ -2298,6 +2303,7 @@ import { Img } from '@renderer/function/model/img'
                         } else if (!backend.isMobile()) {
                             // 非图片文件（桌面/Web）：先弹确认，防止误粘贴
                             this.fileUploadPending = file
+                            this.fileUploadChatId = runtimeData.chatInfo.show.id
                         }
                         // 阻止默认行为
                         event.preventDefault()
@@ -2430,9 +2436,6 @@ import { Img } from '@renderer/function/model/img'
                 const chatType = runtimeData.chatInfo.show.type
                 const chatId = runtimeData.chatInfo.show.id
 
-                // 检查当前会话是否仍是上传时的会话，切走后静默终止 UI 更新
-                const isSameChat = () => runtimeData.chatInfo.show.id === chatId
-
                 // 读取整个文件为 ArrayBuffer
                 let buffer: ArrayBuffer
                 try {
@@ -2441,7 +2444,6 @@ import { Img } from '@renderer/function/model/img'
                     popInfo.add(PopType.ERR, this.$t('读取文件失败'))
                     return
                 }
-                if (!isSameChat()) return
 
                 // 计算 SHA256
                 let sha256 = ''
@@ -2454,7 +2456,6 @@ import { Img } from '@renderer/function/model/img'
                     popInfo.add(PopType.ERR, this.$t('计算文件校验值失败'))
                     return
                 }
-                if (!isSameChat()) return
 
                 const totalSize = buffer.byteLength
                 const totalChunks = Math.ceil(totalSize / CHUNK_SIZE)
@@ -2462,14 +2463,10 @@ import { Img } from '@renderer/function/model/img'
                 // 显示进度条
                 this.fileUploadName = fileName
                 this.fileUploadProgress = 0
+                this.fileUploadChatId = chatId
 
                 // 逐片发送
                 for (let i = 0; i < totalChunks; i++) {
-                    if (!isSameChat()) {
-                        this.fileUploadProgress = -1
-                        return
-                    }
-
                     const start = i * CHUNK_SIZE
                     const end = Math.min(start + CHUNK_SIZE, totalSize)
                     const chunkBytes = new Uint8Array(buffer, start, end - start)
@@ -2496,16 +2493,12 @@ import { Img } from '@renderer/function/model/img'
                     try {
                         await Connector.waitReturn(echo, CHUNK_TIMEOUT)
                     } catch (e) {
-                        if (isSameChat()) {
-                            this.fileUploadProgress = -1
-                            popInfo.add(PopType.ERR, this.$t('文件上传超时（第 {n} 片）', { n: i + 1 }))
-                        }
+                        this.fileUploadProgress = -1
+                        popInfo.add(PopType.ERR, this.$t('文件上传超时（第 {n} 片）', { n: i + 1 }))
                         return
                     }
 
-                    if (isSameChat()) {
-                        this.fileUploadProgress = Math.round(((i + 1) / totalChunks) * 95)
-                    }
+                    this.fileUploadProgress = Math.round(((i + 1) / totalChunks) * 95)
                 }
 
                 // 发送完成信号
@@ -2519,10 +2512,8 @@ import { Img } from '@renderer/function/model/img'
                 try {
                     completeResp = await Connector.waitReturn(completeEcho, CHUNK_TIMEOUT)
                 } catch (e) {
-                    if (isSameChat()) {
-                        this.fileUploadProgress = -1
-                        popInfo.add(PopType.ERR, this.$t('文件上传完成确认超时'))
-                    }
+                    this.fileUploadProgress = -1
+                    popInfo.add(PopType.ERR, this.$t('文件上传完成确认超时'))
                     return
                 }
 
@@ -2530,14 +2521,12 @@ import { Img } from '@renderer/function/model/img'
                 const serverPath: string | undefined =
                     completeResp?.data?.file_path ?? completeResp?.file_path
                 if (!serverPath) {
-                    if (isSameChat()) {
-                        this.fileUploadProgress = -1
-                        popInfo.add(PopType.ERR, this.$t('服务端未返回文件路径'))
-                    }
+                    this.fileUploadProgress = -1
+                    popInfo.add(PopType.ERR, this.$t('服务端未返回文件路径'))
                     return
                 }
 
-                if (isSameChat()) this.fileUploadProgress = 98
+                this.fileUploadProgress = 98
 
                 // 调用群/私聊文件发送 API
                 if (chatType === 'group') {
@@ -2554,12 +2543,10 @@ import { Img } from '@renderer/function/model/img'
                     }, uuid())
                 }
 
-                if (isSameChat()) {
-                    this.fileUploadProgress = 100
-                    setTimeout(() => {
-                        if (isSameChat()) this.fileUploadProgress = -1
+                this.fileUploadProgress = 100
+                setTimeout(() => {
+                    if (this.fileUploadChatId === chatId) this.fileUploadProgress = -1
                     }, 1500)
-                }
 
                 popInfo.add(PopType.INFO, `${this.$t('文件发送成功')}：${fileName}`)
             },
