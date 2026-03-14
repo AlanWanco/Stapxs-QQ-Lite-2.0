@@ -748,7 +748,9 @@ import { Img } from '@renderer/function/model/img'
                 isDeleteMsg,
                 isDev: import.meta.env.DEV,
                 chatMoveOptions,
-                chatImg: undefined as any
+                chatImg: undefined as any,
+                sentHistory: [] as string[],
+                historyIndex: -1
             }
         },
         watch: {
@@ -760,6 +762,8 @@ import { Img } from '@renderer/function/model/img'
                 this.sendCache = []
                 this.imgCache.clear()
                 this.multipleSelectList = []
+                this.sentHistory = []
+                this.historyIndex = -1
                 this.initMenuDisplay()
                 this.$nextTick(() => {
                     this.resizeMainInput()
@@ -1008,6 +1012,38 @@ import { Img } from '@renderer/function/model/img'
              * @param event 事件
              */
             mainKey(event: KeyboardEvent) {
+                // Shift+↑/↓ 切换已发送消息历史（仅当前 session，需开启 opt_send_history）
+                if (
+                    runtimeData.sysConfig.opt_send_history &&
+                    event.shiftKey &&
+                    (event.keyCode === 38 || event.keyCode === 40) &&
+                    !this.tags.onAtFind
+                ) {
+                    event.preventDefault()
+                    if (this.sentHistory.length === 0) return
+                    if (event.keyCode === 38) {
+                        // 向上：取更旧的历史
+                        if (this.historyIndex === -1) {
+                            // 首次按上键，先保存当前输入内容
+                            this.oldMsg = this.msg
+                            this.historyIndex = this.sentHistory.length - 1
+                        } else {
+                            this.historyIndex = Math.max(0, this.historyIndex - 1)
+                        }
+                    } else {
+                        // 向下：取更新的历史，或恢复草稿
+                        if (this.historyIndex === -1) return
+                        this.historyIndex++
+                        if (this.historyIndex >= this.sentHistory.length) {
+                            this.historyIndex = -1
+                            this.msg = this.oldMsg
+                            return
+                        }
+                    }
+                    this.msg = this.sentHistory[this.historyIndex]
+                    return
+                }
+
                 // At 选择器激活时的键盘事件处理
                 if (this.tags.onAtFind && this.atFindList && this.atFindList.length > 0) {
                     // 上下箭头键（支持按住快速滚动）
@@ -2416,6 +2452,15 @@ import { Img } from '@renderer/function/model/img'
                 }
                 // 发送后事务
                 this.tags.checkNewLineFlag = true
+                // 保存发送历史（opt_send_history 开启时，最多 50 条）
+                if (runtimeData.sysConfig.opt_send_history && this.msg.trim() !== '') {
+                    this.sentHistory.push(this.msg)
+                    if (this.sentHistory.length > 50) {
+                        this.sentHistory.shift()
+                    }
+                    this.historyIndex = -1
+                    this.oldMsg = ''
+                }
                 this.msg = ''
                 this.sendCache = []
                 this.imgCache.clear()

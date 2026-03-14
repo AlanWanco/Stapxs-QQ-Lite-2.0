@@ -337,6 +337,40 @@ export default defineComponent({
             }
         }, true)
 
+        // Ctrl+↑/↓ 切换聊天框（非移动端）
+        window.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (backend.isMobile()) return
+            if (!e.ctrlKey) return
+            if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
+            const list = runtimeData.onMsgList
+            if (!list || list.length === 0) return
+            const currentId = runtimeData.chatInfo?.show?.id ?? 0
+            const currentIndex = list.findIndex((item: any) =>
+                (item.user_id && item.user_id === currentId) ||
+                (item.group_id && item.group_id === currentId)
+            )
+            let nextIndex: number
+            if (currentIndex === -1) {
+                nextIndex = e.key === 'ArrowUp' ? list.length - 1 : 0
+            } else {
+                nextIndex = currentIndex + (e.key === 'ArrowUp' ? -1 : 1)
+                if (nextIndex < 0 || nextIndex >= list.length) return
+            }
+            const item = list[nextIndex] as any
+            const id = item.user_id ?? item.group_id
+            const info = {
+                type: item.user_id ? 'user' : 'group',
+                id: id,
+                name: item.remark || item.nickname || item.group_name || String(id),
+                avatar: item.user_id
+                    ? `https://q1.qlogo.cn/g?b=qq&s=0&nk=${id}`
+                    : `https://p.qlogo.cn/gh/${id}/${id}/0`,
+            } as any
+            e.preventDefault()
+            this.changeChat(info)
+            App.loadHistory(info)
+        })
+
         // 焦点补丁：防止任何方式触发的焦点导致容器偏移
         window.addEventListener('focusin', () => {
             setTimeout(() => {

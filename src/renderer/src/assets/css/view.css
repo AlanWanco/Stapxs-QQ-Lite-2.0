@@ -17,6 +17,7 @@ body {
     /* 字体缩放 */
     font-size: calc(16px * var(--scale-font, 1));
     overscroll-behavior: none; /* 防止安卓页面滚动 */
+    -webkit-tap-highlight-color: transparent; /* 禁用移动端 WebKit 点击高亮 */
 
     --desktop-friend-list-width: 300px;
     --sidebar-ul-width: 75px;         /* Web 端 ul 宽度；桌面端由 append_new/platform.css body 块覆盖为 50px */

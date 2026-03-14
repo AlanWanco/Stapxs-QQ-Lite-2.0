@@ -82,6 +82,7 @@ export const optDefault: { [key: string]: any } = {
     send_face: false,
     use_breakline: true,
     send_key: 'none',
+    opt_send_history: false,
     close_browser: false,
     close_ga: false,
     open_ga_bot: true,

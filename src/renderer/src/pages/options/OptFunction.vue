@@ -171,6 +171,21 @@
                     </select>
                 </div>
             </div>
+            <div v-if="!backend.isMobile()" class="opt-item">
+                <div :class="checkDefault('opt_send_history')" />
+                <font-awesome-icon :icon="['fas', 'clock-rotate-left']" />
+                <div>
+                    <span>{{ $t('发送历史记录') }}</span>
+                    <span>{{ $t('Shift+↑/↓ 切换上一条/下一条已发送消息（仅当前会话）') }}</span>
+                </div>
+                <label class="ss-switch">
+                    <input v-model="runtimeData.sysConfig.opt_send_history" type="checkbox"
+                        name="opt_send_history" @change="save($event)">
+                    <div>
+                        <div />
+                    </div>
+                </label>
+            </div>
             <div class="opt-item">
                 <div :class="checkDefault('record_recent_emoji')" />
                 <font-awesome-icon :icon="['fas', 'clock-rotate-left']" />
