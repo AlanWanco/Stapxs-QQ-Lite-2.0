@@ -226,9 +226,6 @@ body {
     margin-top: 0 !important;
     height: 100% !important;
 }
-.face-pan div.system-face-bar {
-    margin-top: 10px !important;
-}
 .face-pan div.tab-main > div {
     margin-bottom: 0 !important;
 }
@@ -783,36 +780,17 @@ body {
     }
     .friend-list {
         width: var(--mobile-sidebar-collapsed);
-    }
-    .chat-pan {
-        height: calc(100% - 3.75rem);
+        background: var(--color-card-1) !important;
     }
     .chat-info {
         width: calc(100% - 4.375rem);
     }
-    .friend-list {
-        background: var(--color-card-1) !important;
-    }
-    /* .friend-list > div:first-child {
-        margin: 5px 15px 5px 0;
-    } */
     .friend-list > div:last-child {
         padding: 0px !important;
     }
-    /* .friend-list > div:first-child > div.small {
-        height: 2.875rem;
-    } */
-    /* .friend-list > div:first-child > div.small > div {
-        margin-right: 10px;
-        width: 2.875rem;
-    } */
     .friend-list > div:first-child > div.small > div > svg {
         height: 0.875rem;
     }
-    /* .friend-list > div:first-child > div.small > label {
-        margin-top: 1px;
-        height: 2.875rem;
-    } */
 }
 @media (max-width: 500px) {
     .pop-box-body {
