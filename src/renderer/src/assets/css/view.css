@@ -18,12 +18,13 @@ body {
     font-size: calc(16px * var(--scale-font, 1));
     overscroll-behavior: none; /* 防止安卓页面滚动 */
 
+    --desktop-friend-list-width: 275px;
     /* 移动端响应式布局变量 */
-    --mobile-tab-bar-height: 4.7rem;
+    --mobile-tab-bar-height: 5rem;
     --mobile-sidebar-collapsed: 5rem;
     --mobile-sidebar-expanded: clamp(15.625rem, 45vw, 18.75rem);
     --mobile-sidebar-wide: clamp(17.5rem, 35vw, 22.8rem);
-    --mobile-avatar-size: 2.8rem;
+    --mobile-avatar-size: 2.6rem;
     --mobile-title-bar-mac: 1.875rem;
     --mobile-title-bar-win: 2.2rem;
 }
@@ -461,7 +462,7 @@ textarea:focus {
     flex-direction: column;
     overflow: hidden;
     display: flex;
-    width: 300px;
+    width: var(--desktop-friend-list-width);
 }
 .friend-list > div {
     transition: opacity 0.3s;
