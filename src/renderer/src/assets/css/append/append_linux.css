@@ -58,7 +58,6 @@
     margin-right: 10px;
     border-radius: 0 7px 7px 0;
     padding-top: 25px;
-    left: 275px;
     box-shadow: -5px 0 4px -5px var(--color-shader);
 }
 /* 合并转发侧栏避让 title bar */

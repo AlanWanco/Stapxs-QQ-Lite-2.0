@@ -153,9 +153,9 @@ body {
     font-size: 0.6rem;
 }
 
-.chat-pan {
+/* .chat-pan {
     left: 325px;
-}
+} */
 .chat-pan > div.info {
     padding: 10px;
     width: calc(100% - 50px);
