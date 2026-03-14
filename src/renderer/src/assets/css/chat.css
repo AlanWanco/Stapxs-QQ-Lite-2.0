@@ -19,7 +19,7 @@ input {
     overflow: hidden;
     display: flex;
     height: 100%;
-    left: var(--desktop-friend-list-width);
+    left: calc(var(--desktop-friend-list-width) + 50px);
     z-index: 2;
     right: 0;
     top: 0;
