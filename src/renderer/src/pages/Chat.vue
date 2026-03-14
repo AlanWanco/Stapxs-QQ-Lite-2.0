@@ -1113,8 +1113,10 @@ import { Img } from '@renderer/function/model/img'
                         )
                         if (lastMyMsg) {
                             event.preventDefault()
+                            // 无论撤回是否成功，都把内容填回输入框
                             Connector.callApi('delete_msg', { message_id: lastMyMsg.message_id })
-                            this.reedit(lastMyMsg)
+                                .catch(() => {/* 撤回失败静默忽略 */})
+                                .finally(() => { this.reedit(lastMyMsg) })
                         }
                     } else {
                         this.lastUpKeyTime = now
