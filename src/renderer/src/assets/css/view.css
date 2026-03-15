@@ -461,6 +461,10 @@ textarea:focus {
     overflow: hidden;
     display: flex;
     width: var(--desktop-friend-list-width);
+    /* 移动端禁止长按触发系统文字选择 / 预览菜单 */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
 }
 .friend-list > div {
     transition: opacity 0.3s;

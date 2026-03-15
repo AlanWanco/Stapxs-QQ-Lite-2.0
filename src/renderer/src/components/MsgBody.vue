@@ -22,7 +22,8 @@
         :data-raw="getMsgRawTxt(data)"
         :data-sender="data.sender.user_id"
         :data-time="data.time"
-        @mouseleave="hiddenUserInfo">
+        @mouseleave="hiddenUserInfo"
+        @dblclick.stop="$emit('dblclick', data)">
         <img v-menu.prevent.stop="event => $emit('showMenu', event, data)"
             v-user-tooltip="() => getUserById(data.sender.user_id)"
             name="avatar"
@@ -415,6 +416,7 @@ const emit = defineEmits<{
     leftMove: [msg: Msg]
     rightMove: [msg: Msg]
     showMenu: [event: MenuEventData, msg: Msg]
+    dblclick: [msg: Msg]
 }>()
 
 const msgMain = useTemplateRef<HTMLDivElement>('msgMain')
@@ -444,7 +446,7 @@ function getUserById(id: number): IUser | undefined {
         name: 'MsgBody',
         inject: ['viewer'],
         props: ['data', 'type', 'selected', 'imageListHeader'],
-        emits: ['scrollToMsg', 'imageLoaded', 'sendPoke', 'showMenu', 'leftMove', 'rightMove'],
+        emits: ['scrollToMsg', 'imageLoaded', 'sendPoke', 'showMenu', 'leftMove', 'rightMove', 'dblclick'],
         data() {
             return {
                 Emoji,

@@ -127,6 +127,7 @@
                             :data="msgIndex"
                             :image-list-header="chatImg"
                             @click="msgClick($event, msgIndex)"
+                            @dblclick="msgDblClick(msgIndex)"
                             @show-menu="showMsgMeun"
                             @scroll-to-msg="scrollToMsg"
                             @image-loaded="imgLoadedScroll"
@@ -2807,6 +2808,48 @@ import { Img } from '@renderer/function/model/img'
                         this.multipleSelectList.push(message_id)
                     }
                 }
+            },
+
+            msgDblClick(data: any) {
+                // 提取消息中的文字内容
+                const hasText = data.message && data.message.some((m: any) => m.type === 'text' || m.type === 'at')
+                if (!hasText) return
+
+                // 构建纯文本（保留换行）
+                const { $t } = app.config.globalProperties
+                let text = ''
+                for (const part of data.message) {
+                    if (part.type === 'text') {
+                        text += part.text
+                    } else if (part.type === 'at') {
+                        const card = part.text ?? ('@' + part.qq)
+                        text += card
+                    }
+                }
+                if (!text.trim()) return
+
+                const escapedText = text
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+
+                const popInfo = {
+                    title: $t('复制文字'),
+                    html: `<div style="white-space:pre-wrap;word-break:break-all;user-select:text;-webkit-user-select:text;padding:8px 0;line-height:1.6;">${escapedText}</div>`,
+                    full: false,
+                    allowClose: true,
+                    allowQuickClose: true,
+                    button: [
+                        {
+                            text: $t('关闭'),
+                            master: true,
+                            fun: () => {
+                                runtimeData.popBoxList.shift()
+                            },
+                        },
+                    ],
+                }
+                runtimeData.popBoxList.push(popInfo)
             },
 
             delMsgs() {
