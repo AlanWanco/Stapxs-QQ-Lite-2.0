@@ -63,8 +63,9 @@
       - 双击文字消息进行自由复制
       
 ## TODO Features
-- [ ] [Android]安卓版icon符合Google制定的APK ICON规范
 - [ ] **对齐Stapxs-QQ-lite-X的相关新功能与重构**
+- [ ] [Android]支持读取Android剪贴板
+- [ ] [Android]安卓版icon符合Google制定的APK ICON规范
 - [ ] [Android]本地文件权限？
 - [ ] [Android]调出键盘时 上面的info块会向上延伸 导致你不知道现在聊的是哪个群
 
