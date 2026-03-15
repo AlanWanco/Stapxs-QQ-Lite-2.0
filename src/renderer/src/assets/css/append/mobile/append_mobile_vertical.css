@@ -28,14 +28,33 @@
         width: 100% !important;
         z-index: 20 !important;
     }
+    /* chat-pan 侧边栏展开时滑出屏幕，fixed info 不跟随 transform，需手动隐藏 */
+    .chat-pan.open > div.info {
+        display: none !important;
+    }
     
     /* BUG-C: chat-pan 顶部让出系统导航栏/刘海区域 */
+    /* 固定 info 栏：脱离 flex 流，固定在视口顶部，键盘弹出时不随布局压缩而消失 */
     .chat-pan > div.info {
-        padding-top: calc(var(--safe-area-top) + 0.9rem);
-        margin-top: 0;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        width: auto !important;
+        /* 内边距：顶部让出刘海/安全区域，其余保持原 15px */
+        padding: calc(var(--safe-area-top) + 0.9rem) 15px 15px 15px;
+        margin: 0 15px;
+        box-sizing: border-box;
+        z-index: 21; /* 高于 chat-pan(20)，确保浮在消息列表之上 */
     }
     .chat-pan > div.info > svg:not(.back) {
         display: none !important;
+    }
+    /* chat 消息区：补偿 info 固定后占用的高度，避免顶部消息被遮挡 */
+    /* info 高度 ≈ safe-area-top + 0.9rem(顶padding) + 50px(头像行) + 15px(底padding) ≈ safe-area-top + ~4.7rem */
+    .chat-pan > div.chat {
+        margin-top: 0;
+        padding-top: calc(var(--safe-area-top) + 5.5rem);
     }
     
     .chat-pan > div.more > div:nth-child(2) {
