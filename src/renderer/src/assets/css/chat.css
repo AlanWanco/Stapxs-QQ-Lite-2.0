@@ -2131,7 +2131,6 @@ div.tiny-session-body > div:nth-child(3) > div > svg {
 @media (max-width: 500px) {
     .chat-pan {
         left: var(--mobile-sidebar-collapsed);
-        /* height: calc(100% - var(--mobile-tab-bar-height) - var(--safe-area-bottom, 0px)); */
     }
     /* 群信息面板 */
     .chat-info {

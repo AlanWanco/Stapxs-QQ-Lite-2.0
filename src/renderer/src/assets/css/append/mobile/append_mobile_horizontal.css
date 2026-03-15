@@ -341,9 +341,10 @@
     .friend-list.open {
         width: var(--mobile-sidebar-expanded) !important;
     }
-    /* FL: chat-pan 跟随侧栏状态 */
+    /* FL: chat-pan 跟随侧栏状态，高度扣除底部导航栏 */
     .chat-pan {
         left: var(--mobile-sidebar-collapsed) !important;
+        height: calc(100% - var(--mobile-tab-bar-height) - var(--safe-area-bottom, 0px));
     }
     .chat-pan.open {
         left: var(--mobile-sidebar-expanded) !important;
