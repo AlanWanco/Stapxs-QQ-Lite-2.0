@@ -98,6 +98,7 @@ input {
         width: var(--mobile-sidebar-collapsed) !important;
         z-index: 100 !important;
         margin: 0 !important;
+        background: var(--color-card-1) !important;
     }
     /* 群收纳盒展开时 */
     .group-assist-message-list.show.open {

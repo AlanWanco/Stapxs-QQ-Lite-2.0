@@ -85,6 +85,11 @@ export function scrollToMsg(seqName: string, showAnimation: boolean, showHighlig
 export function openLink(url: string, external = false) {
     // 判断是不是 Electron，是的话打开内嵌 iframe
     if (backend.isDesktop()) {
+        // Tauri 不支持内嵌 iframe（会触发 WebView 导航导致页面重载），直接外部打开
+        if (backend.type === 'tauri') {
+            backend.call('', 'sys:openInBrowser', false, url)
+            return
+        }
         if (!external && !runtimeData.sysConfig.close_browser) {
             runtimeData.popBoxList = []
             url = backend.proxyUrl(url)
@@ -1609,6 +1614,9 @@ function createVMenu(): Directive<HTMLElement, (event: MenuEventData)=>void> {
     // 右键菜单事件数据类型
     type Binding = DirectiveBinding<(event: MenuEventData)=>void> & { modifiers: {prevent?: boolean, stop?: boolean} }
 
+    // 记录 touch 长按触发时间，防止 Android 同时派发 contextmenu 导致双重菜单
+    let lastTouchFiredTime = 0
+
     // 右键菜单事件数据类型
     const {
         handle: menuTouchHandle,
@@ -1623,6 +1631,8 @@ function createVMenu(): Directive<HTMLElement, (event: MenuEventData)=>void> {
         },
         {
             onFit: (data: MenuEventData, binding: Binding) => {
+                // 记录触发时间，防止 contextmenu 重复触发
+                lastTouchFiredTime = Date.now()
                 // 触发右键菜单事件
                 binding.value(data)
             }
@@ -1645,6 +1655,8 @@ function createVMenu(): Directive<HTMLElement, (event: MenuEventData)=>void> {
             el.addEventListener('contextmenu', (event) => {
                 if (prevent) event.preventDefault()
                 if (stop) event.stopPropagation()
+                // 防止 Android 长按同时触发 touch 长按和 contextmenu 导致双重菜单
+                if (Date.now() - lastTouchFiredTime < 600) return
                 const data: MenuEventData = {
                     x: event.clientX,
                     y: event.clientY,

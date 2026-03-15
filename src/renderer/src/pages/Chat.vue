@@ -2413,16 +2413,17 @@ import { Img } from '@renderer/function/model/img'
                     return
                 }
 
-                // 计算 SHA256
+                // 计算 SHA256（需要安全上下文，HTTP 下 crypto.subtle 不可用时跳过）
                 let sha256 = ''
                 try {
-                    const hashBuf = await crypto.subtle.digest('SHA-256', buffer)
-                    sha256 = Array.from(new Uint8Array(hashBuf))
-                        .map(b => b.toString(16).padStart(2, '0'))
-                        .join('')
+                    if (crypto.subtle) {
+                        const hashBuf = await crypto.subtle.digest('SHA-256', buffer)
+                        sha256 = Array.from(new Uint8Array(hashBuf))
+                            .map(b => b.toString(16).padStart(2, '0'))
+                            .join('')
+                    }
                 } catch (e) {
-                    popInfo.add(PopType.ERR, this.$t('计算文件校验值失败'))
-                    return
+                    // 计算失败时继续上传，不传 sha256 校验值
                 }
 
                 const totalSize = buffer.byteLength
@@ -2453,7 +2454,7 @@ import { Img } from '@renderer/function/model/img'
                         chunk_index: i,
                         total_chunks: totalChunks,
                         file_size: totalSize,
-                        expected_sha256: sha256,
+                        ...(sha256 ? { expected_sha256: sha256 } : {}),
                         filename: fileName,
                         file_retention: 30000,
                     }, echo)
@@ -3063,6 +3064,11 @@ import { Img } from '@renderer/function/model/img'
 
             openLeftBar() {
                 runtimeData.tags.openSideBar = !runtimeData.tags.openSideBar
+                // 展开消息列表时，收回 chatpan（移动端 ≤500px 由 CSS translateX 处理，无需清 id）
+                const w = window.innerWidth
+                if (runtimeData.tags.openSideBar && w > 500) {
+                    runtimeData.chatInfo.show.id = 0
+                }
             },
 
             /**

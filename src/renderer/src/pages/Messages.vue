@@ -241,6 +241,16 @@
                 loginInfo: loginInfo,
                 showGroupAssist: false,
                 windowWidth: window.innerWidth,
+                noMenuUntil: 0,
+            }
+        },
+        watch: {
+            'runtimeData.tags.openSideBar'(newVal: boolean, oldVal: boolean) {
+                // 侧拉从 chatpan 返回时（openSideBar 变为 true），短暂禁止长按菜单触发
+                // 避免侧拉手势结束后手指落在列表 item 上误触 500ms 长按
+                if (newVal && !oldVal) {
+                    this.noMenuUntil = Date.now() + 600
+                }
             }
         },
         mounted() {
@@ -663,7 +673,7 @@
                 }
                 this.showMenu = true
                 setTimeout(() => {
-                    if (this.showMenu) {
+                    if (this.showMenu && Date.now() >= this.noMenuUntil) {
                         this.listMenuShowRun(info, item)
                         this.showMenu = false
                     }
