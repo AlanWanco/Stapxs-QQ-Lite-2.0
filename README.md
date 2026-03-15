@@ -67,8 +67,8 @@
 - [ ] **对齐Stapxs-QQ-lite-X的相关新功能与重构**
 
 ## Known Bugs
-- [(min-width: 501px) and (max-width: 750px)]也就是平板模式的时候 如果消息主页里的消息处于折叠状态且chatpan出现 点击汉堡按钮展开消息列表时 消息主页会展开 但是会在chat pan的下面（这里的正常情况应该是把chatpan收回去）
 - [低优先级]单条回复有点问题（图片太高？寻求更多错误样本）
+- windows/macOS URL web端点点击url正常 tauri点击之后没法调用外部浏览器
 
 ---
 
