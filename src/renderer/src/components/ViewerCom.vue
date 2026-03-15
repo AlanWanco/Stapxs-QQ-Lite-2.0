@@ -108,7 +108,7 @@
                 <Transition mode="out-in"
                     :name="`viewer-change-img-${changeViewerCssName}`">
                     <div :key="currentImg?.src">
-                        <div v-if="loading" class="viewer loading cursor-exit">
+                        <div v-if="loading" :class="['viewer', 'loading', runtimeData.tags.darkMode ? 'cursor-exit-dark' : 'cursor-exit']">
                             <font-awesome-icon :icon="['fas', 'spinner']" />
                         </div>
                         <div v-else
@@ -117,7 +117,8 @@
                                 'grab': mouseMoveInfo,
                                 'zooming': zoomTimeout,
                                 'cursor-not-allowed': edit,
-                                'cursor-exit': !edit,
+                                'cursor-exit': !edit && !runtimeData.tags.darkMode,
+                                'cursor-exit-dark': !edit && runtimeData.tags.darkMode,
                             }"
                             @touchstart="onGlobalTouchStart"
                             @touchmove="onGlobalTouchMove"

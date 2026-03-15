@@ -1525,6 +1525,10 @@ textarea:focus {
     cursor: url(@renderer/assets/img/icons/exit.png), auto;
 }
 
+.cursor-exit-dark {
+    cursor: url(@renderer/assets/img/icons/exit_dark.png), auto;
+}
+
 .cursor-not-allowed {
     cursor: not-allowed
 }
