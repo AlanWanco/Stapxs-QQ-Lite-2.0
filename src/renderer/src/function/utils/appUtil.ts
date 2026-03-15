@@ -83,53 +83,56 @@ export function scrollToMsg(seqName: string, showAnimation: boolean, showHighlig
  * @param external 是否外部打开
  */
 export function openLink(url: string, external = false) {
-    // 判断是不是 Electron，是的话打开内嵌 iframe
-    if (backend.isDesktop()) {
-        if (!external && !runtimeData.sysConfig.close_browser) {
-            runtimeData.popBoxList = []
-            url = backend.proxyUrl(url)
-            const popInfo = {
-                html: `<iframe src="${url}" class="view-iframe"></iframe>`,
-                full: true,
-                button: [
-                    {
-                        text: app.config.globalProperties.$t(
-                            '请不要在内嵌页面中输入敏感信息，内嵌页面并不安全。',
-                        ),
-                        fun: () => undefined,
-                    },
-                    {
-                        text: app.config.globalProperties.$t('打开…'),
-                        fun: () => {
+    if (!external && !runtimeData.sysConfig.close_browser) {
+        runtimeData.popBoxList = []
+        url = backend.proxyUrl(url)
+        const popInfo = {
+            html: `<iframe src="${url}" class="view-iframe"></iframe>`,
+            full: true,
+            button: [
+                {
+                    text: app.config.globalProperties.$t(
+                        '请不要在内嵌页面中输入敏感信息，内嵌页面并不安全。',
+                    ),
+                    fun: () => undefined,
+                },
+                {
+                    text: app.config.globalProperties.$t('打开…'),
+                    fun: () => {
+                        if (backend.isDesktop()) {
                             const shell = window.electron?.shell
                             if (shell) {
                                 shell.openExternal(url)
                             } else {
                                 backend.call('', 'sys:openInBrowser', false, backend.unProxyUrl(url))
                             }
-                            runtimeData.popBoxList.shift()
-                        },
+                        } else {
+                            window.open(backend.unProxyUrl(url))
+                        }
+                        runtimeData.popBoxList.shift()
                     },
-                    {
-                        text: app.config.globalProperties.$t('关闭'),
-                        master: true,
-                        fun: () => {
-                            runtimeData.popBoxList.shift()
-                        },
+                },
+                {
+                    text: app.config.globalProperties.$t('关闭'),
+                    master: true,
+                    fun: () => {
+                        runtimeData.popBoxList.shift()
                     },
-                ],
-            }
-            runtimeData.popBoxList.push(popInfo)
-        } else {
+                },
+            ],
+        }
+        runtimeData.popBoxList.push(popInfo)
+    } else {
+        if (backend.isDesktop()) {
             const shell = window.electron?.shell
             if (shell) {
                 shell.openExternal(url)
             } else {
                 backend.call('', 'sys:openInBrowser', false, backend.unProxyUrl(url))
             }
+        } else {
+            window.open(url)
         }
-    } else {
-        window.open(url)
     }
 }
 
