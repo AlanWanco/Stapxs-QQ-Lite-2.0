@@ -1552,7 +1552,7 @@ textarea:focus {
     }
 }
 
-@media (max-width: 700px) {
+@media (max-width: 750px) {
     /* 侧栏及主布局自适应 */
     .main-body {
         flex-direction: column-reverse;

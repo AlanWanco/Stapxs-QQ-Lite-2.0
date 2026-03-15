@@ -493,6 +493,39 @@ export default defineComponent({
                     document.body.style.setProperty('--safe-area--viewer-top', safeArea.top + 'px')
                 }
             }
+            // Capacitor（Android）：注册全局 backButton 处理
+            // Chat.vue 打开时会注册自己的 listener 并接管，此处只处理 Chat 未打开的情况
+            if (backend.type === 'capacitor' && backend.platform === 'android') {
+                ;(window as any).Capacitor.Plugins.App.addListener('backButton', () => {
+                    // 如果 ChatPan 已打开，由 Chat.vue 的 listener 接管，此处跳过
+                    if (runtimeData.chatInfo.show.id !== 0) return
+                    // 群收纳盒展开时：关闭群收纳盒
+                    if (runtimeData.tags.showGroupAssist) {
+                        runtimeData.tags.showGroupAssist = false
+                        return
+                    }
+                    // 主界面：弹出确认框退出 APP
+                    const popInfo = {
+                        title: this.$t('提醒'),
+                        html: `<span>${this.$t('离开 Stapxs QQ Lite？')}</span>`,
+                        button: [
+                            {
+                                text: this.$t('取消'),
+                                fun: () => { runtimeData.popBoxList.shift() },
+                            },
+                            {
+                                text: this.$t('离开'),
+                                master: true,
+                                fun: () => {
+                                    runtimeData.popBoxList.shift()
+                                    ;(window as any).Capacitor.Plugins.App.exitApp()
+                                },
+                            },
+                        ],
+                    }
+                    runtimeData.popBoxList.push(popInfo)
+                })
+            }
             // 加载密码保存和自动连接
             loginInfo.address = runtimeData.sysConfig.address
             if (

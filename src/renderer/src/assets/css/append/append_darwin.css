@@ -42,8 +42,8 @@ input {
     height: calc(100% - 17px) !important;
 }
 
-/* macOS 平板模式（501px-700px）- 可折叠侧边栏 */
-@media (min-width: 501px) and (max-width: 700px) {
+/* macOS 平板模式（501px-750px）- 可折叠侧边栏 */
+@media (min-width: 501px) and (max-width: 750px) {
     /* 默认显示折叠状态（80px），展开时 300px */
     .friend-list {
         width: var(--mobile-sidebar-collapsed) !important;

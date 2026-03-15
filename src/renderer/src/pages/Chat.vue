@@ -778,8 +778,7 @@ import { Img } from '@renderer/function/model/img'
                 sentHistory: new Map<number, string[]>(),
                 historyIndex: -1,
                 lastUpKeyTime: 0,
-                fileUploadProgress: -1,
-                fileUploadName: '',
+                _backButtonHandle: null as { remove: () => void } | null,
              }
         },
         computed: {
@@ -788,6 +787,12 @@ import { Img } from '@renderer/function/model/img'
             },
             fileUploadChatId() {
                 return runtimeData.fileUploadChatId
+            },
+            fileUploadProgress() {
+                return runtimeData.fileUploadProgress ?? -1
+            },
+            fileUploadName() {
+                return runtimeData.fileUploadName ?? ''
             },
         },
         watch: {
@@ -834,7 +839,9 @@ import { Img } from '@renderer/function/model/img'
             )
             // Capacitor：系统返回操作（Android）
             if(backend.type == 'capacitor' && backend.platform === 'android') {
-                backend.addListener('App', 'backButton', () => {
+                // 直接用原生 Capacitor API 拿到 handle，以便 beforeUnmount 时移除，
+                // 防止 v-if 每次重建组件时重复注册导致多次触发
+                this._backButtonHandle = await (window as any).Capacitor.Plugins.App.addListener('backButton', () => {
                     this.exitWin()
                 })
             }
@@ -849,6 +856,11 @@ import { Img } from '@renderer/function/model/img'
         },
         beforeUnmount() {
             window.removeEventListener('click', this.handleOutsideClick)
+            // 移除 backButton listener，防止组件重建时重复注册
+            if (this._backButtonHandle) {
+                this._backButtonHandle.remove()
+                this._backButtonHandle = null
+            }
         },
         methods: {
             handleOutsideClick(event: MouseEvent) {
@@ -2441,8 +2453,8 @@ import { Img } from '@renderer/function/model/img'
                 const totalChunks = Math.ceil(totalSize / CHUNK_SIZE)
 
                 // 显示进度条
-                this.fileUploadName = fileName
-                this.fileUploadProgress = 0
+                runtimeData.fileUploadName = fileName
+                runtimeData.fileUploadProgress = 0
                 runtimeData.fileUploadChatId = chatId
 
                 // 逐片发送
@@ -2473,12 +2485,12 @@ import { Img } from '@renderer/function/model/img'
                     try {
                         await Connector.waitReturn(echo, CHUNK_TIMEOUT)
                     } catch (e) {
-                        this.fileUploadProgress = -1
+                        runtimeData.fileUploadProgress = -1
                         popInfo.add(PopType.ERR, this.$t('文件上传超时（第 {n} 片）', { n: i + 1 }))
                         return
                     }
 
-                    this.fileUploadProgress = Math.round(((i + 1) / totalChunks) * 95)
+                    runtimeData.fileUploadProgress = Math.round(((i + 1) / totalChunks) * 95)
                 }
 
                 // 发送完成信号
@@ -2492,7 +2504,7 @@ import { Img } from '@renderer/function/model/img'
                 try {
                     completeResp = await Connector.waitReturn(completeEcho, CHUNK_TIMEOUT)
                 } catch (e) {
-                    this.fileUploadProgress = -1
+                    runtimeData.fileUploadProgress = -1
                     popInfo.add(PopType.ERR, this.$t('文件上传完成确认超时'))
                     return
                 }
@@ -2501,12 +2513,12 @@ import { Img } from '@renderer/function/model/img'
                 const serverPath: string | undefined =
                     completeResp?.data?.file_path ?? completeResp?.file_path
                 if (!serverPath) {
-                    this.fileUploadProgress = -1
+                    runtimeData.fileUploadProgress = -1
                     popInfo.add(PopType.ERR, this.$t('服务端未返回文件路径'))
                     return
                 }
 
-                this.fileUploadProgress = 98
+                runtimeData.fileUploadProgress = 98
 
                 // 调用群/私聊文件发送 API
                 if (chatType === 'group') {
@@ -2523,9 +2535,9 @@ import { Img } from '@renderer/function/model/img'
                     }, uuid())
                 }
 
-                this.fileUploadProgress = 100
+                runtimeData.fileUploadProgress = 100
                 setTimeout(() => {
-                    if (runtimeData.fileUploadChatId === chatId) this.fileUploadProgress = -1
+                    if (runtimeData.fileUploadChatId === chatId) runtimeData.fileUploadProgress = -1
                     }, 1500)
 
                 popInfo.add(PopType.INFO, `${this.$t('文件发送成功')}：${fileName}`)

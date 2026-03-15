@@ -1901,6 +1901,7 @@ const baseRuntime = {
         canLoadHistory: true,
         loadHistoryFail: false,
         openSideBar: true,
+        showGroupAssist: false,
         viewer: { index: 0 },
         msgType: BotMsgType.Array,
         isElectron: false,
@@ -1954,6 +1955,8 @@ const baseRuntime = {
     mergeMsgStack: [],
     fileUploadPending: null,
     fileUploadChatId: -1,
+    fileUploadProgress: -1,
+    fileUploadName: '',
     inch: getInch(),
 }
 

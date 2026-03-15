@@ -239,9 +239,14 @@
                 menu: Menu.append,
                 showMenu: false,
                 loginInfo: loginInfo,
-                showGroupAssist: false,
                 windowWidth: window.innerWidth,
             }
+        },
+        computed: {
+            showGroupAssist: {
+                get() { return runtimeData.tags.showGroupAssist },
+                set(val: boolean) { runtimeData.tags.showGroupAssist = val },
+            },
         },
         watch: {
             'runtimeData.tags.openSideBar'(newVal: boolean, oldVal: boolean) {
@@ -272,7 +277,7 @@
                     }
                     // 平板/移动端：如果从群收纳盒选择群聊，折叠群收纳盒（但保持显示）
                     const width = window.innerWidth
-                    if (width <= 700 && this.showGroupAssist) {
+                    if (width <= 750 && this.showGroupAssist) {
                         runtimeData.tags.openSideBar = false
                     }
                     const back = {
@@ -628,7 +633,7 @@
              */
             showGroupAssistCheck() {
                 const width = window.innerWidth
-                const isTabletOrMobile = width <= 700
+                const isTabletOrMobile = width <= 750
                 
                 if (isTabletOrMobile) {
                     // 平板/移动端：直接切换显示群收纳盒列表，不自动打开第一个
@@ -717,7 +722,7 @@
         background: transparent !important;
     }
 
-    @media (max-width: 700px) {
+    @media (max-width: 750px) {
         .menu {
             width: 8.75rem !important;
         }

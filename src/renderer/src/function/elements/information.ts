@@ -29,6 +29,7 @@ export interface RunTimeDataElem {
         canLoadHistory: boolean
 		loadHistoryFail: boolean
         openSideBar: boolean
+        showGroupAssist: boolean // 群收纳盒是否展开显示
         loginWaveTimer?: any
         connectSsl: boolean
         classes: any[]
@@ -51,6 +52,8 @@ export interface RunTimeDataElem {
     mergeMessageImgList?: any[] | undefined
     fileUploadPending?: File | null // 待确认上传的文件（跨组件生命周期保留）
     fileUploadChatId?: number // 该文件所属的 chat id
+    fileUploadProgress?: number // 上传进度 0-100，-1 表示无上传
+    fileUploadName?: string // 当前上传的文件名
     stickerCache?: any[]
     popBoxList: {
         // 通用弹窗

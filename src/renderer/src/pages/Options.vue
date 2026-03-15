@@ -119,7 +119,7 @@
             window.addEventListener('resize', () => {
                 this.$nextTick(() => {
                     const width = window.innerWidth
-                    if (width < 700) {
+                    if (width < 750) {
                         this.showAbout = true
                     } else {
                         this.showAbout = false
@@ -130,7 +130,7 @@
                 if (val) {
                     this.$nextTick(() => {
                         const width = window.innerWidth
-                        if (width < 700) {
+                        if (width < 750) {
                             this.showAbout = true
                         } else {
                             this.showAbout = false

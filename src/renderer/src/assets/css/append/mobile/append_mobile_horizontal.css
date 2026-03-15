@@ -301,7 +301,8 @@
 
 /* 移动端附加样式（横向 - 平板，缩减侧边栏） */
 @media (min-width: 501px) and (max-width: 750px) {
-    /* 补全 view.css @media(max-width:700px) 未覆盖的 701-750px 区间 */
+    /* 补全 view.css @media(max-width:750px) 中纵向模式已有的样式，
+       覆盖平板横版（501-750px）中特有的差异 */
     .main-body {
         flex-direction: column-reverse;
     }
@@ -319,6 +320,12 @@
         position: fixed;
         bottom: 0;
         z-index: 10;
+    }
+    /* 覆盖 view.css @media(min-width:750px) 中 li:last-child margin-bottom:10px，
+       防止最后一个导航 icon 在横版底栏中偏下 */
+    .main-body > ul > li {
+        margin-top: 0;
+        margin-bottom: 0 !important;
     }
     /* A1: 主内容区安全区域 */
     .main-body > div {

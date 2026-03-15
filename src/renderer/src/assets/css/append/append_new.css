@@ -774,7 +774,7 @@ body {
     font-size: 0.8rem;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 750px) {
     .main-body > ul {
         background: var(--color-card-2) !important;
         height: 3.75rem !important;
