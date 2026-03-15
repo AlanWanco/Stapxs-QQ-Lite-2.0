@@ -1011,6 +1011,8 @@ const msgFunctions = {
                             fakeMsg.time = trueMsg[0].time
                             fakeMsg.fake_msg = undefined
                             fakeMsg.revoke = false
+                            // 消息内容（含图片 URL）已变，通知图片列表重建
+                            runtimeData.watch.chatImgVersion++
                         }
                     })
                 }
@@ -1914,6 +1916,7 @@ const baseRuntime = {
     },
     watch: {
         backTimes: 0,
+        chatImgVersion: 0,
     },
     chatInfo: {
         show: { type: '', id: 0, name: '', avatar: '' },

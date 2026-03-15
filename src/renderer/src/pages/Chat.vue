@@ -830,6 +830,10 @@ import { Img } from '@renderer/function/model/img'
             this.updateList(this.list.length, 0)
             // PS：由于监听 list 本身返回的新旧值是一样，于是监听 length（反正也只要知道长度）
             this.$watch(() => this.list.length, this.updateList)
+            // 监听图片列表版本号（发送图片后 URL 被替换，需要重建链表）
+            this.$watch(() => runtimeData.watch.chatImgVersion, () => {
+                this.rebuildChatImg()
+            })
             //精华消息列表刷新
             this.$watch(
                 () => this.chat.info.jin_info.list.length,
@@ -2681,6 +2685,23 @@ import { Img } from '@renderer/function/model/img'
                 })
             },
 
+            rebuildChatImg() {
+                const getImgList = [] as string[]
+                this.list.forEach((item: any) => {
+                    if (item.message !== undefined) {
+                        item.message.forEach((msg: MsgItemElem) => {
+                            if (
+                                msg.type === 'image' &&
+                                msg.file != 'marketface'
+                            ) {
+                                getImgList.push(msg.url)
+                            }
+                        })
+                    }
+                })
+                this.chatImg = Img.fromList(getImgList)
+            },
+
             updateList(newLength: number, oldLength: number) {
                 // =================== 首次加载消息 ===================
 
@@ -2784,21 +2805,7 @@ import { Img } from '@renderer/function/model/img'
                             this.tags.nowGetHistroy = false
                         }
                         // 刷新图片列表
-                        // TODO: 需要优化性能
-                        const getImgList = [] as string[]
-                        this.list.forEach((item: any) => {
-                            if (item.message !== undefined) {
-                                item.message.forEach((msg: MsgItemElem) => {
-                                    if (
-                                        msg.type === 'image' &&
-                                        msg.file != 'marketface'
-                                    ) {
-                                        getImgList.push(msg.url)
-                                    }
-                                })
-                            }
-                        })
-                        this.chatImg = Img.fromList(getImgList)
+                        this.rebuildChatImg()
                         // 处理跳入跳转预设
                         // 如果 jump 参数不是 undefined，则意味着这次加载历史记录的同时需要跳转到指定的消息
                         if (

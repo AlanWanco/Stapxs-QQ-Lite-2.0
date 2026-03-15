@@ -44,6 +44,7 @@ export interface RunTimeDataElem {
         oldHeartbeatTime?: number
         lastHeartbeatTime?: number
         backTimes: number
+        chatImgVersion: number
     }
 	inch: number
     messageList: any[]
