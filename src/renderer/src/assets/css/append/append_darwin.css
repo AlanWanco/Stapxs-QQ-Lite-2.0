@@ -78,8 +78,8 @@ input {
         left: var(--mobile-sidebar-expanded) !important;
     }
     
-    /* 防止 friend-list-space 占据整个空间 */
-    .friend-list-space {
+    /* 仅当有聊天存在时，防止 friend-list-space 占据整个空间 */
+    .friend-list-space.has-chat {
         display: none !important;
     }
     

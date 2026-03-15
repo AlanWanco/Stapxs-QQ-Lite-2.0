@@ -123,7 +123,7 @@
                 </div>
             </div>
         </div>
-        <div :class="'friend-list-space' + (runtimeData.tags.openSideBar ? ' open' : '')">
+        <div :class="'friend-list-space' + (runtimeData.tags.openSideBar ? ' open' : '') + (!loginInfo.status || runtimeData.chatInfo.show.id == 0 ? '' : ' has-chat')">
             <div v-if="!loginInfo.status || runtimeData.chatInfo.show.id == 0" class="ss-card">
                 <font-awesome-icon :icon="['fas', 'inbox']" />
                 <span>{{ $t('选择联系人开始聊天') }}</span>

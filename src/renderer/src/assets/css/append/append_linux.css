@@ -129,23 +129,26 @@ body {
         left: var(--mobile-sidebar-expanded) !important;
     }
     
-    /* 防止 friend-list-space 占据整个空间 */
-    .friend-list-space {
+    /* 仅当有聊天存在时，防止 friend-list-space 占据整个空间 */
+    .friend-list-space.has-chat {
         display: none !important;
     }
     
     /* 修复：群收纳盒在平板模式下的显示逻辑 */
+    .friend-list-container {
+        position: relative;
+    }
     .group-assist-message-list {
         display: none !important;
     }
-    /* 群收纳盒激活时：从左边弹出，盖住 chat-pan */
+    /* 群收纳盒激活时：改为相对于母容器的 absolute 定位，避免受 #app 的 margin 影响 */
     .group-assist-message-list.show {
         display: flex !important;
-        position: fixed !important;
+        position: absolute !important;
         left: 0 !important;
-        top: var(--mobile-title-bar-linux) !important; /* 避开 title bar */
+        top: 0 !important;
         bottom: 0 !important;
-        height: calc(100vh - var(--mobile-title-bar-linux)) !important;
+        height: 100% !important;
         width: var(--mobile-sidebar-collapsed) !important;
         z-index: 100 !important;
         margin: 0 !important;
