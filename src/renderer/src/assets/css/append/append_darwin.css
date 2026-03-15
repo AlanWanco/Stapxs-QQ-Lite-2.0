@@ -79,8 +79,8 @@ input {
     }
     
     /* 仅当有聊天存在时，防止 friend-list-space 占据整个空间 */
-    .friend-list-space.has-chat {
-        display: none !important;
+    .friend-list-space:not(.has-chat) {
+        display: flex !important;
     }
     
     /* 修复：群收纳盒在平板模式下的显示逻辑 */
