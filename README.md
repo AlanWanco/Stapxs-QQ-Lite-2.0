@@ -65,11 +65,9 @@
 ## TODO Features
 - [ ] [Android]安卓版icon符合Google制定的APK ICON规范
 - [ ] **对齐Stapxs-QQ-lite-X的相关新功能与重构**
+- [ ] [Android]本地文件权限？
 
 ## Known Bugs
-- [Android]查看合并转发时系统层面返回键直接返回到消息列表而非chatpan 导致再次打开chatpan之后打开的是之前的合并消息
-- [Android]横版模式下下方导航栏三个icon没对齐
-- 上传文件的提示框 关闭chat pan之后再打开会消失
 - [低优先级]单条回复有点问题（图片太高？寻求更多错误样本）
 
 ---
