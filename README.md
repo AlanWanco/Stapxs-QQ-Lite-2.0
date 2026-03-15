@@ -68,7 +68,7 @@
 
 ## Known Bugs
 - [低优先级]单条回复有点问题（图片太高？寻求更多错误样本）
-- windows/macOS URL web端点点击url正常 tauri点击之后没法调用外部浏览器
+- [Android]查看合并转发时系统层面返回键直接返回到消息列表而非chatpan 导致再次打开chatpan之后打开的是之前的合并消息
 
 ---
 
