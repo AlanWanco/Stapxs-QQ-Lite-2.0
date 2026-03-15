@@ -1547,9 +1547,9 @@ textarea:focus {
     .main-body > ul > li:first-child {
         margin-top: 10px;
     }
-    .main-body > ul > li:last-child {
+    /* .main-body > ul > li:last-child {
         margin-bottom: 10px;
-    }
+    } */
 }
 
 @media (max-width: 750px) {
