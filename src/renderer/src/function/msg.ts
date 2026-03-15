@@ -1952,6 +1952,8 @@ const baseRuntime = {
     messageList: [],
     popBoxList: [],
     mergeMsgStack: [],
+    fileUploadPending: null,
+    fileUploadChatId: -1,
     inch: getInch(),
 }
 

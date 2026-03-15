@@ -49,6 +49,8 @@ export interface RunTimeDataElem {
     mergeMsgStack: MergeStackData[]
     mergeMessageList?: any[] | undefined
     mergeMessageImgList?: any[] | undefined
+    fileUploadPending?: File | null // 待确认上传的文件（跨组件生命周期保留）
+    fileUploadChatId?: number // 该文件所属的 chat id
     stickerCache?: any[]
     popBoxList: {
         // 通用弹窗

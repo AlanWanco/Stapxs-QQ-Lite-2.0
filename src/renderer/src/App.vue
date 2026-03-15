@@ -854,6 +854,11 @@ export default defineComponent({
                 },
             }
             runtimeData.mergeMessageList = undefined // 清空合并转发缓存
+            runtimeData.mergeMsgStack.length = 0 // 清空合并转发面板堆栈
+            // 切换聊天时，清空属于旧聊天的待上传文件
+            if (runtimeData.fileUploadChatId !== data.id) {
+                runtimeData.fileUploadPending = null
+            }
             runtimeData.tags.canLoadHistory = true // 重置终止加载标志
             runtimeData.tags.loadHistoryFail = false // 重置加载失败标志
             if (data.type == 'group') {

@@ -780,9 +780,15 @@ import { Img } from '@renderer/function/model/img'
                 lastUpKeyTime: 0,
                 fileUploadProgress: -1,
                 fileUploadName: '',
-                fileUploadPending: null as File | null,
-                fileUploadChatId: -1,
-            }
+             }
+        },
+        computed: {
+            fileUploadPending() {
+                return runtimeData.fileUploadPending
+            },
+            fileUploadChatId() {
+                return runtimeData.fileUploadChatId
+            },
         },
         watch: {
             chat(newChat: any, oldChat: any) {
@@ -797,8 +803,8 @@ import { Img } from '@renderer/function/model/img'
                 // 上传状态不在此重置：进度条通过 fileUploadChatId === chat.show.id 控制可见性
                 // 切换聊天时取消粘贴待确认（pending 文件属于旧聊天，不应带到新聊天）
                 if (newChat?.show?.id !== oldChat?.show?.id) {
-                    if (this.fileUploadChatId === oldChat?.show?.id) {
-                        this.fileUploadPending = null
+                    if (runtimeData.fileUploadChatId === oldChat?.show?.id) {
+                        runtimeData.fileUploadPending = null
                     }
                 }
                 this.initMenuDisplay()
@@ -2307,8 +2313,8 @@ import { Img } from '@renderer/function/model/img'
                             this.setImg(file)
                         } else if (!backend.isMobile()) {
                             // 非图片文件（桌面/Web）：先弹确认，防止误粘贴
-                            this.fileUploadPending = file
-                            this.fileUploadChatId = runtimeData.chatInfo.show.id
+                            runtimeData.fileUploadPending = file
+                            runtimeData.fileUploadChatId = runtimeData.chatInfo.show.id
                         }
                         // 阻止默认行为
                         event.preventDefault()
@@ -2335,8 +2341,8 @@ import { Img } from '@renderer/function/model/img'
 
             /** 确认粘贴文件上传 */
             confirmPasteUpload() {
-                const file = this.fileUploadPending
-                this.fileUploadPending = null
+                const file = runtimeData.fileUploadPending
+                runtimeData.fileUploadPending = null
                 if (file) {
                     this.uploadFileStream(file, file.name || this.$t('未知文件'))
                 }
@@ -2344,7 +2350,7 @@ import { Img } from '@renderer/function/model/img'
 
             /** 取消粘贴文件上传 */
             cancelPasteUpload() {
-                this.fileUploadPending = null
+                runtimeData.fileUploadPending = null
             },
 
             runSelectFile() {                const input = document.getElementById('choice-file')
@@ -2437,7 +2443,7 @@ import { Img } from '@renderer/function/model/img'
                 // 显示进度条
                 this.fileUploadName = fileName
                 this.fileUploadProgress = 0
-                this.fileUploadChatId = chatId
+                runtimeData.fileUploadChatId = chatId
 
                 // 逐片发送
                 for (let i = 0; i < totalChunks; i++) {
@@ -2519,7 +2525,7 @@ import { Img } from '@renderer/function/model/img'
 
                 this.fileUploadProgress = 100
                 setTimeout(() => {
-                    if (this.fileUploadChatId === chatId) this.fileUploadProgress = -1
+                    if (runtimeData.fileUploadChatId === chatId) this.fileUploadProgress = -1
                     }, 1500)
 
                 popInfo.add(PopType.INFO, `${this.$t('文件发送成功')}：${fileName}`)
@@ -3145,8 +3151,8 @@ import { Img } from '@renderer/function/model/img'
                     // 会话信息栏
                     this.openChatInfoPan()
                 } else if(mergePan?.isMergeOpen()) {
-                    // 合并转发栏
-                    mergePan?.closeMergeMsg()
+                    // 合并转发栏：逐层退出（不是一次性全关）
+                    mergePan?.exitMergeMsg()
                     setTimeout(() => {
                         const chatPan = document.getElementById('chat-pan')
                         const mergePan = chatPan!.getElementsByClassName('merge-pan')[0] as HTMLDivElement
