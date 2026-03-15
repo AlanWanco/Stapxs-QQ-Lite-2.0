@@ -712,6 +712,7 @@ import { Img } from '@renderer/function/model/img'
                     showBottomButton: true,
                     showMoreDetail: false,
                     showMsgMenu: false,
+                    msgMenuOpenTime: 0,
                     showForwardPan: false,
                     openChatInfo: false,
                     isReply: false,
@@ -1581,6 +1582,7 @@ import { Img } from '@renderer/function/model/img'
                     }
                     // 显示菜单
                     this.tags.showMsgMenu = true
+                    this.tags.msgMenuOpenTime = Date.now()
                     // PS：在菜单完全显示出来之前获取不到正确的高度，所以延迟一下
                     setTimeout(() => {
                         // 出界判定
@@ -2148,6 +2150,8 @@ import { Img } from '@renderer/function/model/img'
              * 关闭右击菜单
              */
             closeMsgMenu() {
+                // 防止安卓长按触发菜单后，合成 click 事件立即关闭菜单（< 300ms 忽略关闭请求）
+                if (Date.now() - this.tags.msgMenuOpenTime < 300) return
                 // 关闭菜单
                 this.tags.showMsgMenu = false
                 this.tags.menuDisplay.menuSelectedMsgId = null

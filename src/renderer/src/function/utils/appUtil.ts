@@ -1606,6 +1606,19 @@ export function useLocalStorage<T>(key: string, defaultValue: T): Ref<T> {
 
 //#region == v命令封装 ======================================
 /**
+ * 全局长按菜单抑制时间戳
+ * 在侧拉返回等手势结束后，短暂禁止所有 v-menu 长按触发
+ * 设置方式：setVMenuSuppressUntil(Date.now() + 600)
+ */
+let vMenuSuppressUntil = 0
+export function setVMenuSuppressUntil(ts: number) {
+    vMenuSuppressUntil = ts
+}
+export function getVMenuSuppressUntil(): number {
+    return vMenuSuppressUntil
+}
+
+/**
  * 创建一个右键菜单指令
  * 用于闭包公用停留事件控制器
  * @returns
@@ -1631,6 +1644,8 @@ function createVMenu(): Directive<HTMLElement, (event: MenuEventData)=>void> {
         },
         {
             onFit: (data: MenuEventData, binding: Binding) => {
+                // 侧拉返回等手势结束后的全局抑制窗口内，不触发菜单
+                if (Date.now() < vMenuSuppressUntil) return
                 // 记录触发时间，防止 contextmenu 重复触发
                 lastTouchFiredTime = Date.now()
                 // 触发右键菜单事件
@@ -1655,6 +1670,8 @@ function createVMenu(): Directive<HTMLElement, (event: MenuEventData)=>void> {
             el.addEventListener('contextmenu', (event) => {
                 if (prevent) event.preventDefault()
                 if (stop) event.stopPropagation()
+                // 侧拉返回等手势结束后的全局抑制窗口内，不触发菜单
+                if (Date.now() < vMenuSuppressUntil) return
                 // 防止 Android 长按同时触发 touch 长按和 contextmenu 导致双重菜单
                 if (Date.now() - lastTouchFiredTime < 600) return
                 const data: MenuEventData = {

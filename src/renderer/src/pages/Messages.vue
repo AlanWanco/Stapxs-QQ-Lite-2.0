@@ -203,7 +203,7 @@
         UserGroupElem,
     } from '@renderer/function/elements/information'
     import { getRaw as getOpt, run as runOpt } from '@renderer/function/option'
-    import { changeGroupNotice, changeGroupBoxOverride, loadHistoryMessage } from '@renderer/function/utils/appUtil'
+    import { changeGroupNotice, changeGroupBoxOverride, loadHistoryMessage, setVMenuSuppressUntil, getVMenuSuppressUntil } from '@renderer/function/utils/appUtil'
     import { PopInfo, PopType } from '@renderer/function/base'
     import { MenuStatue } from 'vue3-bcui/packages/dist/types'
     import { library } from '@fortawesome/fontawesome-svg-core'
@@ -241,7 +241,6 @@
                 loginInfo: loginInfo,
                 showGroupAssist: false,
                 windowWidth: window.innerWidth,
-                noMenuUntil: 0,
             }
         },
         watch: {
@@ -249,7 +248,7 @@
                 // 侧拉从 chatpan 返回时（openSideBar 变为 true），短暂禁止长按菜单触发
                 // 避免侧拉手势结束后手指落在列表 item 上误触 500ms 长按
                 if (newVal && !oldVal) {
-                    this.noMenuUntil = Date.now() + 600
+                    setVMenuSuppressUntil(Date.now() + 600)
                 }
             }
         },
@@ -380,6 +379,11 @@
              */
             openLeftBar() {
                 runtimeData.tags.openSideBar = !runtimeData.tags.openSideBar
+                // 平板模式（501px~750px）展开消息列表时，收回 chatpan
+                const w = window.innerWidth
+                if (runtimeData.tags.openSideBar && w > 500) {
+                    runtimeData.chatInfo.show.id = 0
+                }
             },
 
             /**
@@ -673,7 +677,7 @@
                 }
                 this.showMenu = true
                 setTimeout(() => {
-                    if (this.showMenu && Date.now() >= this.noMenuUntil) {
+                    if (this.showMenu && Date.now() >= getVMenuSuppressUntil()) {
                         this.listMenuShowRun(info, item)
                         this.showMenu = false
                     }

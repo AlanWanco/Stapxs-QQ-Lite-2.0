@@ -106,6 +106,7 @@
             textClick(event: Event) {
                 const target = event.target as HTMLElement
                 if (target.dataset.link) {
+                    event.preventDefault()
                     // 点击了链接
                     const link = target.dataset.link
                     openLink(link)

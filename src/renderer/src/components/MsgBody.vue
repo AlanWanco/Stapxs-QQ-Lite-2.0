@@ -866,6 +866,8 @@ function getUserById(id: number): IUser | undefined {
             textClick(event: Event) {
                 const target = event.target as HTMLElement
                 if (target.dataset.link) {
+                    // 阻止默认行为（防止 Tauri/WebView 中 href="" 触发页面重载）
+                    event.preventDefault()
                     // 如果禁用了外部浏览器打开，则不执行任何操作
                     if (Option.get('close_browser')) return
                     

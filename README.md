@@ -59,6 +59,8 @@
     - **2026-03-15**
       - 实现新版onebot ws流式协议传输文件
       - [Electron/tauri/web]剪贴板里有文件时在聊天窗口粘贴文件可以传输文件
+    - **2026-03-15**
+      - 双击文字消息进行自由复制
       
 ## TODO Features
 - [ ] [Android]安卓版icon符合Google制定的APK ICON规范
@@ -66,7 +68,6 @@
 
 ## Known Bugs
 - [(min-width: 501px) and (max-width: 750px)]也就是平板模式的时候 如果消息主页里的消息处于折叠状态且chatpan出现 点击汉堡按钮展开消息列表时 消息主页会展开 但是会在chat pan的下面（这里的正常情况应该是把chatpan收回去）
-- [macOS][(min-width: 501px) and (max-width: 750px)]平板模式下 在群收纳盒里且chatpan已出现 点击汉堡按钮展开群收纳盒列表的时候 消息主页会展开 会在chat pan的上面 但是问题在于背景颜色是透明的 
 - [低优先级]单条回复有点问题（图片太高？寻求更多错误样本）
 
 ---
