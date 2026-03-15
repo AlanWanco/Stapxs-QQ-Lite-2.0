@@ -45,7 +45,7 @@ body {
 .top-bar {
     border-radius: 7px 7px 0 0;
     width: calc(100% - 20px);
-    background: transparent;
+    background: var(--color-card-2);
     box-shadow: unset;
     height: 35px;
 }

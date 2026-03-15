@@ -868,8 +868,6 @@ function getUserById(id: number): IUser | undefined {
                 if (target.dataset.link) {
                     // 阻止默认行为（防止 Tauri/WebView 中 href="" 触发页面重载）
                     event.preventDefault()
-                    // 如果禁用了外部浏览器打开，则不执行任何操作
-                    if (Option.get('close_browser')) return
                     
                     // 点击了链接
                     const link = target.dataset.link

@@ -85,11 +85,6 @@ export function scrollToMsg(seqName: string, showAnimation: boolean, showHighlig
 export function openLink(url: string, external = false) {
     // 判断是不是 Electron，是的话打开内嵌 iframe
     if (backend.isDesktop()) {
-        // Tauri 不支持内嵌 iframe（会触发 WebView 导航导致页面重载），直接外部打开
-        if (backend.type === 'tauri') {
-            backend.call('', 'sys:openInBrowser', false, url)
-            return
-        }
         if (!external && !runtimeData.sysConfig.close_browser) {
             runtimeData.popBoxList = []
             url = backend.proxyUrl(url)
