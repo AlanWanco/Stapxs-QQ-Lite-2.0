@@ -66,6 +66,7 @@
 - [ ] [Android]安卓版icon符合Google制定的APK ICON规范
 - [ ] **对齐Stapxs-QQ-lite-X的相关新功能与重构**
 - [ ] [Android]本地文件权限？
+- [ ] [Android]调出键盘时 上面的info块会向上延伸 导致你不知道现在聊的是哪个群
 
 ## Known Bugs
 - [低优先级]单条回复有点问题（图片太高？寻求更多错误样本）
