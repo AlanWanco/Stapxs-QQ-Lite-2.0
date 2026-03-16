@@ -1953,15 +1953,26 @@ import { Img } from '@renderer/function/model/img'
 
                 const msgId = msg.message_id
                 const echoSuffix = isLiked ? '_remove' : ''
-                Connector.send(
-                    runtimeData.jsonMap.send_respond.name,
-                    {
-                        group_id: this.chat.show.id,
+                const botName: string = runtimeData.jsonMap.name ?? ''
+                let params: Record<string, any>
+                if (botName.startsWith('NapCat')) {
+                    // NapCat: set_msg_emoji_like，用 set 字段表示添加/取消
+                    params = {
                         message_id: msgId,
                         emoji_id: String(emojiId),
+                        set: !isLiked,
+                    }
+                } else {
+                    // Lagrange: set_group_reaction，每次调用为切换，用 code 字段
+                    params = {
+                        group_id: this.chat.show.id,
+                        message_id: msgId,
                         code: String(emojiId),
-                        is_add: !isLiked,
-                    },
+                    }
+                }
+                Connector.send(
+                    runtimeData.jsonMap.send_respond.name,
+                    params,
                     'SendRespondBack_' + msgId + '_' + emojiId + echoSuffix,
                 )
             },
