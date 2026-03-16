@@ -22,6 +22,11 @@
             <a>{{ info.name }}</a>
             <span v-if="isMe(data.target_user_id)">{{ $t('回应了你的消息') }}</span>
             <span v-else>{{ $t('回应了消息') }}</span>
+            <template v-if="data.likes && data.likes.length > 0">
+                <EmojiFace v-for="like in data.likes" :key="like.emoji_id"
+                    :emoji="Emoji.get(Number(like.emoji_id))!"
+                    class="notice-emoji-face" />
+            </template>
         </div>
         <div v-else-if="data.notice_type == 'group_ban'" class="note-ban note-base">
             <template v-if="data.sub_type === 'ban'">
@@ -68,11 +73,17 @@
     } from '@renderer/function/utils/systemUtil'
     import { pokeAnime } from '@renderer/function/utils/msgUtil'
     import { backend } from '@renderer/runtime/backend'
+    import Emoji from '@renderer/function/model/emoji'
+    import EmojiFace from './EmojiFace.vue'
 
     export default defineComponent({
         name: 'NoticeBody',
+        components: { EmojiFace },
         props: ['data', 'id'],
         emits: ['reedit'],
+        setup() {
+            return { Emoji }
+        },
         data() {
             return {
                 trueLang: getTrueLang(),
@@ -175,3 +186,13 @@
         },
     })
 </script>
+
+<style scoped>
+.notice-emoji-face {
+    display: inline-flex;
+    vertical-align: middle;
+    width: 1.1em;
+    height: 1.1em;
+    margin-left: 2px;
+}
+</style>
