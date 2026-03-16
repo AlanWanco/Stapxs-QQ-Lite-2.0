@@ -2525,21 +2525,38 @@ import { Img } from '@renderer/function/model/img'
                 runtimeData.fileUploadProgress = 98
 
                 // 调用群/私聊文件发送 API
+                const fileSendEcho = uuid()
                 if (chatType === 'group') {
                     Connector.sendRaw('upload_group_file', {
                         group_id: chatId,
                         file: serverPath,
                         name: fileName,
-                    }, uuid())
+                    }, fileSendEcho)
                 } else {
                     Connector.sendRaw('upload_private_file', {
                         user_id: chatId,
                         file: serverPath,
                         name: fileName,
-                    }, uuid())
+                    }, fileSendEcho)
+                }
+
+                // 等待发送指令确认
+                try {
+                    await Connector.waitReturn(fileSendEcho, CHUNK_TIMEOUT)
+                } catch (e) {
+                    // 忽略错误
                 }
 
                 runtimeData.fileUploadProgress = 100
+                // 自动刷新当前聊天（如果还在这个窗口）
+                if (runtimeData.chatInfo.show.id === chatId) {
+                    // 延迟一会刷新，确保 bot 已经处理完并记录了消息
+                    setTimeout(() => {
+                        if (runtimeData.chatInfo.show.id === chatId) {
+                            loadHistoryFirst(this.chat.show)
+                        }
+                    }, 500)
+                }
                 setTimeout(() => {
                     if (runtimeData.fileUploadChatId === chatId) runtimeData.fileUploadProgress = -1
                     }, 1500)
