@@ -340,16 +340,16 @@
             :class="'sending right' + (isMe ? ' me' : '')">
             <font-awesome-icon :icon="['fas', 'spinner']" />
         </div>
-        <div v-if="data.emoji_like"
+        <div v-if="data.emoji_like && data.emoji_like.length > 0"
             :class="'emoji-like' + (isMe ? ' me' : '')">
             <div class="emoji-like-body">
                 <TransitionGroup name="emoji-like">
-                    <template v-for="info, id in data.emojis" :key="'respond-' + data.message_id + '-' + id">
+                    <template v-for="info in data.emoji_like" :key="'respond-' + data.message_id + '-' + info.emoji_id">
                         <div :class="{
-                            'me-send': info.includes(runtimeData.loginInfo.uin),
+                            'me-send': false,
                         }">
-                            <EmojiFace :emoji="Emoji.get(Number(id))!" />
-                            <span>{{ info.length }}</span>
+                            <EmojiFace :emoji="Emoji.get(Number(info.emoji_id))!" />
+                            <span>{{ info.count }}</span>
                         </div>
                     </template>
                 </TransitionGroup>

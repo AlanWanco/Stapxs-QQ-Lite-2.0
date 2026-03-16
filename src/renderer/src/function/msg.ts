@@ -200,11 +200,47 @@ const noticeFunctions = {
      */
     group_msg_emoji_like: (_: string, msg: { [key: string]: any }) => {
         const msgId = msg.message_id
+        const isAdd = msg.is_add
         const emojiList = msg.likes
         // 寻找消息
         runtimeData.messageList.forEach((item, index) => {
             if (item.message_id === msgId) {
-                runtimeData.messageList[index].emoji_like = emojiList
+                if (!runtimeData.messageList[index].emoji_like) {
+                    runtimeData.messageList[index].emoji_like = []
+                }
+                
+                emojiList.forEach((like: any) => {
+                    const id = Number(like.emoji_id)
+                    const count = like.count
+                    
+                    let hasAdd = false
+                    runtimeData.messageList[index].emoji_like.forEach((existLike: any) => {
+                        if (existLike.emoji_id == id) {
+                            if (isAdd) {
+                                existLike.count += count
+                            } else {
+                                existLike.count -= count
+                            }
+                            hasAdd = true
+                        }
+                    })
+                    
+                    if (!hasAdd && isAdd) {
+                        runtimeData.messageList[index].emoji_like.push({
+                            emoji_id: id,
+                            count: count,
+                        })
+                    }
+                })
+
+                // 清理数量 <= 0 的表情
+                runtimeData.messageList[index].emoji_like = runtimeData.messageList[index].emoji_like.filter(
+                    (item: any) => item.count > 0
+                )
+                
+                if (runtimeData.messageList[index].emoji_like.length === 0) {
+                    delete runtimeData.messageList[index].emoji_like
+                }
             }
         })
     },
