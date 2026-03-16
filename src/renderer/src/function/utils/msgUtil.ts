@@ -422,7 +422,7 @@ export function sendMsgRaw(
                 if (item.file.startsWith('base64://')) {
                     const b64Str = (item.file as string).substring(9)
                     item.url = 'data:image/png;base64,' + b64Str
-                } else {
+                } else if (!item.url || item.url == '') {
                     item.url = item.file
                 }
             }
