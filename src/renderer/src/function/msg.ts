@@ -202,6 +202,9 @@ const noticeFunctions = {
         const msgId = msg.message_id
         const isAdd = msg.is_add
         const emojiList = msg.likes
+        // 推送事件里发回应的人，NapCat 用 operator_id，部分框架用 user_id
+        const operatorId = msg.operator_id ?? msg.user_id
+        const isMe = operatorId !== undefined && Number(operatorId) === Number(runtimeData.loginInfo.uin)
         // 寻找消息
         runtimeData.messageList.forEach((item, index) => {
             if (item.message_id === msgId) {
@@ -218,8 +221,10 @@ const noticeFunctions = {
                         if (existLike.emoji_id == id) {
                             if (isAdd) {
                                 existLike.count += count
+                                if (isMe) existLike.liked = true
                             } else {
                                 existLike.count -= count
+                                if (isMe) existLike.liked = false
                             }
                             hasAdd = true
                         }
@@ -229,6 +234,7 @@ const noticeFunctions = {
                         runtimeData.messageList[index].emoji_like.push({
                             emoji_id: id,
                             count: count,
+                            liked: isMe,
                         })
                     }
                 })
@@ -1168,7 +1174,7 @@ const msgFunctions = {
         const isRemove = echoList[3] === 'remove'
         // 从消息列表中找到这条消息
         runtimeData.messageList.forEach((item, index) => {
-            if (item.message_id === msgId) {
+            if (item.message_id == msgId) {
                 if (isRemove) {
                     // 取消回应：减少计数，并清除 liked 标记
                     if (runtimeData.messageList[index].emoji_like) {
