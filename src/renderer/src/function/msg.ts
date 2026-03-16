@@ -241,8 +241,18 @@ const noticeFunctions = {
                 if (runtimeData.messageList[index].emoji_like.length === 0) {
                     delete runtimeData.messageList[index].emoji_like
                 }
+                
+                // 将被回应者的 user_id 附加到 notice 消息上，以便渲染时区分
+                if (runtimeData.messageList[index].sender) {
+                    msg.target_user_id = runtimeData.messageList[index].sender.user_id
+                }
             }
         })
+
+        // 仅在当前群聊显示，且只处理新增操作
+        if (msg.group_id === runtimeData.chatInfo.show.id && isAdd) {
+            runtimeData.messageList.push(msg)
+        }
     },
 
     /**

@@ -18,6 +18,11 @@
                 {{ $t('重新编辑') }}
             </a>
         </div>
+        <div v-else-if="data.notice_type == 'group_msg_emoji_like'" class="note-recall note-base">
+            <a>{{ info.name }}</a>
+            <span v-if="isMe(data.target_user_id)">{{ $t('回应了你的消息') }}</span>
+            <span v-else>{{ $t('回应了消息') }}</span>
+        </div>
         <div v-else-if="data.notice_type == 'group_ban'" class="note-ban note-base">
             <template v-if="data.sub_type === 'ban'">
                 <template v-if="isMe(data.user_id)">
@@ -86,10 +91,10 @@
             // 补全撤回者信息
             if (
                 this.info.notice_type &&
-                this.info.notice_type.indexOf('recall') >= 0
+                (this.info.notice_type.indexOf('recall') >= 0 || this.info.notice_type === 'group_msg_emoji_like')
             ) {
                 if (runtimeData.chatInfo.show.type === 'group') {
-                    const id = this.info.operator_id
+                    const id = this.info.operator_id ?? this.info.user_id
                     if (this.isMe(id)) {
                         this.info.name = this.$t('你')
                     } else {
