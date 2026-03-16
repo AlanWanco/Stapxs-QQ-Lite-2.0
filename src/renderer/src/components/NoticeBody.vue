@@ -90,25 +90,33 @@
             ) {
                 if (runtimeData.chatInfo.show.type === 'group') {
                     const id = this.info.operator_id
-                    // 寻找群成员信息
-                    if (runtimeData.chatInfo.info.group_members !== undefined) {
-                        const back =
-                            runtimeData.chatInfo.info.group_members.filter(
-                                (item) => {
-                                    return item.user_id === Number(id)
-                                },
-                            )
-                        if (back.length === 1) {
-                            this.info.name =
-                                back[0].card === '' || back[0].card == null? back[0].nickname: back[0].card
+                    if (this.isMe(id)) {
+                        this.info.name = this.$t('你')
+                    } else {
+                        // 寻找群成员信息
+                        if (runtimeData.chatInfo.info.group_members !== undefined) {
+                            const back =
+                                runtimeData.chatInfo.info.group_members.filter(
+                                    (item) => {
+                                        return item.user_id === Number(id)
+                                    },
+                                )
+                            if (back.length === 1) {
+                                this.info.name =
+                                    back[0].card === '' || back[0].card == null? back[0].nickname: back[0].card
+                            } else {
+                                this.info.name = id
+                            }
                         } else {
                             this.info.name = id
                         }
-                    } else {
-                        this.info.name = id
                     }
                 } else {
-                    this.info.name = runtimeData.chatInfo.show.name
+                    if (this.info.originMsg !== undefined) {
+                        this.info.name = this.$t('你')
+                    } else {
+                        this.info.name = runtimeData.chatInfo.show.name
+                    }
                 }
             }
             // poke 通知创建对应的动画
