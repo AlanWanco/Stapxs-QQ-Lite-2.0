@@ -69,7 +69,7 @@
                             nickname: $t('群收纳盒'),
                             remark: $t('群收纳盒'),
                             time: runtimeData.groupAssistList[0].time,
-                            raw_msg: runtimeData.groupAssistList[0].group_name + ': ' +
+                            raw_msg: `<span class='reply-name'>${runtimeData.groupAssistList[0].group_name}</span>: ` +
                                 (runtimeData.groupAssistList[0].raw_msg_base ?? '')
                         }"
                         @click="showGroupAssistCheck" />

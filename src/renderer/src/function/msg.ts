@@ -640,7 +640,12 @@ const msgFunctions = {
                     // 更新消息列表
                     const onmsg = runtimeData.baseOnMsgList.get(Number(id))
                     if (onmsg) {
-                        onmsg.raw_msg = raw
+                        if (onmsg.group_id) {
+                            const name = list[0].sender.card && list[0].sender.card !== '' ? list[0].sender.card : list[0].sender.nickname
+                            onmsg.raw_msg = `<span class="reply-name">${name}</span>: ${raw}`
+                        } else {
+                            onmsg.raw_msg = raw
+                        }
                         onmsg.time = getViewTime(Number(time))
                         runtimeData.baseOnMsgList.set(id, onmsg)
                     }
@@ -1443,7 +1448,7 @@ async function saveMsg(msg: any, append = undefined as undefined | string) {
             if (user) {
                 if (runtimeData.chatInfo.show.type == 'group') {
                     user.raw_msg =
-                        lastMsg.sender.nickname + ': ' + getMsgRawTxt(lastMsg)
+                        `<span class="reply-name">${lastMsg.sender.nickname}</span>: ` + getMsgRawTxt(lastMsg)
                 } else {
                     user.raw_msg = getMsgRawTxt(lastMsg)
                 }
@@ -1706,7 +1711,7 @@ function newMsg(_: string, data: any) {
             if (getGroup) {
                 getGroup.message_id = data.message_id
                 const name = data.sender.card && data.sender.card !== '' ? data.sender.card : data.sender.nickname
-                getGroup.raw_msg = name + ': ' + getMsgRawTxt(data)
+                getGroup.raw_msg = `<span class="reply-name">${name}</span>: ${getMsgRawTxt(data)}`
                 getGroup.raw_msg_base = getMsgRawTxt(data)
                 getGroup.time = getViewTime(Number(data.time))
                 runtimeData.baseOnMsgList.set(Number(id), getGroup)
@@ -1847,7 +1852,7 @@ function newMsg(_: string, data: any) {
                 if (data.message_type === 'group') {
                     const name =
                         data.sender.card && data.sender.card !== '' ? data.sender.card : data.sender.nickname
-                    item.raw_msg = name + ': ' + getMsgRawTxt(data)
+                    item.raw_msg = `<span class="reply-name">${name}</span>: ${getMsgRawTxt(data)}`
                 } else {
                     item.raw_msg = getMsgRawTxt(data)
                 }
@@ -1890,7 +1895,7 @@ function formatMessageData(data: any, isGroup: boolean) {
 
     return {
         message_id: data.message_id,
-        raw_msg: isGroup ? `${name}: ${getMsgRawTxt(data)}` : getMsgRawTxt(data),
+        raw_msg: isGroup ? `<span class="reply-name">${name}</span>: ${getMsgRawTxt(data)}` : getMsgRawTxt(data),
         time: getViewTime(Number(data.time)),
         raw_msg_base: getMsgRawTxt(data)
     }

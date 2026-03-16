@@ -72,6 +72,9 @@ export const optDefault: { [key: string]: any } = {
     use_favicon_notice: true,
     use_super_face: true,
     opt_ind_message: false,
+    opt_privacy_mode: false,
+    opt_privacy_show_content: false,
+    opt_privacy_hide_time: false,
     // Function
     close_notice: false,
     bubble_sort_user: true,
@@ -142,7 +145,34 @@ const configFunction: { [key: string]: (value: any) => void } = {
     custom_css: injectCustomCss,
     custom_scale: setCustomScale,
     font_scale: setFontScale,
-    opt_ind_message: updateChatPan
+    opt_ind_message: updateChatPan,
+    opt_privacy_mode: setPrivacyMode,
+    opt_privacy_show_content: setPrivacyShowContent,
+    opt_privacy_hide_time: setPrivacyHideTime,
+}
+
+function setPrivacyMode(value: boolean) {
+    if (value) {
+        document.body.classList.add('privacy-mode')
+    } else {
+        document.body.classList.remove('privacy-mode')
+    }
+}
+
+function setPrivacyShowContent(value: boolean) {
+    if (value) {
+        document.body.classList.add('privacy-show-content')
+    } else {
+        document.body.classList.remove('privacy-show-content')
+    }
+}
+
+function setPrivacyHideTime(value: boolean) {
+    if (value) {
+        document.body.classList.add('privacy-hide-time')
+    } else {
+        document.body.classList.remove('privacy-hide-time')
+    }
 }
 
 function updateChatPan() {

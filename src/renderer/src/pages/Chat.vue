@@ -205,7 +205,7 @@
                                         <img :src="`https://q1.qlogo.cn/g?b=qq&s=0&nk=${item.sender_uin}`">
                                         <div>
                                             <a>{{ item.sender_nick }}</a>
-                                            <span>{{ Intl.DateTimeFormat(
+                                            <span class="time">{{ Intl.DateTimeFormat(
                                                       trueLang,
                                                       {
                                                           hour: 'numeric',
@@ -215,7 +215,7 @@
                                                   }}
                                                 {{ $t('发送') }}</span>
                                         </div>
-                                        <span>{{
+                                        <span class="time">{{
                                             $t('{time}，由 {name} 设置', {
                                                 time: Intl.DateTimeFormat(
                                                     trueLang,

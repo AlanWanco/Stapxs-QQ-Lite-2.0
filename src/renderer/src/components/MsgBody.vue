@@ -233,8 +233,8 @@
                             @click="scrollToMsg(item.id)">
                             <font-awesome-icon :icon="['fas', 'reply']" />
                             <a :class="getRepMsg(item.id) ? '' : 'msg-unknown'"
-                                style="cursor: pointer">
-                                {{ getRepMsg(item.id) ?? $t('（查看回复消息）') }}
+                                style="cursor: pointer"
+                                v-html="getRepMsg(item.id) ?? $t('（查看回复消息）')">
                             </a>
                         </div>
                         <div v-else-if="item.type == 'poke'" v-once :class="showPock()">
@@ -834,8 +834,10 @@ function getUserById(id: number): IUser | undefined {
                     return item.message_id == message_id
                 })
                 if (list.length === 1) {
-                    if (list[0].message.length > 0)
-                        return ( list[0].sender.nickname + ': ' + getMsgRawTxt(list[0]))
+                    if (list[0].message.length > 0) {
+                        const name = list[0].sender.card && list[0].sender.card !== '' ? list[0].sender.card : list[0].sender.nickname
+                        return `<span class="reply-name">${name}</span>: ${getMsgRawTxt(list[0])}`
+                    }
                     else return this.$t('（获取回复消息失败）')
                 }
                 return null

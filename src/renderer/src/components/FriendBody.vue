@@ -33,9 +33,7 @@
                 <a v-if="data.highlight" class="highlight">
                     {{ data.highlight }}
                 </a>
-                <a :class="from == 'friend' ? 'nick' : ''">{{
-                    from == 'friend' ? (data.longNick ?? '') : data.raw_msg
-                }}</a>
+                <a :class="from == 'friend' ? 'nick' : ''" v-html="from == 'friend' ? (data.longNick ?? '') : data.raw_msg"></a>
                 <div v-if="from == 'message'" style="margin-left: 10px; display: flex">
                     <font-awesome-icon v-if="data.always_top === true" :icon="['fas', 'thumbtack']" />
                 </div>

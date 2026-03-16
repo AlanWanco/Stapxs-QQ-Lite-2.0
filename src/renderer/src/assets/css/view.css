@@ -1927,3 +1927,80 @@ textarea:focus {
         transform: translateX(calc(-100% + 2.35rem));
     }
 }
+
+/* 截图隐私模式 */
+body.privacy-mode {
+    --blur-id: 8px;
+    --blur-content: 12px;
+    --blur-time: 9px;
+}
+
+/* 1. 身份信息、头像及基础 UI (始终模糊) */
+body.privacy-mode .friend-body img,
+body.privacy-mode .friend-body p,
+body.privacy-mode .friend-body .nick,
+body.privacy-mode .chat-pan .info img,
+body.privacy-mode .chat-pan .info .info p,
+body.privacy-mode .chat-pan .info .info span:first-child,
+body.privacy-mode .chat-pan .chat header a:not(.time),
+body.privacy-mode .chat-pan .chat header span,
+body.privacy-mode .user-name,
+body.privacy-mode .reply-name,
+body.privacy-mode .message img[name="avatar"],
+body.privacy-mode .message header a:not(.time),
+body.privacy-mode .message header span:not(.time),
+body.privacy-mode .message .msg-at,
+body.privacy-mode .message .at a,
+body.privacy-mode .msg-text .at a,
+body.privacy-mode .jin-pan-body a,
+body.privacy-mode .jin-pan-body span:not(.time) {
+    filter: blur(var(--blur-id)) !important;
+    clip-path: inset(0) !important;
+}
+
+.reply-name { font-weight: bold; }
+
+/* 2. 消息内容 (未开启“显示消息内容”时模糊) */
+body.privacy-mode:not(.privacy-show-content) .msg-text,
+body.privacy-mode:not(.privacy-show-content) .msg-md,
+body.privacy-mode:not(.privacy-show-content) .msg-img,
+body.privacy-mode:not(.privacy-show-content) .msg-file,
+body.privacy-mode:not(.privacy-show-content) .msg-video,
+body.privacy-mode:not(.privacy-show-content) .msg-voice,
+body.privacy-mode:not(.privacy-show-content) .msg-replay a:not(.reply-name),
+body.privacy-mode:not(.privacy-show-content) .msg-raw-forward,
+body.privacy-mode:not(.privacy-show-content) .friend-body > div:last-child > div:last-child > a:not(.reply-name),
+body.privacy-mode:not(.privacy-show-content) .chat-pan .chat .msg-text,
+body.privacy-mode:not(.privacy-show-content) .chat-pan .chat .msg-md,
+body.privacy-mode:not(.privacy-show-content) .chat-pan .chat .msg-img,
+body.privacy-mode:not(.privacy-show-content) .chat-pan .chat .msg-file,
+body.privacy-mode:not(.privacy-show-content) .jin-pan-body .context {
+    filter: blur(var(--blur-content)) !important;
+    clip-path: inset(0) !important;
+}
+
+/* 3. 时间信息 (开启“隐藏消息时间”时模糊) */
+body.privacy-mode.privacy-hide-time .message header a.time,
+body.privacy-mode.privacy-hide-time .note.note-time,
+body.privacy-mode.privacy-hide-time .note.note-time a,
+body.privacy-mode.privacy-hide-time .note-time a,
+body.privacy-mode.privacy-hide-time .friend-body .time,
+body.privacy-mode.privacy-hide-time .chat-pan .info .info span:last-child,
+body.privacy-mode.privacy-hide-time .jin-pan-body span.time {
+    filter: blur(var(--blur-time)) !important;
+    clip-path: inset(0) !important;
+}
+
+/* 4. 排除设置页面 */
+body.privacy-mode .opt-main .opt-item span,
+body.privacy-mode .opt-main .opt-item a,
+body.privacy-mode .opt-main header {
+    filter: none !important;
+    clip-path: none !important;
+}
+
+
+/* 针对回复/预览中的人名样式 */
+.reply-name {
+    font-weight: bold;
+}

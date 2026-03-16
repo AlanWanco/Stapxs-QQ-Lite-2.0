@@ -1546,3 +1546,21 @@ msgstr ""
 
 msgid "发起私聊"
 msgstr "发起私聊"
+
+msgid "截图隐私模式"
+msgstr ""
+
+msgid "模糊头像和昵称，方便截图分享"
+msgstr ""
+
+msgid "显示消息内容"
+msgstr ""
+
+msgid "隐私模式下是否仍然显示消息具体内容"
+msgstr ""
+
+msgid "隐藏消息时间"
+msgstr ""
+
+msgid "是否模糊处理消息发送时间及上次在线时间"
+msgstr ""

@@ -376,6 +376,51 @@
                     </div>
                 </label>
             </div>
+            <div class="opt-item">
+                <div :class="checkDefault('opt_privacy_mode')" />
+                <font-awesome-icon :icon="['fas', 'shield-halved']" />
+                <div>
+                    <span>{{ $t('截图隐私模式') }}</span>
+                    <span>{{ $t('模糊头像和昵称，方便截图分享') }}</span>
+                </div>
+                <label class="ss-switch">
+                    <input v-model="runtimeData.sysConfig.opt_privacy_mode"
+                        type="checkbox" name="opt_privacy_mode" @change="save">
+                    <div>
+                        <div />
+                    </div>
+                </label>
+            </div>
+            <div v-if="runtimeData.sysConfig.opt_privacy_mode" class="opt-item">
+                <div :class="checkDefault('opt_privacy_show_content')" />
+                <font-awesome-icon :icon="['fas', 'eye']" />
+                <div>
+                    <span>{{ $t('显示消息内容') }}</span>
+                    <span>{{ $t('隐私模式下是否仍然显示消息具体内容') }}</span>
+                </div>
+                <label class="ss-switch">
+                    <input v-model="runtimeData.sysConfig.opt_privacy_show_content"
+                        type="checkbox" name="opt_privacy_show_content" @change="save">
+                    <div>
+                        <div />
+                    </div>
+                </label>
+            </div>
+            <div v-if="runtimeData.sysConfig.opt_privacy_mode" class="opt-item">
+                <div :class="checkDefault('opt_privacy_hide_time')" />
+                <font-awesome-icon :icon="['fas', 'clock']" />
+                <div>
+                    <span>{{ $t('隐藏消息时间') }}</span>
+                    <span>{{ $t('是否模糊处理消息发送时间及上次在线时间') }}</span>
+                </div>
+                <label class="ss-switch">
+                    <input v-model="runtimeData.sysConfig.opt_privacy_hide_time"
+                        type="checkbox" name="opt_privacy_hide_time" @change="save">
+                    <div>
+                        <div />
+                    </div>
+                </label>
+            </div>
             <div v-if="isMobile() && !backend.isMobile()"
                 class="opt-item">
                 <div :class="checkDefault('initial_scale')" />
