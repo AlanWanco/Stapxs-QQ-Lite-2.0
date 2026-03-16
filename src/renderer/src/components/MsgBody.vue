@@ -1217,6 +1217,12 @@ function getUserById(id: number): IUser | undefined {
         margin-right: 5px;
         padding: 5px 15px;
         margin-bottom: 5px;
+        cursor: pointer;
+    }
+    .emoji-like-body img,
+    .emoji-like-body span,
+    .emoji-like-body .emoji {
+        pointer-events: none;
     }
     .emoji-like-body img {
         width: 15px;
