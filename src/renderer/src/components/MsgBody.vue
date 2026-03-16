@@ -346,8 +346,9 @@
                 <TransitionGroup name="emoji-like">
                     <template v-for="info in data.emoji_like" :key="'respond-' + data.message_id + '-' + info.emoji_id">
                         <div :class="{
-                            'me-send': false,
-                        }">
+                            'me-send': info.liked,
+                        }"
+                        @click.stop="emit('toggleReaction', data, Number(info.emoji_id), !!info.liked)">
                             <EmojiFace :emoji="Emoji.get(Number(info.emoji_id))!" />
                             <span>{{ info.count }}</span>
                         </div>
@@ -414,6 +415,7 @@ const emit = defineEmits<{
     sendPoke: [...args: any[]]
     leftMove: [msg: Msg]
     rightMove: [msg: Msg]
+    toggleReaction: [msg: any, emojiId: number, isLiked: boolean]
     showMenu: [event: MenuEventData, msg: Msg]
     dblclick: [msg: Msg]
 }>()

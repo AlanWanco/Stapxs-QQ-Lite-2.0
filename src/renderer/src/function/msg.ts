@@ -1156,6 +1156,7 @@ const msgFunctions = {
 
     /**
      * 表情回应后处理
+     * echoList: [0]=SendRespondBack [1]=msgId [2]=emojiId [3]='remove'(optional)
      */
     SendRespondBack: (
         _: string,
@@ -1164,30 +1165,55 @@ const msgFunctions = {
     ) => {
         const msgId = echoList[1]
         const id = Number(echoList[2])
+        const isRemove = echoList[3] === 'remove'
         // 从消息列表中找到这条消息
         runtimeData.messageList.forEach((item, index) => {
             if (item.message_id === msgId) {
-                if (runtimeData.messageList[index].emoji_like) {
-                    // 寻找有没有 emoji_id 相同的
-                    let hasAdd = false
-                    runtimeData.messageList[index].emoji_like.forEach(
-                        (item: { emoji_id: number; count: number }) => {
-                            if (item.emoji_id == id) {
-                                item.count++
-                                hasAdd = true
-                            }
-                        },
-                    )
-                    if (!hasAdd) {
-                        runtimeData.messageList[index].emoji_like.push({
-                            emoji_id: id,
-                            count: 1,
-                        })
+                if (isRemove) {
+                    // 取消回应：减少计数，并清除 liked 标记
+                    if (runtimeData.messageList[index].emoji_like) {
+                        runtimeData.messageList[index].emoji_like.forEach(
+                            (entry: { emoji_id: number; count: number; liked?: boolean }) => {
+                                if (entry.emoji_id == id) {
+                                    entry.count = Math.max(0, entry.count - 1)
+                                    entry.liked = false
+                                }
+                            },
+                        )
+                        // 清理数量 <= 0 的表情
+                        runtimeData.messageList[index].emoji_like = runtimeData.messageList[index].emoji_like.filter(
+                            (entry: any) => entry.count > 0
+                        )
+                        if (runtimeData.messageList[index].emoji_like.length === 0) {
+                            delete runtimeData.messageList[index].emoji_like
+                        }
                     }
                 } else {
-                    runtimeData.messageList[index].emoji_like = [
-                        { emoji_id: id, count: 1 },
-                    ]
+                    // 添加回应
+                    if (runtimeData.messageList[index].emoji_like) {
+                        // 寻找有没有 emoji_id 相同的
+                        let hasAdd = false
+                        runtimeData.messageList[index].emoji_like.forEach(
+                            (entry: { emoji_id: number; count: number; liked?: boolean }) => {
+                                if (entry.emoji_id == id) {
+                                    entry.count++
+                                    entry.liked = true
+                                    hasAdd = true
+                                }
+                            },
+                        )
+                        if (!hasAdd) {
+                            runtimeData.messageList[index].emoji_like.push({
+                                emoji_id: id,
+                                count: 1,
+                                liked: true,
+                            })
+                        }
+                    } else {
+                        runtimeData.messageList[index].emoji_like = [
+                            { emoji_id: id, count: 1, liked: true },
+                        ]
+                    }
                 }
             }
         })

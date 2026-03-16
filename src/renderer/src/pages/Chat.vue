@@ -136,7 +136,8 @@
                             @scroll-to-msg="scrollToMsg"
                             @image-loaded="imgLoadedScroll"
                             @right-move="replyMsg"
-                            @send-poke="sendPoke" />
+                            @send-poke="sendPoke"
+                            @toggle-reaction="toggleReaction" />
                         <!-- 其他通知消息 -->
                         <NoticeBody v-else-if="msgIndex.post_type === 'notice'"
                             :id="uuid()"
@@ -437,7 +438,7 @@
             <div />
         </div>
         <!-- 合并转发消息预览器 -->
-        <MergePan ref="mergePan" @show-menu="showMsgMeun" @dblclick="msgDblClick" />
+        <MergePan ref="mergePan" @show-menu="showMsgMeun" @dblclick="msgDblClick" @toggle-reaction="toggleReaction" />
         <!-- 消息右击菜单 -->
         <Teleport to="body">
             <div :class="'msg-menu' + (['linux', 'win32', 'darwin'].includes(backend.platform ?? '') ? ' withBar' : '')">
@@ -1930,6 +1931,39 @@ import { Img } from '@renderer/function/model/img'
                     )
                 }
                 this.closeMsgMenu()
+            },
+
+            /**
+             * 点击 emoji 气泡切换回应（添加或取消）
+             * @param msg 消息对象
+             * @param emojiId emoji 编号
+             * @param isLiked 当前是否已回应（true=取消，false=添加）
+             */
+            toggleReaction(msg: any, emojiId: number, isLiked: boolean) {
+                // 防抖：同一个 emoji 500ms 内不重复触发
+                const key = `${msg.message_id}_${emojiId}`
+                const now = Date.now()
+                if (!(this as any)._reactionDebounce) {
+                    (this as any)._reactionDebounce = {}
+                }
+                if ((this as any)._reactionDebounce[key] && now - (this as any)._reactionDebounce[key] < 500) {
+                    return
+                }
+                (this as any)._reactionDebounce[key] = now
+
+                const msgId = msg.message_id
+                const echoSuffix = isLiked ? '_remove' : ''
+                Connector.send(
+                    runtimeData.jsonMap.send_respond.name,
+                    {
+                        group_id: this.chat.show.id,
+                        message_id: msgId,
+                        emoji_id: String(emojiId),
+                        code: String(emojiId),
+                        is_add: !isLiked,
+                    },
+                    'SendRespondBack_' + msgId + '_' + emojiId + echoSuffix,
+                )
             },
 
             /**

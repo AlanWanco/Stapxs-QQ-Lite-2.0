@@ -27,7 +27,8 @@
                     <MsgBody :data="msgIndex" :type="'merge'" 
                         :image-list-header="runtimeData.mergeMessageImgList"
                         @show-menu="(event, data) => $emit('showMenu', event, data)"
-                        @dblclick="(data) => $emit('dblclick', data)" />
+                        @dblclick="(data) => $emit('dblclick', data)"
+                        @toggle-reaction="(msg, emojiId, isLiked) => $emit('toggleReaction', msg, emojiId, isLiked)" />
                 </template>
             </TransitionGroup>
         </div>
@@ -50,7 +51,7 @@
         name: 'MergePan',
         components: { NoticeBody, MsgBody },
         inject: ['viewer'],
-        emits: ['showMenu', 'dblclick'],
+        emits: ['showMenu', 'dblclick', 'toggleReaction'],
         data() {
             const stack = runtimeData.mergeMsgStack
             const nowData: Ref<MergeStackData|undefined> = ref()
