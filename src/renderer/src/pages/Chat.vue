@@ -1829,12 +1829,29 @@ import { Img } from '@renderer/function/model/img'
                                 master: true,
                                 fun: () => {
                                     // 构建消息体
+                                    // 对每条消息的每个消息段分别处理：
+                                    // - 图片/视频/文件/语音等媒体类型保留原始消息段（让框架处理）
+                                    // - 其他类型（文本/at/表情等）转为文本字符串
+                                    // 混合消息则将文本段合并为一个 text 段，媒体段保留，
+                                    // 整体 content 仍为数组，兼容官方 QQ 解析
+                                    const mediaTypes = new Set(['image', 'video', 'record', 'file'])
                                     const msgBody = msgList.map((item) => {
+                                        const hasMedia = item.message.some(
+                                            (seg: any) => mediaTypes.has(seg.type)
+                                        )
+                                        let content: string | any[]
+                                        if (!hasMedia) {
+                                            // 纯文本消息，转为字符串，兼容性最好
+                                            content = getMsgRawTxt(item, false)
+                                        } else {
+                                            // 含媒体的消息，保留原始消息段数组
+                                            content = item.message
+                                        }
                                         return {
                                             type: 'node',
                                             user_id: item.sender.user_id,
                                             nickname: item.sender.nickname,
-                                            content: item.message,
+                                            content,
                                         }
                                     })
                                     sendMsgRaw(
