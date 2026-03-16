@@ -10,7 +10,7 @@
 -->
 
 <template>
-        <div id="chat-pan"
+    <div id="chat-pan"
         v-move="chatMoveOptions"
         :class="'chat-pan' +
             (runtimeData.tags.openSideBar ? ' open' : '') +
@@ -19,7 +19,7 @@
         @v-move-right.prevent="exitWin()">
         <slot name="chat-extra" />
         <!-- 桌面端顶部空间占位，避免被 top-bar 遮挡 -->
-        <div v-if="['linux', 'win32'].includes(backend.platform ?? '')" class="top-spacer"></div>
+        <div v-if="['linux', 'win32'].includes(backend.platform ?? '')" class="top-spacer" />
         <!-- 聊天基本信息 -->
         <div class="info" @click="closeAllPanels">
             <font-awesome-icon :icon="['fas', 'bars-staggered']" @click="openLeftBar" />
@@ -69,8 +69,12 @@
                     <span class="upload-confirm-size">{{ (fileUploadPending.size / 1024).toFixed(0) }} KB</span>
                 </div>
                 <div class="upload-confirm-actions">
-                    <button class="upload-confirm-cancel" @click="cancelPasteUpload">{{ $t('取消') }}</button>
-                    <button class="upload-confirm-ok" @click="confirmPasteUpload">{{ $t('发送') }}</button>
+                    <button class="upload-confirm-cancel" @click="cancelPasteUpload">
+                        {{ $t('取消') }}
+                    </button>
+                    <button class="upload-confirm-ok" @click="confirmPasteUpload">
+                        {{ $t('发送') }}
+                    </button>
                 </div>
             </div>
             <div v-else-if="fileUploadProgress >= 0 && fileUploadChatId === chat.show.id" class="upload-progress-bar">
@@ -80,7 +84,7 @@
                     <span class="upload-progress-pct">{{ fileUploadProgress }}%</span>
                 </div>
                 <div class="upload-progress-track">
-                    <div class="upload-progress-fill" :style="{ width: fileUploadProgress + '%' }"></div>
+                    <div class="upload-progress-fill" :style="{ width: fileUploadProgress + '%' }" />
                 </div>
             </div>
         </Transition>
@@ -206,13 +210,13 @@
                                         <div>
                                             <a>{{ item.sender_nick }}</a>
                                             <span class="time">{{ Intl.DateTimeFormat(
-                                                      trueLang,
-                                                      {
-                                                          hour: 'numeric',
-                                                          minute: 'numeric',
-                                                      },
-                                                  ).format(new Date(item.sender_time * 1000))
-                                                  }}
+                                                                   trueLang,
+                                                                   {
+                                                                       hour: 'numeric',
+                                                                       minute: 'numeric',
+                                                                   },
+                                                               ).format(new Date(item.sender_time * 1000))
+                                                               }}
                                                 {{ $t('发送') }}</span>
                                         </div>
                                         <span class="time">{{
@@ -380,7 +384,7 @@
                     </div>
                 </div>
             </div>
-                <!-- 消息发送框 -->
+            <!-- 消息发送框 -->
             <div>
                 <div v-menu.prevent="_=>moreFunClick()"
                     @click="moreFunClick(runtimeData.sysConfig.quick_send)">
@@ -783,7 +787,7 @@ import { Img } from '@renderer/function/model/img'
                 sentHistory: new Map<number, string[]>(),
                 historyIndex: -1,
                 lastUpKeyTime: 0,
-                _backButtonHandle: null as { remove: () => void } | null,
+                backButtonHandle: null as { remove: () => void } | null,
              }
         },
         computed: {
@@ -850,7 +854,7 @@ import { Img } from '@renderer/function/model/img'
             if(backend.type == 'capacitor' && backend.platform === 'android') {
                 // 直接用原生 Capacitor API 拿到 handle，以便 beforeUnmount 时移除，
                 // 防止 v-if 每次重建组件时重复注册导致多次触发
-                this._backButtonHandle = await (window as any).Capacitor.Plugins.App.addListener('backButton', () => {
+                this.backButtonHandle = await (window as any).Capacitor.Plugins.App.addListener('backButton', () => {
                     this.exitWin()
                 })
             }
@@ -866,9 +870,9 @@ import { Img } from '@renderer/function/model/img'
         beforeUnmount() {
             window.removeEventListener('click', this.handleOutsideClick)
             // 移除 backButton listener，防止组件重建时重复注册
-            if (this._backButtonHandle) {
-                this._backButtonHandle.remove()
-                this._backButtonHandle = null
+            if (this.backButtonHandle) {
+                this.backButtonHandle.remove()
+                this.backButtonHandle = null
             }
         },
         methods: {
@@ -3200,6 +3204,10 @@ import { Img } from '@renderer/function/model/img'
              * 退出一层窗口
              */
             exitWin() {
+                if (runtimeData.popBoxList.length > 0) {
+                    runtimeData.popBoxList.shift()
+                    return
+                }
                 const mergePan = this.$refs.mergePan as InstanceType<typeof MergePan>
                 if(this.tags.openChatInfo) {
                     // 会话信息栏

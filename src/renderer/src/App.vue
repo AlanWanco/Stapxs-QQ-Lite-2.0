@@ -365,9 +365,7 @@ export default defineComponent({
                 type: item.user_id ? 'user' : 'group',
                 id: id,
                 name: item.remark || item.nickname || item.group_name || String(id),
-                avatar: item.user_id
-                    ? `https://q1.qlogo.cn/g?b=qq&s=0&nk=${id}`
-                    : `https://p.qlogo.cn/gh/${id}/${id}/0`,
+                avatar: item.user_id? `https://q1.qlogo.cn/g?b=qq&s=0&nk=${id}`: `https://p.qlogo.cn/gh/${id}/${id}/0`,
             } as any
             e.preventDefault()
             this.changeChat(info)
@@ -496,9 +494,14 @@ export default defineComponent({
             // Capacitor（Android）：注册全局 backButton 处理
             // Chat.vue 打开时会注册自己的 listener 并接管，此处只处理 Chat 未打开的情况
             if (backend.type === 'capacitor' && backend.platform === 'android') {
-                ;(window as any).Capacitor.Plugins.App.addListener('backButton', () => {
+                (window as any).Capacitor.Plugins.App.addListener('backButton', () => {
                     // 如果 ChatPan 已打开，由 Chat.vue 的 listener 接管，此处跳过
                     if (runtimeData.chatInfo.show.id !== 0) return
+                    // 弹窗：关闭弹窗
+                    if (runtimeData.popBoxList.length > 0) {
+                        runtimeData.popBoxList.shift()
+                        return
+                    }
                     // 群收纳盒展开时：关闭群收纳盒
                     if (runtimeData.tags.showGroupAssist) {
                         runtimeData.tags.showGroupAssist = false
@@ -579,6 +582,12 @@ export default defineComponent({
             // 创建 popstate
             if(backend.platform == 'web' && (getDeviceType() === 'Android' || getDeviceType() === 'iOS')) {
                 window.addEventListener('popstate', () => {
+                    // 弹窗：关闭弹窗
+                    if (runtimeData.popBoxList.length > 0) {
+                        runtimeData.popBoxList.shift()
+                        history.pushState('ssqqweb', '', location.href)
+                        return
+                    }
                     if(!loginInfo.status || runtimeData.tags.openSideBar) {
                         // 离开提醒
                         const popInfo = {
