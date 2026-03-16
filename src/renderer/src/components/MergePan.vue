@@ -26,7 +26,8 @@
                     <!-- 合并转发消息忽略是不是自己的判定 -->
                     <MsgBody :data="msgIndex" :type="'merge'" 
                         :image-list-header="runtimeData.mergeMessageImgList"
-                        @show-menu="(event, data) => $emit('showMenu', event, data)" />
+                        @show-menu="(event, data) => $emit('showMenu', event, data)"
+                        @dblclick="(data) => $emit('dblclick', data)" />
                 </template>
             </TransitionGroup>
         </div>
@@ -49,7 +50,7 @@
         name: 'MergePan',
         components: { NoticeBody, MsgBody },
         inject: ['viewer'],
-        emits: ['showMenu'],
+        emits: ['showMenu', 'dblclick'],
         data() {
             const stack = runtimeData.mergeMsgStack
             const nowData: Ref<MergeStackData|undefined> = ref()

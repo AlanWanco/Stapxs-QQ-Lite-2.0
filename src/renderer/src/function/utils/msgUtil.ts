@@ -220,7 +220,7 @@ export function parseMsgList(
  * @param message 待处理的消息对象
  * @returns 字符串
  */
-export function getMsgRawTxt(data: any): string {
+export function getMsgRawTxt(data: any, html = true): string {
     const { $t } = app.config.globalProperties
 
     const message = data.message as [{ [key: string]: any }]
@@ -248,10 +248,11 @@ export function getMsgRawTxt(data: any): string {
                         }
                     }
                     if (atName) {
-                        back += `<span class="reply-name">${atName}</span>`
+                        back += html ? `<span class="reply-name">${atName}</span>` : atName
                     } else {
                         // 实在找不到名字，显示 QQ 号
-                        back += `<span class="reply-name">@${message[i].qq}</span>`
+                        const name = `@${message[i].qq}`
+                        back += html ? `<span class="reply-name">${name}</span>` : name
                     }
                     break
                 }
@@ -446,7 +447,7 @@ export function sendMsgRaw(
             },
             message: preShowMsg,
         } as { [key: string]: any }
-        showMsg.raw_message = getMsgRawTxt(showMsg)
+        showMsg.raw_message = getMsgRawTxt(showMsg, false)
 
         if (showMsg.message_type == 'group') {
             showMsg.group_id = runtimeData.chatInfo.show.id

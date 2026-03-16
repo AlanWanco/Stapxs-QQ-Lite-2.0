@@ -2204,7 +2204,9 @@ export const vTooltip = {
             const event = ev as CustomEvent<{ x: number, y: number }>
             const detail = event.detail
             const compData = resolveBinding(binding.value, detail)
-            tooltip = addTooltip(compData, { x: detail.x, y: detail.y })
+            const scale = runtimeData.sysConfig.custom_scale || 1
+            const totalScale = scale * scale
+            tooltip = addTooltip(compData, { x: detail.x / totalScale, y: detail.y / totalScale })
         }, options)
 
         el.addEventListener('v-long-hover-end', () => {

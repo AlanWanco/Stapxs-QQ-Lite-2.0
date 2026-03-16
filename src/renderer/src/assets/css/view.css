@@ -211,6 +211,11 @@ textarea:focus {
     padding: 0 0 calc(var(--safe-area-bottom, 0px) + 10px) 0;
     margin: 0;
 }
+@media (min-width: 751px) {
+    .main-body > ul > li:last-child {
+        margin-bottom: 10px;
+    }
+}
 .side-bar-space {
     flex: 1;
 }
@@ -1974,7 +1979,8 @@ body.privacy-mode:not(.privacy-show-content) .chat-pan .chat .msg-text,
 body.privacy-mode:not(.privacy-show-content) .chat-pan .chat .msg-md,
 body.privacy-mode:not(.privacy-show-content) .chat-pan .chat .msg-img,
 body.privacy-mode:not(.privacy-show-content) .chat-pan .chat .msg-file,
-body.privacy-mode:not(.privacy-show-content) .jin-pan-body .context {
+body.privacy-mode:not(.privacy-show-content) .jin-pan-body .context,
+body.privacy-mode:not(.privacy-show-content) .msg-content-text {
     filter: blur(var(--blur-content)) !important;
     clip-path: inset(0) !important;
 }

@@ -61,7 +61,7 @@ export default defineComponent({
             // 只取最多 maxMessages 条聊天记录
             const chatData = toRaw(runtimeData.messageList).filter(item => item.raw_message && item.sender.user_id !== runtimeData.loginInfo.uin).slice(-maxMessages)
             const chatStr = chatData.map(item => {
-                return `【${getViewTime(item.time)}】${item.sender.nickname}: ${getMsgRawTxt(item)}`
+                return `【${getViewTime(item.time)}】${item.sender.nickname}: ${getMsgRawTxt(item, false)}`
             }).join('\n')
             logger.debug('聊天记录：' + chatStr)
 

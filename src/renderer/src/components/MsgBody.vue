@@ -19,7 +19,7 @@
             (isMe ? ' me' : '') +
             (selected ? ' selected' : '') +
             (runtimeData.sysConfig.opt_ind_message === true ? ' right' : '')"
-        :data-raw="getMsgRawTxt(data)"
+        :data-raw="getMsgRawTxt(data, false)"
         :data-sender="data.sender.user_id"
         :data-time="data.time"
         @mouseleave="hiddenUserInfo"
@@ -184,7 +184,7 @@
                                     <template v-if="item.content && item.content.length > 0">
                                         <div v-for="(i, indexItem) in item.content.slice(0, 3)"
                                             :key="'raw-forward-' + indexItem">
-                                            {{ i.sender.nickname }}:
+                                            <span class="reply-name">{{ i.sender.nickname }}</span>:
                                             <span v-for="(msg, msgIndex) in i.message"
                                                 :key="'raw-forward-item-' + msgIndex">
                                                 <span v-if="msg.type == 'text'">

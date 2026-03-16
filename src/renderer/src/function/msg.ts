@@ -1712,7 +1712,7 @@ function newMsg(_: string, data: any) {
                 getGroup.message_id = data.message_id
                 const name = data.sender.card && data.sender.card !== '' ? data.sender.card : data.sender.nickname
                 getGroup.raw_msg = `<span class="reply-name">${name}</span>: ${getMsgRawTxt(data)}`
-                getGroup.raw_msg_base = getMsgRawTxt(data)
+                getGroup.raw_msg_base = getMsgRawTxt(data, false)
                 getGroup.time = getViewTime(Number(data.time))
                 runtimeData.baseOnMsgList.set(Number(id), getGroup)
             }
@@ -1753,7 +1753,7 @@ function newMsg(_: string, data: any) {
                 isImportant
             ) {
                 // 准备消息内容
-                let raw = getMsgRawTxt(data)
+                let raw = getMsgRawTxt(data, false)
                 raw = raw === '' ? data.raw_message : raw
                 logger.add(LogType.INFO, '新消息通知：' + raw, undefined, true)
                 if (data.group_name === undefined) {
@@ -1897,7 +1897,7 @@ function formatMessageData(data: any, isGroup: boolean) {
         message_id: data.message_id,
         raw_msg: isGroup ? `<span class="reply-name">${name}</span>: ${getMsgRawTxt(data)}` : getMsgRawTxt(data),
         time: getViewTime(Number(data.time)),
-        raw_msg_base: getMsgRawTxt(data)
+        raw_msg_base: getMsgRawTxt(data, false)
     }
 }
 

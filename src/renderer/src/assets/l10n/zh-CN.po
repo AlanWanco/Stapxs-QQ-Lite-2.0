@@ -1564,3 +1564,6 @@ msgstr ""
 
 msgid "是否模糊处理消息发送时间及上次在线时间"
 msgstr ""
+
+msgid "查看头像"
+msgstr ""

@@ -433,7 +433,7 @@
             <div />
         </div>
         <!-- 合并转发消息预览器 -->
-        <MergePan ref="mergePan" @show-menu="showMsgMeun" />
+        <MergePan ref="mergePan" @show-menu="showMsgMeun" @dblclick="msgDblClick" />
         <!-- 消息右击菜单 -->
         <Teleport to="body">
             <div :class="'msg-menu' + (['linux', 'win32', 'darwin'].includes(backend.platform ?? '') ? ' withBar' : '')">
@@ -508,6 +508,10 @@
                     <div v-show="tags.menuDisplay.poke" @click="sendPoke(selectedMsg ? selectedMsg.sender.user_id : undefined)">
                         <div><font-awesome-icon :icon="['fas', 'fa-hand-point-up']" /></div>
                         <a>{{ $t('戳一戳') }}</a>
+                    </div>
+                    <div v-show="tags.menuDisplay.viewAvatar" @click="previewAvatar">
+                        <div><font-awesome-icon :icon="['fas', 'user-circle']" /></div>
+                        <a>{{ $t('查看头像') }}</a>
                     </div>
                     <div v-show="tags.menuDisplay.remove" @click="removeUser">
                         <div><font-awesome-icon :icon="['fas', 'trash-can']" /></div>
@@ -728,6 +732,7 @@ import { Img } from '@renderer/function/model/img'
                         copy: true,
                         copySelect: false,
                         copyImg: false,
+                        viewAvatar: false,
                         downloadImg: false as string | false,
                         startChat: false,
                         revoke: false,
@@ -1470,6 +1475,7 @@ import { Img } from '@renderer/function/model/img'
                         )
                         this.tags.menuDisplay.showRespond = false
                         this.tags.menuDisplay.at = true
+                        this.tags.menuDisplay.viewAvatar = true
                         this.tags.menuDisplay.poke = true
                         this.tags.menuDisplay.startChat = true
                         this.tags.menuDisplay.remove = true
@@ -1508,6 +1514,7 @@ import { Img } from '@renderer/function/model/img'
                         this.tags.menuDisplay.reedit = this.tags.menuDisplay.revoke && data.sender?.user_id === runtimeData.loginInfo.uin
                         if (runtimeData.chatInfo.show.type == 'group' && data.sender?.user_id !== runtimeData.loginInfo.uin) {
                             this.tags.menuDisplay.startChat = true
+                            this.tags.menuDisplay.viewAvatar = true
                         }
                         if (data.revoke === true) {
                             // 已被撤回的自己的消息只显示复制
@@ -1913,7 +1920,7 @@ import { Img } from '@renderer/function/model/img'
                 if (msg !== null) {
                     // 如果消息体没有简述消息的话 ……
                     if (!msg.raw_message) {
-                        msg.raw_message = getMsgRawTxt(msg)
+                        msg.raw_message = getMsgRawTxt(msg, false)
                     }
                     const popInfo = new PopInfo()
                     app.config.globalProperties.$copyText(msg.raw_message).then(
@@ -1952,6 +1959,17 @@ import { Img } from '@renderer/function/model/img'
                                 )
                             },
                         )
+                }
+                this.closeMsgMenu()
+            },
+
+            previewAvatar() {
+                const msg = this.selectedMsg
+                if (msg !== null && msg.sender) {
+                    const url = `https://q1.qlogo.cn/g?b=qq&s=640&nk=${msg.sender.user_id}`
+                    if (this.viewer) {
+                        (this.viewer as any).open(new Img(url))
+                    }
                 }
                 this.closeMsgMenu()
             },
@@ -2881,7 +2899,7 @@ import { Img } from '@renderer/function/model/img'
 
                 const popInfo = {
                     title: $t('复制文字'),
-                    html: `<div style="white-space:pre-wrap;word-break:break-all;user-select:text;-webkit-user-select:text;padding:8px 0;line-height:1.6;">${escapedText}</div>`,
+                    html: `<div class="msg-content-text" style="white-space:pre-wrap;word-break:break-all;user-select:text;-webkit-user-select:text;padding:8px 0;line-height:1.6;">${escapedText}</div>`,
                     full: false,
                     allowClose: true,
                     allowQuickClose: true,
@@ -2933,7 +2951,7 @@ import { Img } from '@renderer/function/model/img'
                         ':' +
                         time.getSeconds() +
                         '\n' +
-                        getMsgRawTxt(item) +
+                        getMsgRawTxt(item, false) +
                         '\n\n'
                 })
                 const popInfo = new PopInfo()
@@ -3018,7 +3036,7 @@ import { Img } from '@renderer/function/model/img'
                     } else if (value.length > 0) {
                         this.tags.search.list = this.list.filter(
                             (item: any) => {
-                                const rawMessage = getMsgRawTxt(item)
+                                const rawMessage = getMsgRawTxt(item, false)
                                 return rawMessage.indexOf(value) !== -1
                             },
                         )
