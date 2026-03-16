@@ -1832,7 +1832,6 @@ import { Img } from '@renderer/function/model/img'
                                     const msgBody = msgList.map((item) => {
                                         return {
                                             type: 'node',
-                                            id: item.message_id,
                                             user_id: item.sender.user_id,
                                             nickname: item.sender.nickname,
                                             content: item.message,
