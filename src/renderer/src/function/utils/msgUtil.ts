@@ -229,8 +229,9 @@ export function getMsgRawTxt(data: any): string {
     for (let i = 0; i < message.length; i++) {
         try {
             switch (message[i].type) {
-                case 'at':
-                    if (message[i].text == undefined) {
+                case 'at': {
+                    let atName = message[i].text
+                    if (atName == undefined) {
                         // 群内才可以 at，如果 at 消息中没有 text 字段
                         // 尝试去群成员列表中找到对应的昵称，群成员列表只在当前打开的群才有
                         if (
@@ -242,14 +243,18 @@ export function getMsgRawTxt(data: any): string {
                                     (item) => item.user_id == message[i].qq,
                                 )
                             if (user) {
-                                back +=
-                                    '@' +
-                                    (user.card && user.card != '' ? user.card : user.nickname)
-                                break
+                                atName = '@' + (user.card && user.card != '' ? user.card : user.nickname)
                             }
                         }
-                        break
                     }
+                    if (atName) {
+                        back += `<span class="reply-name">${atName}</span>`
+                    } else {
+                        // 实在找不到名字，显示 QQ 号
+                        back += `<span class="reply-name">@${message[i].qq}</span>`
+                    }
+                    break
+                }
                 // eslint-disable-next-line
                 case 'text':
                     back += message[i].text
