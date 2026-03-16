@@ -67,7 +67,8 @@
                     <span>{{ $t('用于下载表情和自动解析网站（范例：http://127.0.0.1:7890），留空则不使用') }}</span>
                 </div>
                 <input v-model="runtimeData.sysConfig.global_proxy" class="ss-input"
-                    style="width: 150px" type="text" name="global_proxy" @keyup.enter="save">
+                    style="width: 150px" type="text" name="global_proxy"
+                    @keyup.enter="save">
             </div>
             <div class="opt-item">
                 <div :class="checkDefault('url_parse_auto')" />

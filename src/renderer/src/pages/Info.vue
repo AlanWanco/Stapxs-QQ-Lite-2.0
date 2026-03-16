@@ -106,18 +106,18 @@
                         :items="number_cache.length > 0 ? number_cache : chat.info.group_members"
                         :item-size="60"
                         key-field="user_id">
-                        <div class="member-item edit"
-                            v-menu.prevent="event => $emit('showMenu', event, {
-                                message_id: 'fake',
-                                sender: {
-                                    user_id: item.user_id,
-                                    nickname: item.nickname,
-                                    card: item.card,
-                                    role: item.role
-                                },
-                                group_id: chat.show.id,
-                                message: []
-                            })">
+                        <div v-menu.prevent="event => $emit('showMenu', event, {
+                                 message_id: 'fake',
+                                 sender: {
+                                     user_id: item.user_id,
+                                     nickname: item.nickname,
+                                     card: item.card,
+                                     role: item.role
+                                 },
+                                 group_id: chat.show.id,
+                                 message: []
+                             })"
+                            class="member-item edit">
                             <img alt="nk" loading="lazy"
                                 :src="`https://q1.qlogo.cn/g?b=qq&s=0&nk=${item.user_id}`">
                             <div>

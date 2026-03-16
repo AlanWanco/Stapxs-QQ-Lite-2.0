@@ -234,8 +234,7 @@
                             <font-awesome-icon :icon="['fas', 'reply']" />
                             <a :class="getRepMsg(item.id) ? '' : 'msg-unknown'"
                                 style="cursor: pointer"
-                                v-html="getRepMsg(item.id) ?? $t('（查看回复消息）')">
-                            </a>
+                                v-html="getRepMsg(item.id) ?? $t('（查看回复消息）')" />
                         </div>
                         <div v-else-if="item.type == 'poke'" v-once :class="showPock()">
                             <font-awesome-icon class="poke-hand" style="margin-right: 5px;" :icon="['fas', 'fa-hand-point-up']" />

@@ -298,7 +298,8 @@
                     <span>{{ $t('支持占位符：{version} 版本号, {nickname} 昵称') }}</span>
                 </div>
                 <input v-model="runtimeData.sysConfig.custom_title_text" class="ss-input"
-                    style="width: 250px" type="text" name="custom_title_text" @keyup.enter="save">
+                    style="width: 250px" type="text" name="custom_title_text"
+                    @keyup.enter="save">
             </div>
             <div class="opt-item">
                 <div :class="checkDefault('chatview_name')" />
