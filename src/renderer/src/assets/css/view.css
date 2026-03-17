@@ -211,7 +211,7 @@ textarea:focus {
     padding: 0 0 calc(var(--safe-area-bottom, 0px) + 10px) 0;
     margin: 0;
 }
-@media (min-width: 751px) {
+@media (min-width: 751px) and (pointer: fine) {
     .main-body > ul > li:last-child {
         margin-bottom: 10px;
     }
