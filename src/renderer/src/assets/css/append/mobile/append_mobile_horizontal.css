@@ -320,6 +320,7 @@
         position: fixed;
         bottom: 0;
         z-index: 10;
+        padding: 0 !important;
     }
     /* 覆盖 view.css @media(min-width:750px) 中 li:last-child margin-bottom:10px，
        防止最后一个导航 icon 在横版底栏中偏下 */
