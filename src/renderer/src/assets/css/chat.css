@@ -266,7 +266,8 @@ input {
     color: var(--color-main);
     text-shadow: 0 0 0 currentColor;
 }
-.chat-pan > div.more > div:nth-child(2) > div > form > .input-mirror .composer-token.image-token {
+.chat-pan > div.more > div:nth-child(2) > div > form > .input-mirror .composer-token.image-token,
+.chat-pan > div.more > div:nth-child(2) > div > form > .input-mirror .composer-token.face-token {
     color: var(--color-font);
     font-weight: 700;
     text-shadow: none;

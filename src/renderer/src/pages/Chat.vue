@@ -2569,7 +2569,7 @@ import { Img } from '@renderer/function/model/img'
                     case 'image':
                         return `[${this.$t('图片')}]`
                     case 'face':
-                        return this.$t('表情')
+                        return `[${this.$t('表情')}]`
                     case 'file':
                         return seg.name ?? this.$t('文件')
                     default:
@@ -2594,7 +2594,8 @@ import { Img } from '@renderer/function/model/img'
                     const seg = this.sendCache[token.index]
                     const label = token.text || (seg ? this.getSpecialMsgLabel(seg) : '')
                     const cls = seg?.type === 'at' ? 'composer-token mention' :
-                        seg?.type === 'image' ? 'composer-token image-token' : 'composer-token'
+                        seg?.type === 'image' ? 'composer-token image-token' :
+                            seg?.type === 'face' ? 'composer-token face-token' : 'composer-token'
                     html += `<span class="${cls}">${this.escapeHtml(label)}</span>`
                     cursor = token.end
                 })
