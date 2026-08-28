@@ -655,6 +655,20 @@ import { Img } from '@renderer/function/model/img'
 </script>
 
 <script lang="ts">
+    type ComposerToken = {
+        index: number
+        start: number
+        end: number
+        text: string
+    }
+
+    type ComposerSnapshot = {
+        msg: string
+        sendCache: MsgItemElem[]
+        composerTokens: ComposerToken[]
+        imgCache: Array<[number, string]>
+    }
+
     export default defineComponent({
         name: 'ViewChat',
         inject: ['viewer'],
@@ -787,12 +801,7 @@ import { Img } from '@renderer/function/model/img'
                 oldMsg: '',
                 imgCache: new Map<number, string>(),
                 sendCache: [] as MsgItemElem[],
-                composerTokens: [] as Array<{
-                    index: number
-                    start: number
-                    end: number
-                    text: string
-                }>,
+                composerTokens: [] as ComposerToken[],
                 composerBeforeCompositionMsg: '',
                 selectedMsg: null as { [key: string]: any } | null,
                 selectCache: '',
@@ -806,7 +815,9 @@ import { Img } from '@renderer/function/model/img'
                 isDev: import.meta.env.DEV,
                 chatMoveOptions,
                 chatImg: undefined as any,
-                sentHistory: new Map<number, string[]>(),
+                sentHistory: new Map<number, ComposerSnapshot[]>(),
+                composerDrafts: new Map<number, ComposerSnapshot>(),
+                historyDraft: null as ComposerSnapshot | null,
                 historyIndex: -1,
                 lastUpKeyTime: 0,
                 backButtonHandle: null as { remove: () => void } | null,
@@ -853,6 +864,14 @@ import { Img } from '@renderer/function/model/img'
         },
         watch: {
             chat(newChat: any, oldChat: any) {
+                if (newChat?.show?.id !== oldChat?.show?.id && oldChat?.show?.id !== undefined) {
+                    const draft = this.createComposerSnapshot()
+                    if (draft.msg !== '' || draft.composerTokens.length > 0) {
+                        this.composerDrafts.set(oldChat.show.id, draft)
+                    } else {
+                        this.composerDrafts.delete(oldChat.show.id)
+                    }
+                }
                 // 重置部分状态数据
                 const data = (this as any).$options.data(this)
                 this.tags = data.tags
@@ -871,6 +890,10 @@ import { Img } from '@renderer/function/model/img'
                 }
                 this.initMenuDisplay()
                 this.$nextTick(() => {
+                    const draft = this.composerDrafts.get(newChat?.show?.id)
+                    if (draft) {
+                        this.restoreComposerSnapshot(draft)
+                    }
                     this.resizeMainInput()
                 })
             },
@@ -1151,7 +1174,7 @@ import { Img } from '@renderer/function/model/img'
                         // 向上：取更旧的历史
                         if (this.historyIndex === -1) {
                             // 首次按上键，先保存当前输入内容
-                            this.oldMsg = this.msg
+                            this.historyDraft = this.createComposerSnapshot()
                             this.historyIndex = history.length - 1
                         } else {
                             this.historyIndex = Math.max(0, this.historyIndex - 1)
@@ -1162,11 +1185,14 @@ import { Img } from '@renderer/function/model/img'
                         this.historyIndex++
                         if (this.historyIndex >= history.length) {
                             this.historyIndex = -1
-                            this.msg = this.oldMsg
+                            if (this.historyDraft) {
+                                this.restoreComposerSnapshot(this.historyDraft)
+                                this.historyDraft = null
+                            }
                             return
                         }
                     }
-                    this.msg = history[this.historyIndex]
+                    this.restoreComposerSnapshot(history[this.historyIndex])
                     return
                 }
 
@@ -2593,6 +2619,30 @@ import { Img } from '@renderer/function/model/img'
                 return msg
             },
 
+            createComposerSnapshot(): ComposerSnapshot {
+                return {
+                    msg: this.msg,
+                    sendCache: this.sendCache.map((item: any) => {
+                        return item == null ? item : { ...item }
+                    }),
+                    composerTokens: this.composerTokens.map((token) => ({ ...token })),
+                    imgCache: Array.from(this.imgCache.entries()),
+                }
+            },
+
+            restoreComposerSnapshot(snapshot: ComposerSnapshot) {
+                this.msg = snapshot.msg
+                this.oldMsg = snapshot.msg
+                this.sendCache = snapshot.sendCache.map((item: any) => {
+                    return item == null ? item : { ...item }
+                })
+                this.composerTokens = snapshot.composerTokens.map((token) => ({ ...token }))
+                this.imgCache = new Map(snapshot.imgCache)
+                this.$nextTick(() => {
+                    this.resizeMainInput()
+                })
+            },
+
             syncComposerTokensWithInput() {
                 const oldMsg = this.oldMsg
                 const newMsg = this.msg
@@ -3096,11 +3146,12 @@ import { Img } from '@renderer/function/model/img'
                 if (runtimeData.sysConfig.opt_send_history && this.msg.trim() !== '') {
                     const chatId = this.chat.show.id
                     const history = this.sentHistory.get(chatId) ?? []
-                    history.push(this.msg)
+                    history.push(this.createComposerSnapshot())
                     if (history.length > 50) history.shift()
                     this.sentHistory.set(chatId, history)
                     this.historyIndex = -1
-                this.oldMsg = ''
+                    this.historyDraft = null
+                    this.oldMsg = ''
                 }
                 this.msg = ''
                 this.sendCache = []
