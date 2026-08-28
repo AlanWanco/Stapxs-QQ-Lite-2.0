@@ -379,18 +379,45 @@ div:has(> .msg-img.long-img)::after {
 }
 
 .msg-record {
+    align-items: center;
     display: flex;
     margin: 0 5px;
 }
-.msg-record > i {
-    display: inline-block;
-    font-size: 2rem;
+.msg-record > svg {
+    width: 1.4rem;
+    height: 1.4rem;
+    color: var(--color-font-1);
+}
+.msg-record.me > svg {
+    color: var(--color-font-1-r);
 }
 .msg-record > div {
     margin-left: 10px;
+    min-width: 180px;
 }
 .msg-record > div a {
-    line-height: 2rem;
+    display: block;
+    font-size: 0.8rem;
+    line-height: 1.2rem;
+    opacity: 0.7;
+}
+.msg-record > div span {
+    font-size: 0.9rem;
+    opacity: 0.7;
+}
+.msg-record > div code {
+    display: block;
+    max-width: 280px;
+    margin-top: 4px;
+    color: #f20000dd;
+    white-space: normal;
+    word-break: break-all;
+    font-size: 0.75rem;
+}
+.msg-record > div audio {
+    width: 240px;
+    max-width: 55vw;
+    height: 32px;
 }
 
 .msg-video {

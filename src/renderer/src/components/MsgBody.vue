@@ -176,6 +176,22 @@
                                 现在还有不支持 video tag 的浏览器吗？
                             </video>
                         </div>
+                        <div v-else-if="item.type == 'record'"
+                            :class="'msg-record' + (isMe ? ' me' : '')">
+                            <font-awesome-icon :icon="['fas', 'microphone-lines']" />
+                            <div>
+                                <a>{{ $t('语音消息') }}</a>
+                                <audio v-if="recordAudioSrc(item)"
+                                    controls
+                                    preload="metadata"
+                                    :src="recordAudioSrc(item)"
+                                    @loadedmetadata="recordAudioMetadata($event, item)"
+                                    @canplay="recordAudioReady(item)"
+                                    @error="recordAudioError($event, item)" />
+                                <span v-else>{{ loadRecordUrl(item) }}</span>
+                                <code v-if="item.record_error && !recordAudioSrc(item)">{{ item.record_error }}</code>
+                            </div>
+                        </div>
                         <template v-else-if="item.type == 'forward'">
                             <div class="msg-raw-forward"
                                 @click="openMerge()">
@@ -596,6 +612,209 @@ function getUserById(id: number): IUser | undefined {
             imgClick(url: string) {
                 if (this.viewer && this.imageListHeader) {
                     (this.viewer as any).openBySrc(this.imageListHeader, url)
+                }
+            },
+
+            recordAudioSrc(item: any) {
+                const url = item.record_url ?? this.getRecordMessageAudioSrc(item)
+                if (!url) return ''
+                return backend.proxyUrl(url)
+            },
+
+            recordAudioReady(item: any) {
+                item.record_failed = false
+                item.record_error = ''
+            },
+
+            recordAudioMetadata(event: Event, item: any) {
+                const audio = event.target as HTMLAudioElement
+                if (!Number.isFinite(audio.duration) || audio.duration <= 0) {
+                    this.retryRecordAudio(item, 'invalid audio duration: ' + audio.duration)
+                }
+            },
+
+            recordAudioError(event: Event, item: any) {
+                const audio = event.target as HTMLAudioElement
+                this.retryRecordAudio(item, 'audio element error code: ' + (audio.error?.code ?? 'unknown'))
+            },
+
+            retryRecordAudio(item: any, reason: string) {
+                if (item.record_retry_loading) return
+                const file = item.file ?? item.path
+                const nextFormat = item.record_format === 'mp3' ? 'wav' : 'mp3'
+                if (!file || !runtimeData.jsonMap.record_file || item.record_retry_formats?.includes(nextFormat)) {
+                    item.record_url = ''
+                    item.record_failed = true
+                    item.record_error = reason + '; no playable fallback'
+                    return
+                }
+
+                item.record_retry_loading = true
+                item.record_retry_formats = [...(item.record_retry_formats ?? []), nextFormat]
+                this.loadRecordByFormat(file, nextFormat).then((result) => {
+                    if (result.url) {
+                        item.record_url = result.url
+                        item.record_format = result.format
+                        item.record_failed = false
+                        item.record_error = ''
+                    } else {
+                        item.record_url = ''
+                        item.record_failed = true
+                        item.record_error = reason + '; fallback ' + nextFormat + ': ' + result.error
+                    }
+                }).catch((error) => {
+                    item.record_url = ''
+                    item.record_failed = true
+                    item.record_error = reason + '; fallback ' + nextFormat + ': ' + (error instanceof Error ? error.message : String(error))
+                }).finally(() => {
+                    item.record_retry_loading = false
+                })
+            },
+
+            recordMimeType(item: any) {
+                switch (item.record_format) {
+                    case 'wav':
+                        return 'audio/wav'
+                    case 'mp3':
+                        return 'audio/mpeg'
+                    default:
+                        return undefined
+                }
+            },
+
+            recordAudioErrorText(item: any) {
+                if (item.record_retry_loading) return this.$t('语音加载中')
+                return item.record_error
+            },
+
+            recordAudioFallbackText(item: any) {
+                if (item.record_retry_loading) return this.$t('语音加载中')
+                if (item.record_failed) return this.$t('语音加载失败')
+                return ''
+            },
+
+            getRecordMessageAudioSrc(item: any) {
+                if (item.base64) return `data:audio/mpeg;base64,${item.base64}`
+                if (typeof item.file === 'string' && item.file.startsWith('base64://')) {
+                    return `data:audio/mpeg;base64,${item.file.slice(9)}`
+                }
+                return this.isPlayableRecordUrl(item.url) ? item.url : ''
+            },
+
+            isPlayableRecordUrl(url: string | undefined) {
+                if (!url) return false
+                if (url.startsWith('data:audio/')) return true
+                const cleanUrl = url.split('?')[0].toLowerCase()
+                if (cleanUrl.startsWith('/') || cleanUrl.startsWith('file://')) return false
+                return ['.mp3', '.wav', '.ogg', '.opus', '.m4a'].some((ext) => cleanUrl.endsWith(ext))
+            },
+
+            loadRecordUrl(item: any) {
+                if (item.record_loading) return this.$t('语音加载中')
+                if (item.record_failed) return this.$t('语音加载失败')
+
+                const file = item.file ?? item.path
+                if (!file || !runtimeData.jsonMap.record_file) {
+                    item.record_error = !file ? 'missing record file/path' : 'missing record_file api map'
+                    return item.url ? this.$t('语音格式暂不支持') : this.$t('语音暂不可播放')
+                }
+
+                item.record_loading = true
+                this.loadRecordByFormat(file, 'mp3').then((mp3Result) => {
+                    if (mp3Result.url) return mp3Result
+                    return this.loadRecordByFormat(file, 'wav').then((wavResult) => {
+                        if (wavResult.url) return wavResult
+                        return {
+                            url: '',
+                            error: 'file=' + file + '; mp3: ' + mp3Result.error + '; wav: ' + wavResult.error,
+                        }
+                    })
+                }).then((result) => {
+                    if (result.url) {
+                        item.record_url = result.url
+                        item.record_error = ''
+                    } else {
+                        item.record_failed = true
+                        item.record_error = result.error
+                    }
+                }).catch((error) => {
+                    item.record_failed = true
+                    item.record_error = error instanceof Error ? error.message : String(error)
+                }).finally(() => {
+                    item.record_loading = false
+                })
+
+                return this.$t('语音加载中')
+            },
+
+            async loadRecordByFormat(file: string, outFormat: 'mp3' | 'wav') {
+                const data = await Connector.callApi('record_file', {
+                    file,
+                    out_format: outFormat,
+                })
+                const record = Array.isArray(data) ? data[0] : data
+                const url = this.getRecordResponseUrl(record, outFormat)
+                if (!url) {
+                    return {
+                        url: '',
+                        error: 'no url/file in response ' + this.formatRecordDebug(data),
+                    }
+                }
+                if (url.startsWith('http') || url.startsWith('data:audio/')) {
+                    return { url, error: '' }
+                }
+                if (url.startsWith('/') || url.startsWith('file://')) {
+                    return {
+                        url: '',
+                        error: 'bot returned local file path, not accessible by browser: ' + url,
+                    }
+                }
+                return {
+                    url: '',
+                    error: 'unplayable url/file: ' + url,
+                }
+            },
+
+            getRecordResponseUrl(record: any, outFormat: 'mp3' | 'wav') {
+                if (!record) return ''
+                const mime = record.mime ?? (outFormat === 'wav' ? 'audio/wav' : 'audio/mpeg')
+                const base64 = record.base64 ?? record.audio ?? record.content
+                if (typeof base64 === 'string') {
+                    return this.getRecordBase64Url(base64, mime)
+                }
+
+                const value = record.url ?? record.file ?? record.path ?? record.data
+                if (typeof value === 'string' && value !== '[object Object]') {
+                    if (value.startsWith('base64://')) {
+                        return this.getRecordBase64Url(value.slice(9), mime)
+                    }
+                    if (value.startsWith('data:audio/')) {
+                        return value
+                    }
+                    if (this.isBase64RecordValue(value)) {
+                        return this.getRecordBase64Url(value, mime)
+                    }
+                    return value
+                }
+                return ''
+            },
+
+            getRecordBase64Url(value: string, mime: string) {
+                const base64 = value.startsWith('base64://') ? value.slice(9) : value
+                return `data:${mime};base64,${base64}`
+            },
+
+            isBase64RecordValue(value: string) {
+                if (value.length < 32 || /[/:\\]/.test(value)) return false
+                return /^[A-Za-z0-9+/=\r\n]+$/.test(value)
+            },
+
+            formatRecordDebug(data: any) {
+                try {
+                    const text = JSON.stringify(data)
+                    return text.length > 160 ? text.slice(0, 160) + '...' : text
+                } catch (_) {
+                    return String(data)
                 }
             },
 

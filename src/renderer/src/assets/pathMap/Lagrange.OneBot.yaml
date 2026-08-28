@@ -66,6 +66,22 @@ get_message: $.message
 message_value: # 这是消息转义，防止某些消息字段不同
     image:
         url: $.file
+    record:
+        file: $.data.file
+        path: $.data.path
+        url: $.data.url
+        base64: $.data.base64
+# 获取语音文件
+record_file:
+    name: get_record
+    file: $.data.file
+    path: $.data.path
+    url: $.data.url
+    audio: $.data.audio
+    content: $.data.content
+    mime: $.data.mime
+    base64: $.data.base64
+    data: $.data
 # 获取群公告
 group_notices:
     name: _get_group_notice
