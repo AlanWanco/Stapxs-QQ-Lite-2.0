@@ -282,30 +282,35 @@
                         <span>{{ $t('取消') }}</span>
                     </div>
                 </div>
-                <!-- 图片指示器 -->
+                <!-- 特殊消息预览栏 -->
                 <Transition name="img-pan">
-                    <div v-show="imgCache.size > 0"
+                    <div v-show="imagePreviews.length > 0"
                         :class="{
                             'img-pan': true,
                             'ss-card': true,
                         }"
                         @wheel="($event.currentTarget as HTMLElement).scrollLeft += $event.deltaY">
                         <div class="imgs">
-                            <div v-for="[key, value] in imgCache"
-                                :key="'imgCache-' + key">
+                            <div v-for="item in imagePreviews"
+                                :key="'special-preview-' + item.index"
+                                :class="{ 'text-preview': item.kind === 'text' }">
                                 <div class="img-btns">
-                                    <div @click="editImg(key)">
+                                    <div v-if="item.type === 'image'" @click="editImg(item.index)">
                                         <font-awesome-icon :icon="['fas', 'pencil']" />
                                     </div>
-                                    <hr>
-                                    <div @click="deleteImg(key)">
+                                    <hr v-if="item.type === 'image'">
+                                    <div @click="removeSpecialMsg(item.index)">
                                         <font-awesome-icon style="color: var(--color-red)" :icon="['fas', 'xmark']" />
                                     </div>
                                 </div>
-                                <div class="img">
-                                    <img :src="value" :alt="`[SQ:${key}]`">
+                                <div v-if="item.kind === 'image'" class="img">
+                                    <span class="special-badge">{{ item.badge }}</span>
+                                    <img :src="item.preview" :alt="`[SQ:${item.index}]`">
                                 </div>
-                                <span>#{{ key }}</span>
+                                <div v-else class="special-text-chip">
+                                    <span>{{ item.label }}</span>
+                                </div>
+                                <span>{{ item.footer }}</span>
                             </div>
                         </div>
                     </div>
@@ -396,9 +401,11 @@
                     <font-awesome-icon v-else-if="runtimeData.sysConfig.quick_send == 'face'" :icon="['fas', 'face-laugh']" />
                 </div>
                 <div>
-                    <form @submit="mainSubmit">
+                    <form :class="{ 'input-shell': true, 'with-rich-preview': hasComposerSpecialText }" @submit="mainSubmit">
+                        <div v-if="hasComposerSpecialText" class="input-mirror" v-html="composerRichHtml" />
                         <input v-if="!Option.get('use_breakline')"
                             id="main-input"
+                            :class="{ 'main-input-control': true, 'with-rich-preview': hasComposerSpecialText }"
                             v-model="msg"
                             type="text"
                             autocomplete="off"
@@ -411,17 +418,22 @@
                                                 new Date((chat.info.me_info?.shut_up_timestamp ?? 0) * 1000),
                                             ),
                                         ).format(new Date((chat.info.me_info?.shut_up_timestamp ?? 0) * 1000)),
-                                    }) : ''"
+                            }) : ''"
                             @paste="addImg"
+                            @scroll="syncInputMirror($event.target as HTMLInputElement)"
                             @keyup="mainKeyUp"
                             @click="selectSQIn"
-                            @input="handleInput">
+                            @input="handleInput"
+                            @compositionstart="handleCompositionStart"
+                            @compositionend="handleCompositionEnd">
                         <textarea v-else id="main-input-ex"
+                            :class="{ 'main-input-control': true, 'with-rich-preview': hasComposerSpecialText }"
                             v-model="msg"
                             rows="1"
                             :disabled="runtimeData.tags.openSideBar"
                             @paste="addImg"
                             @keydown="mainKey"
+                            @scroll="syncInputMirror($event.target as HTMLTextAreaElement)"
                             @keyup="mainKeyUp"
                             @click="selectSQIn"
                             @input="handleInput"
@@ -623,7 +635,6 @@ import {
     isShowTime,
     isDeleteMsg,
     getImageUrlData,
-    getDifferencesWithRanges
 } from '@renderer/function/utils/msgUtil'
 import { Logger, LogType, PopInfo, PopType } from '@renderer/function/base'
 import { Connector } from '@renderer/function/connect'
@@ -718,6 +729,7 @@ import { Img } from '@renderer/function/model/img'
                 tags: {
                     sendTag: 'REFUSE' as 'READY' | 'PASS' | 'REFUSE',
                     nowGetHistroy: false,
+                    historyLoadArmed: true,
                     showBottomButton: true,
                     showMoreDetail: false,
                     showMsgMenu: false,
@@ -727,6 +739,8 @@ import { Img } from '@renderer/function/model/img'
                     isReply: false,
                     isJinLoading: false,
                     onAtFind: false,
+                    skipAtTriggerOnce: false,
+                    isComposing: false,
                     menuDisplay: {
                         menuSelectedMsgId: null as string | null,
                         jumpToMsg: false,
@@ -773,6 +787,13 @@ import { Img } from '@renderer/function/model/img'
                 oldMsg: '',
                 imgCache: new Map<number, string>(),
                 sendCache: [] as MsgItemElem[],
+                composerTokens: [] as Array<{
+                    index: number
+                    start: number
+                    end: number
+                    text: string
+                }>,
+                composerBeforeCompositionMsg: '',
                 selectedMsg: null as { [key: string]: any } | null,
                 selectCache: '',
                 replyMsgInfo: null,
@@ -804,6 +825,31 @@ import { Img } from '@renderer/function/model/img'
             fileUploadName() {
                 return runtimeData.fileUploadName ?? ''
             },
+            hasComposerSpecialText() {
+                return this.composerTokens.length > 0
+            },
+            composerRichHtml() {
+                return this.buildComposerRichHtml()
+            },
+            imagePreviews() {
+                return this.composerTokens.map((token) => {
+                    const index = token.index
+                    const preview = this.imgCache.get(index)
+
+                    if (preview) {
+                        return {
+                            index,
+                            kind: 'image',
+                            type: 'image',
+                            preview,
+                            badge: '[SQ:' + index + ']',
+                            footer: '#' + index,
+                        }
+                    }
+
+                    return null
+                }).filter((item) => item !== null)
+            },
         },
         watch: {
             chat(newChat: any, oldChat: any) {
@@ -812,6 +858,7 @@ import { Img } from '@renderer/function/model/img'
                 this.tags = data.tags
                 this.msgMenus = data.msgMenus
                 this.sendCache = []
+                this.composerTokens = []
                 this.imgCache.clear()
                 this.multipleSelectList = []
                 this.historyIndex = -1
@@ -964,8 +1011,16 @@ import { Img } from '@renderer/function/model/img'
 
                 const body = event.target as HTMLDivElement
                 const bar = document.getElementById('send-more')
+                if (body.scrollTop > 24) {
+                    this.tags.historyLoadArmed = true
+                }
                 // 顶部
-                if (body.scrollTop === 0 && this.list.length > 0) {
+                if (
+                    body.scrollTop <= 2 &&
+                    this.tags.historyLoadArmed &&
+                    this.list.length > 0
+                ) {
+                    this.tags.historyLoadArmed = false
                     this.loadMoreHistory()
                 }
                 // 底部
@@ -1115,6 +1170,16 @@ import { Img } from '@renderer/function/model/img'
                     return
                 }
 
+                // ESC 可直接取消 At 候选框，保留当前输入内容
+                if (this.tags.onAtFind && event.keyCode === 27) {
+                    event.preventDefault()
+                    this.tags.onAtFind = false
+                    this.tags.skipAtTriggerOnce = true
+                    this.atFindList = null
+                    this.atSelectedIndex = 0
+                    return
+                }
+
                 // At 选择器激活时的键盘事件处理
                 if (this.tags.onAtFind && this.atFindList && this.atFindList.length > 0) {
                     // 上下箭头键（支持按住快速滚动）
@@ -1146,20 +1211,6 @@ import { Img } from '@renderer/function/model/img'
                         if (selectedMember) {
                             this.choiceAt(selectedMember.user_id)
                         }
-                        return
-                    }
-
-                    // ESC 键取消
-                    if (event.keyCode === 27) {
-                        event.preventDefault()
-                        // 删除输入框中从最后一个 @ 开始的所有内容
-                        const lastAtIndex = this.msg.lastIndexOf('@')
-                        if (lastAtIndex >= 0) {
-                            this.msg = this.msg.substring(0, lastAtIndex)
-                        }
-                        this.tags.onAtFind = false
-                        this.atFindList = null
-                        this.atSelectedIndex = 0
                         return
                     }
                 }
@@ -1227,6 +1278,7 @@ import { Img } from '@renderer/function/model/img'
                 }
 
                 if (this.tags.sendTag == 'READY' && this.msg !== '') {
+                    event.preventDefault()
                     this.sendMsg()
                 } else {
                     if(event.key === 'Enter' &&
@@ -1241,14 +1293,81 @@ import { Img } from '@renderer/function/model/img'
 
             handleCompositionStart() {
                 this.tags.sendTag = 'REFUSE'
+                this.tags.isComposing = true
+                this.composerBeforeCompositionMsg = this.msg
             },
-            handleCompositionEnd() {
+            handleCompositionEnd(event: CompositionEvent) {
+                this.oldMsg = this.composerBeforeCompositionMsg
+                this.tags.isComposing = false
+                this.syncComposerTokensWithInput()
+                this.$nextTick(() => {
+                    const input = event.target as HTMLInputElement | HTMLTextAreaElement | null
+                    this.syncInputMirror(input)
+                    this.snapSelectionToTokenBoundary(input)
+                })
                 this.tags.sendTag = 'PASS'
                 setTimeout(() => { this.tags.sendTag = 'REFUSE' }, 50)
             },
 
+            syncInputMirror(target?: HTMLTextAreaElement | HTMLInputElement | null) {
+                const input = target ??
+                    (document.getElementById('main-input') as HTMLInputElement | null) ??
+                    (document.getElementById('main-input-ex') as HTMLTextAreaElement | null)
+                const mirror = document.querySelector('.input-mirror') as HTMLDivElement | null
+                if (!input || !mirror) return
+                mirror.scrollTop = input.scrollTop
+                mirror.scrollLeft = input.scrollLeft
+            },
+
+            isPositionInsideComposerToken(position: number) {
+                return this.composerTokens.some((token) => {
+                    return position >= token.start && position < token.end
+                })
+            },
+
+            getActiveAtIndex() {
+                for (let i = this.msg.length - 1; i >= 0; i--) {
+                    if (this.msg[i] !== '@') continue
+                    if (!this.isPositionInsideComposerToken(i)) {
+                        return i
+                    }
+                }
+                return -1
+            },
+
+            snapSelectionToTokenBoundary(target?: HTMLTextAreaElement | HTMLInputElement | null) {
+                const input = target ??
+                    (document.getElementById('main-input') as HTMLInputElement | null) ??
+                    (document.getElementById('main-input-ex') as HTMLTextAreaElement | null)
+                if (!input) return
+                if (input.selectionStart == null || input.selectionEnd == null) return
+
+                const start = input.selectionStart
+                const end = input.selectionEnd
+
+                for (const token of this.composerTokens) {
+                    if (start === end) {
+                        if (start > token.start && start < token.end) {
+                            const middle = token.start + (token.end - token.start) / 2
+                            const snap = start < middle ? token.start : token.end
+                            input.selectionStart = snap
+                            input.selectionEnd = snap
+                            return
+                        }
+                        continue
+                    }
+
+                    if (start < token.end && end > token.start) {
+                        input.selectionStart = token.start
+                        input.selectionEnd = token.end
+                        return
+                    }
+                }
+            },
+
             mainKeyUp(event: KeyboardEvent) {
                 const logger = new Logger()
+                const input = event.target as HTMLInputElement | HTMLTextAreaElement | null
 
                 // 清除箭头键快速滚动定时器
                 if (event.keyCode === 38 || event.keyCode === 40) {
@@ -1278,11 +1397,17 @@ import { Img } from '@renderer/function/model/img'
                 }
 
                 if (event.keyCode != 13) {
+                    if (this.tags.skipAtTriggerOnce) {
+                        this.tags.skipAtTriggerOnce = false
+                        return
+                    }
                     // 获取最后一个输入的符号用于判定 at
                     const lastInput = this.msg.substring(this.msg.length - 1)
+                    const activeAtIndex = this.getActiveAtIndex()
                     if (
                         !this.tags.onAtFind &&
                         lastInput == '@' &&
+                        activeAtIndex === this.msg.length - 1 &&
                         runtimeData.chatInfo.info.group_members.length > 0 &&
                         runtimeData.chatInfo.show.type == 'group'
                     ) {
@@ -1291,14 +1416,14 @@ import { Img } from '@renderer/function/model/img'
                         this.atSelectedIndex = 0
                     }
                     if (this.tags.onAtFind) {
-                        if (this.msg.lastIndexOf('@') < 0) {
+                        if (activeAtIndex < 0) {
                             logger.add(LogType.UI, '匹配群成员列表被打断 ……')
                             this.tags.onAtFind = false
                             this.atFindList = null
                             this.atSelectedIndex = 0
                         } else {
                             const atInfo = this.msg
-                                .substring(this.msg.lastIndexOf('@') + 1)
+                                .substring(activeAtIndex + 1)
                                 .toLowerCase()
                             this.atFindList = runtimeData.chatInfo.info.group_members
                                     .filter((item) => { return (
@@ -1316,6 +1441,10 @@ import { Img } from '@renderer/function/model/img'
                         }
                     }
                 }
+
+                this.$nextTick(() => {
+                    this.snapSelectionToTokenBoundary(input)
+                })
             },
 
             /**
@@ -1337,13 +1466,43 @@ import { Img } from '@renderer/function/model/img'
              */
             choiceAt(id: number | undefined) {
                 if (id != undefined) {
+                    const activeAtIndex = this.getActiveAtIndex()
+                    if (activeAtIndex < 0) {
+                        this.tags.onAtFind = false
+                        this.atFindList = null
+                        this.atSelectedIndex = 0
+                        return
+                    }
                     // 删除输入框内的 At 文本
-                    this.msg = this.msg.substring(0, this.msg.lastIndexOf('@'))
+                    this.msg = this.msg.substring(0, activeAtIndex)
                     // 添加 at 信息
-                    this.addSpecialMsg({
+                    const tokenIndex = this.addSpecialMsg({
                         msgObj: { type: 'at', qq: Number(id) },
                         addText: true,
+                        insertAt: this.msg.length,
                     })
+                    const token = this.composerTokens.find((item) => item.index === tokenIndex)
+                    if (token) {
+                        this.msg = this.msg.slice(0, token.end) + ' ' + this.msg.slice(token.end)
+                        this.composerTokens = this.composerTokens.map((item) => {
+                            if (item.start > token.start) {
+                                return {
+                                    ...item,
+                                    start: item.start + 1,
+                                    end: item.end + 1,
+                                }
+                            }
+                            return item
+                        })
+                        this.$nextTick(() => {
+                            const input = (document.getElementById('main-input') as HTMLInputElement | null) ??
+                                (document.getElementById('main-input-ex') as HTMLTextAreaElement | null)
+                            if (input) {
+                                input.selectionStart = token.end + 1
+                                input.selectionEnd = token.end + 1
+                            }
+                        })
+                    }
                 }
                 this.toMainInput()
                 this.tags.onAtFind = false
@@ -1405,25 +1564,16 @@ import { Img } from '@renderer/function/model/img'
                     if (typeof input.selectionStart === 'number') {
                         cursurPosition = input.selectionStart
                     }
-                    // 获取所有的 SQCode
-                    const getSQCode = SendUtil.getSQList(this.msg)
-                    if (getSQCode != null) {
-                        // 遍历寻找 SQCode 位置区间包括光标位置的 SQCode
-                        getSQCode.forEach((item) => {
-                            const start = this.msg.indexOf(item)
-                            const end = start + item.length
-                            if (
-                                start !== -1 &&
-                                cursurPosition > start &&
-                                cursurPosition < end
-                            ) {
-                                this.$nextTick(() => {
-                                    input.selectionStart = start
-                                    input.selectionEnd = end
-                                })
-                            }
-                        })
-                    }
+                    this.composerTokens.forEach((item) => {
+                        if (cursurPosition > item.start && cursurPosition < item.end) {
+                            this.$nextTick(() => {
+                                const middle = item.start + (item.end - item.start) / 2
+                                const snap = cursurPosition < middle ? item.start : item.end
+                                input.selectionStart = snap
+                                input.selectionEnd = snap
+                            })
+                        }
+                    })
                 }
             },
 
@@ -1693,8 +1843,9 @@ import { Img } from '@renderer/function/model/img'
              */
             cancelReply() {
                 // 去除回复消息缓存
-                this.sendCache = this.sendCache.filter((item) => {
-                    return item.type !== 'reply'
+                this.sendCache = this.sendCache.map((item) => {
+                    if (item?.type === 'reply') return null as any
+                    return item
                 })
                 this.tags.isReply = false
             },
@@ -2339,16 +2490,7 @@ import { Img } from '@renderer/function/model/img'
              * @param { number } index 图片编号
              */
             deleteImg(index: number) {
-                this.imgCache.delete(index)
-                this.msg = this.msg.replace(
-                    '[SQ:' + index + ']',
-                    '',
-                )
-                // 解决 ] 被删掉的情况
-                this.msg = this.msg.replace(
-                    '[SQ:' + index,
-                    '',
-                )
+                this.removeSpecialMsg(index)
             },
 
             async editImg(key: number) {
@@ -2357,6 +2499,159 @@ import { Img } from '@renderer/function/model/img'
                 if (!this.viewer) return
                 const dataurl = await (this.viewer as any).edit(img)
                 this.imgCache.set(key, dataurl)
+            },
+
+            removeSpecialMsg(index: number) {
+                this.imgCache.delete(index)
+                this.sendCache[index] = null as any
+                const token = this.composerTokens.find((item) => item.index === index)
+                if (!token) return
+                this.msg = this.msg.slice(0, token.start) + this.msg.slice(token.end)
+                const cutLength = token.end - token.start
+                this.composerTokens = this.composerTokens
+                    .filter((item) => item.index !== index)
+                    .map((item) => {
+                        if (item.start >= token.end) {
+                            return {
+                                ...item,
+                                start: item.start - cutLength,
+                                end: item.end - cutLength,
+                            }
+                        }
+                        return item
+                    })
+                this.$nextTick(() => {
+                    const input = (document.getElementById('main-input') as HTMLInputElement | null) ??
+                        (document.getElementById('main-input-ex') as HTMLTextAreaElement | null)
+                    if (input) {
+                        input.selectionStart = token.start
+                        input.selectionEnd = token.start
+                    }
+                })
+            },
+
+            getSpecialMsgBadge(seg: MsgItemElem) {
+                return '[CQ:' + seg.type + ']'
+            },
+
+            getSpecialMsgLabel(seg: MsgItemElem) {
+                switch (seg.type) {
+                    case 'at': {
+                        const member = runtimeData.chatInfo.info.group_members.find((item) => {
+                            return item.user_id === Number(seg.qq)
+                        })
+                        const name = member?.card && member.card !== '' ? member.card : member?.nickname
+                        return '@' + (name ?? seg.qq)
+                    }
+                    case 'reply':
+                        return this.$t('回复消息')
+                    case 'image':
+                        return `[${this.$t('图片')}]`
+                    case 'face':
+                        return this.$t('表情')
+                    case 'file':
+                        return seg.name ?? this.$t('文件')
+                    default:
+                        return this.$t('特殊消息')
+                }
+            },
+
+            escapeHtml(text: string) {
+                return text
+                    .replaceAll('&', '&amp;')
+                    .replaceAll('<', '&lt;')
+                    .replaceAll('>', '&gt;')
+                    .replaceAll('"', '&quot;')
+                    .replaceAll("'", '&#39;')
+            },
+
+            buildComposerRichHtml() {
+                let html = ''
+                let cursor = 0
+                this.composerTokens.forEach((token) => {
+                    html += this.escapeHtml(this.msg.substring(cursor, token.start))
+                    const seg = this.sendCache[token.index]
+                    const label = token.text || (seg ? this.getSpecialMsgLabel(seg) : '')
+                    const cls = seg?.type === 'at' ? 'composer-token mention' :
+                        seg?.type === 'image' ? 'composer-token image-token' : 'composer-token'
+                    html += `<span class="${cls}">${this.escapeHtml(label)}</span>`
+                    cursor = token.end
+                })
+                html += this.escapeHtml(this.msg.substring(cursor))
+                return html.replaceAll('\n', '<br>')
+            },
+
+            serializeComposerMsg() {
+                let msg = ''
+                let cursor = 0
+                this.composerTokens.forEach((token) => {
+                    msg += this.msg.substring(cursor, token.start)
+                    msg += '[SQ:' + token.index + ']'
+                    cursor = token.end
+                })
+                msg += this.msg.substring(cursor)
+                return msg
+            },
+
+            syncComposerTokensWithInput() {
+                const oldMsg = this.oldMsg
+                const newMsg = this.msg
+                if (oldMsg === newMsg || this.composerTokens.length === 0) return
+
+                let start = 0
+                while (
+                    start < oldMsg.length &&
+                    start < newMsg.length &&
+                    oldMsg[start] === newMsg[start]
+                ) {
+                    start++
+                }
+
+                let oldEnd = oldMsg.length - 1
+                let newEnd = newMsg.length - 1
+                while (
+                    oldEnd >= start &&
+                    newEnd >= start &&
+                    oldMsg[oldEnd] === newMsg[newEnd]
+                ) {
+                    oldEnd--
+                    newEnd--
+                }
+
+                const oldChangedEnd = oldEnd + 1
+                const delta = newMsg.length - oldMsg.length
+                let normalizedMsg = newMsg
+                let removedBefore = 0
+                const nextTokens = [] as typeof this.composerTokens
+
+                this.composerTokens.forEach((token) => {
+                    if (token.end <= start) {
+                        nextTokens.push(token)
+                        return
+                    }
+
+                    if (token.start >= oldChangedEnd) {
+                        nextTokens.push({
+                            ...token,
+                            start: token.start + delta - removedBefore,
+                            end: token.end + delta - removedBefore,
+                        })
+                        return
+                    }
+
+                    const removeStart = token.start < start ? token.start : start
+                    const removeEnd = Math.max(removeStart, token.end + delta - removedBefore)
+                    normalizedMsg = normalizedMsg.slice(0, removeStart) + normalizedMsg.slice(removeEnd)
+                    const removedLength = removeEnd - removeStart
+                    removedBefore += removedLength
+                    this.sendCache[token.index] = null as any
+                    this.imgCache.delete(token.index)
+                })
+
+                if (normalizedMsg !== this.msg) {
+                    this.msg = normalizedMsg
+                }
+                this.composerTokens = nextTokens
             },
 
             /**
@@ -2370,19 +2665,52 @@ import { Img } from '@renderer/function/model/img'
                     const index = this.sendCache.length
                     this.sendCache.push(data.msgObj)
                     if (data.addText === true) {
+                        const text = this.getSpecialMsgLabel(data.msgObj)
+                        let start = this.msg.length
                         if (data.addTop === true) {
-                            this.msg = '[SQ:' + index + ']' + this.msg
+                            this.msg = text + this.msg
+                            start = 0
+                            this.composerTokens = this.composerTokens.map((item) => {
+                                return {
+                                    ...item,
+                                    start: item.start + text.length,
+                                    end: item.end + text.length,
+                                }
+                            })
                         } else {
-                            const selectStart = input.selectionStart
+                            const selectStart = data.insertAt ?? input.selectionStart
                             if(selectStart != null) {
+                                start = selectStart
                                 // 插到光标位置
                                 const first = this.msg.substring(0, selectStart)
                                 const last = this.msg.substring(selectStart, this.msg.length)
-                                this.msg = first + '[SQ:' + index + ']' + last
+                                this.msg = first + text + last
+                                this.composerTokens = this.composerTokens.map((item) => {
+                                    if (item.start >= selectStart) {
+                                        return {
+                                            ...item,
+                                            start: item.start + text.length,
+                                            end: item.end + text.length,
+                                        }
+                                    }
+                                    return item
+                                })
                             } else {
-                                this.msg += '[SQ:' + index + ']'
+                                this.msg += text
                             }
                         }
+                        this.composerTokens.push({
+                            index,
+                            start,
+                            end: start + text.length,
+                            text,
+                        })
+                        this.composerTokens.sort((a, b) => a.start - b.start)
+                        this.$nextTick(() => {
+                            const cursor = start + text.length
+                            input.selectionStart = cursor
+                            input.selectionEnd = cursor
+                        })
                     }
                     return index
                 }
@@ -2667,8 +2995,7 @@ import { Img } from '@renderer/function/model/img'
                 // sq 占位符
                 const id = this.sendCache.length
                 const data = {
-                    type: 'text',
-                    text: `[${this.$t('图片')}]`,
+                    type: 'image',
                 }
                 this.addSpecialMsg({
                     addText: true,
@@ -2742,7 +3069,7 @@ import { Img } from '@renderer/function/model/img'
                 //               ^^^^^^^ 0 ^^^^^^^   ^^^^^^^^^^ 1 ^^^^^^^^^^
                 // 在发送操作触发之后，将会解析此条字符串排列出最终需要发送的消息结构用于发送。
                 const msg = SendUtil.parseMsg(
-                    this.msg,
+                    this.serializeComposerMsg(),
                     this.sendCache,
                     [],
                 )
@@ -2773,10 +3100,11 @@ import { Img } from '@renderer/function/model/img'
                     if (history.length > 50) history.shift()
                     this.sentHistory.set(chatId, history)
                     this.historyIndex = -1
-                    this.oldMsg = ''
+                this.oldMsg = ''
                 }
                 this.msg = ''
                 this.sendCache = []
+                this.composerTokens = []
                 this.imgCache.clear()
                 this.scrollBottom()
                 this.cancelReply()
@@ -3072,27 +3400,13 @@ import { Img } from '@renderer/function/model/img'
             handleInput(event: Event) {
                 const input = event.target as HTMLInputElement
                 this.resizeMainInput(input)
+                this.$nextTick(() => {
+                    this.syncInputMirror(input)
+                })
 
                 // 如果删掉了一个 ]
-                const diff = getDifferencesWithRanges(this.msg, this.oldMsg)
-                let { end, str } = { end: 0, str: '' }
-                if(diff.length > 0) {
-                    ({ end, str } = diff[0])
-                }
-
-                if(str.indexOf(']') >= 0) {
-                    const sqIndex = this.oldMsg.substring(0, end).lastIndexOf('[SQ:')
-                    if(sqIndex >= 0 && sqIndex < end) {
-                        // 取出整个 SQ
-                        const msgHas = this.oldMsg.substring(sqIndex)
-                        const sq = this.oldMsg.slice(sqIndex, msgHas.indexOf(']') + sqIndex + 1)
-                        const numStr = sq.replace('[SQ:', '').replace(']', '')
-                        const num = Number(numStr)
-                        if(!isNaN(num) && this.imgCache.has(num)) {
-                            this.deleteImg(num)
-                        }
-                    }
-                }
+                if (this.tags.isComposing) return
+                this.syncComposerTokensWithInput()
 
                 if (this.details[3].open) {
                     const value = input.value
@@ -3152,6 +3466,7 @@ import { Img } from '@renderer/function/model/img'
             reedit(msg: any) {
                 this.msg = ''
                 this.sendCache = []
+                this.composerTokens = []
                 this.imgCache.clear()
                 this.cancelReply()
                 for (const seg of msg.message) {
@@ -3163,10 +3478,9 @@ import { Img } from '@renderer/function/model/img'
                         this.replyMsg(msg)
                     } else {
                         this.addSpecialMsg({
-                            addText: false,
+                            addText: true,
                             msgObj: seg,
                         })
-                        this.msg += '[SQ:' + (this.sendCache.length - 1) + ']'
                     }
                 }
             },

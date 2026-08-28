@@ -175,6 +175,7 @@ export interface GroupMemberInfoElem {
 export interface SQCodeElem {
     addText: boolean
     addTop?: boolean
+    insertAt?: number
     msgObj: MsgItemElem
 }
 

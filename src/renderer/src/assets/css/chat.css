@@ -201,6 +201,30 @@ input {
 .chat-pan > div.more > div:nth-child(2) > div > form {
     width: 100%;
 }
+.chat-pan > div.more > div:nth-child(2) > div > form.input-shell {
+    position: relative;
+}
+.chat-pan > div.more > div:nth-child(2) > div > form > .input-mirror {
+    position: absolute;
+    inset: 0;
+    width: calc(100% - 40px);
+    color: var(--color-font);
+    border-radius: 7px;
+    font-size: 0.85rem;
+    font-family: Helvetica, Arial, Verdana, Tahoma, sans-serif;
+    font-weight: 400;
+    font-style: normal;
+    letter-spacing: normal;
+    line-height: 20px;
+    max-height: 40vh;
+    min-height: 20px;
+    padding: 0 20px;
+    margin: 8.5px 0;
+    overflow: hidden;
+    white-space: pre-wrap;
+    word-break: break-word;
+    pointer-events: none;
+}
 .chat-pan > div.more > div:nth-child(2) > div > form > input {
     padding-top: 0 !important;
     height: 45px !important;
@@ -213,6 +237,10 @@ input {
     background: transparent;
     border-radius: 7px;
     font-size: 0.85rem;
+    font-family: Helvetica, Arial, Verdana, Tahoma, sans-serif;
+    font-weight: 400;
+    font-style: normal;
+    letter-spacing: normal;
     line-height: 20px;
     max-height: 40vh;
     min-height: 20px;
@@ -221,6 +249,27 @@ input {
     height: 20px;
     resize: none;
     border: 0;
+}
+.chat-pan > div.more > div:nth-child(2) > div > form > .main-input-control.with-rich-preview {
+    color: transparent;
+    caret-color: var(--color-font);
+    position: relative;
+    z-index: 1;
+}
+.chat-pan > div.more > div:nth-child(2) > div > form > .input-mirror .composer-token {
+    display: inline;
+    padding: 0;
+    border-radius: 0;
+    color: var(--color-font-1);
+}
+.chat-pan > div.more > div:nth-child(2) > div > form > .input-mirror .composer-token.mention {
+    color: var(--color-main);
+    text-shadow: 0 0 0 currentColor;
+}
+.chat-pan > div.more > div:nth-child(2) > div > form > .input-mirror .composer-token.image-token {
+    color: var(--color-font);
+    font-weight: 700;
+    text-shadow: none;
 }
 .chat-pan > div.more > div:nth-child(2) > div > form > input:disabled,
 .chat-pan > div.more > div:nth-child(2) > div > form > textarea:disabled {
@@ -1589,6 +1638,11 @@ input {
     flex-shrink: 0;
 }
 
+.img-pan > .imgs > div.text-preview {
+    min-width: 120px;
+    max-width: 220px;
+}
+
 .img-pan > .imgs > div:first-child {
     margin-left: 10px;
 }
@@ -1603,6 +1657,8 @@ input {
     border-radius: 1mm;
     top: 1mm;
     right: 1mm;
+    z-index: 2;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
 }
 
 .img-pan > .imgs > div > .img-btns > div {
@@ -1642,11 +1698,41 @@ input {
     background-color: var(--color-card-1);
     border-radius: 7px;
     overflow: hidden;
+    position: relative;
+}
+
+.img-pan > .imgs > div > .img > .special-badge {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    z-index: 1;
+    padding: 3px 6px;
+    font-size: 0.7rem;
+    color: #fff;
+    background-color: rgba(0, 0, 0, 0.6);
+    border-radius: 999px;
 }
 
 .img-pan > .imgs > div > .img > img {
     max-width: 100%;
     max-height: 100%;
+}
+
+.img-pan > .imgs > div > .special-text-chip {
+    min-height: 56px;
+    max-width: 100%;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    background-color: var(--color-card);
+    border-radius: 7px;
+}
+
+.img-pan > .imgs > div > .special-text-chip > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-font-1);
 }
 
 .img-pan > .imgs > div > span {

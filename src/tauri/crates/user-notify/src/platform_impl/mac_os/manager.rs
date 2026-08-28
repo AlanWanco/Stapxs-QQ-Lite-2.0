@@ -46,11 +46,9 @@ impl NotificationManagerMacOS {
             inner: Arc::new(NotificationManagerMacOSInner {
                 delegate_reference: SendWrapper::new(OnceCell::new()),
                 listener_loop: SendWrapper::new(OnceCell::new()),
-                bundle_id: unsafe {
-                    NSBundle::mainBundle()
-                        .bundleIdentifier()
-                        .map(|ns_string| ns_string.to_string())
-                },
+                bundle_id: NSBundle::mainBundle()
+                    .bundleIdentifier()
+                    .map(|ns_string| ns_string.to_string()),
             }),
         }
     }
@@ -60,26 +58,24 @@ impl NotificationManagerMacOS {
         request: &UNNotificationRequest,
         cb: F,
     ) {
-        unsafe {
-            // make the RcBlock callback be a FnOnce
-            let cb = RefCell::new(Some(cb));
-            let block = block2::RcBlock::new(move |error: *mut NSError| {
-                if error.is_null() {
-                    if let Some(cb) = cb.take() {
-                        cb(Ok(()));
-                    }
-                } else if let Some(cb) = cb.take() {
-                    let Some(err_ref) = error.as_ref() else {
-                        return cb(Err(Error::NSError("Failed to read error".to_string())));
-                    };
-                    let description = err_ref.localizedDescription();
-                    cb(Err(Error::NSError(description.to_string())));
+        // make the RcBlock callback be a FnOnce
+        let cb = RefCell::new(Some(cb));
+        let block = block2::RcBlock::new(move |error: *mut NSError| {
+            if error.is_null() {
+                if let Some(cb) = cb.take() {
+                    cb(Ok(()));
                 }
-            });
+            } else if let Some(cb) = cb.take() {
+                let Some(err_ref) = (unsafe { error.as_ref() }) else {
+                    return cb(Err(Error::NSError("Failed to read error".to_string())));
+                };
+                let description = err_ref.localizedDescription();
+                cb(Err(Error::NSError(description.to_string())));
+            }
+        });
 
-            UNUserNotificationCenter::currentNotificationCenter()
-                .addNotificationRequest_withCompletionHandler(request, Some(&block));
-        }
+        UNUserNotificationCenter::currentNotificationCenter()
+            .addNotificationRequest_withCompletionHandler(request, Some(&block));
     }
 }
 
@@ -89,11 +85,11 @@ impl NotificationManager for NotificationManagerMacOS {
     async fn get_notification_permission_state(&self) -> Result<bool, Error> {
         self.inner.bundle_id.as_ref().ok_or(Error::NoBundleId)?;
         let (tx, rx) = tokio::sync::oneshot::channel::<bool>();
-        unsafe {
+        {
             let cb = RefCell::new(Some(tx));
             let block = block2::RcBlock::new(move |settings: NonNull<UNNotificationSettings>| {
                 if let Some(cb) = cb.take() {
-                    let auth_status = settings.as_ref().authorizationStatus();
+                    let auth_status = unsafe { settings.as_ref() }.authorizationStatus();
                     let authorized = match auth_status {
                         UNAuthorizationStatus::Authorized
                         | UNAuthorizationStatus::Provisional
@@ -145,10 +141,8 @@ impl NotificationManager for NotificationManagerMacOS {
             options.set(UNAuthorizationOptions::Alert, true);
             options.set(UNAuthorizationOptions::Sound, true);
             options.set(UNAuthorizationOptions::Badge, true);
-            unsafe {
-                UNUserNotificationCenter::currentNotificationCenter()
-                    .requestAuthorizationWithOptions_completionHandler(options, &block);
-            }
+            UNUserNotificationCenter::currentNotificationCenter()
+                .requestAuthorizationWithOptions_completionHandler(options, &block);
         }
         request_autorization(tx);
         Ok(rx.await??)
@@ -165,30 +159,28 @@ impl NotificationManager for NotificationManagerMacOS {
         let mtm = MainThreadMarker::new().expect("not on main thread");
         let (tx, mut rx) = tokio::sync::mpsc::channel::<NotificationResponse>(10);
         let notification_delegate = NotificationDelegate::new(mtm, tx);
-        unsafe {
-            let proto: Retained<ProtocolObject<dyn UNUserNotificationCenterDelegate>> =
-                ProtocolObject::from_retained(notification_delegate);
+        let proto: Retained<ProtocolObject<dyn UNUserNotificationCenterDelegate>> =
+            ProtocolObject::from_retained(notification_delegate);
 
-            let notification_center = UNUserNotificationCenter::currentNotificationCenter();
-            notification_center.setDelegate(Some(&*proto));
+        let notification_center = UNUserNotificationCenter::currentNotificationCenter();
+        notification_center.setDelegate(Some(&*proto));
 
-            self.inner.delegate_reference
-                .set(proto)
-                .expect("failed to set delegate_reference, did you call register multiple times so that the once_cell was already taken?");
+        self.inner.delegate_reference
+            .set(proto)
+            .expect("failed to set delegate_reference, did you call register multiple times so that the once_cell was already taken?");
 
-            let categories: Retained<NSSet<_>> = categories
-                .into_iter()
-                .map(|category| W(category_to_native_category(category)))
-                .collect();
-            notification_center.setNotificationCategories(&categories);
+        let categories: Retained<NSSet<_>> = categories
+            .into_iter()
+            .map(|category| W(category_to_native_category(category)))
+            .collect();
+        notification_center.setNotificationCategories(&categories);
 
-            let handler_loop = thread::spawn(move || {
-                while let Some(response) = rx.blocking_recv() {
-                    handler_callback(response)
-                }
-            });
-            self.inner.listener_loop.set(handler_loop).expect("failed to set delegate_reference, did you call register multiple times so that the once_cell was already taken?");
-        }
+        let handler_loop = thread::spawn(move || {
+            while let Some(response) = rx.blocking_recv() {
+                handler_callback(response)
+            }
+        });
+        self.inner.listener_loop.set(handler_loop).expect("failed to set delegate_reference, did you call register multiple times so that the once_cell was already taken?");
         log::debug!("NotificationManager.register completed");
         Ok(())
     }
@@ -199,9 +191,7 @@ impl NotificationManager for NotificationManagerMacOS {
     fn remove_all_delivered_notifications(&self) -> Result<(), Error> {
         self.inner.bundle_id.as_ref().ok_or(Error::NoBundleId)?;
 
-        unsafe {
-            UNUserNotificationCenter::currentNotificationCenter().removeAllDeliveredNotifications();
-        }
+        UNUserNotificationCenter::currentNotificationCenter().removeAllDeliveredNotifications();
         Ok(())
     }
 
@@ -211,10 +201,8 @@ impl NotificationManager for NotificationManagerMacOS {
         let ids: Vec<_> = ids.iter().map(|s| NSString::from_str(s)).collect();
         let array: Retained<NSArray<NSString>> = NSArray::from_retained_slice(ids.as_slice());
 
-        unsafe {
-            UNUserNotificationCenter::currentNotificationCenter()
-                .removeDeliveredNotificationsWithIdentifiers(&array);
-        }
+        UNUserNotificationCenter::currentNotificationCenter()
+            .removeDeliveredNotificationsWithIdentifiers(&array);
         Ok(())
     }
 
@@ -232,20 +220,17 @@ impl NotificationManager for NotificationManagerMacOS {
             let completion_handler =
                 block2::RcBlock::new(move |notifications: NonNull<NSArray<UNNotification>>| {
                     if let Some(cb) = cb.take() {
-                        let notifications: &NSArray<UNNotification> =
-                            unsafe { notifications.as_ref() };
+                        let notifications: &NSArray<UNNotification> = unsafe { notifications.as_ref() };
 
                         let mut handles = Vec::with_capacity(notifications.count());
                         for item in notifications {
-                            unsafe {
-                                let request = item.request();
-                                let id = request.identifier().to_string();
+                            let request = item.request();
+                            let id = request.identifier().to_string();
 
-                                let user_info =
-                                    user_info_dictionary_to_hashmap(request.content().userInfo());
+                            let user_info =
+                                user_info_dictionary_to_hashmap(request.content().userInfo());
 
-                                handles.push(NotificationHandleMacOS::new(id, user_info));
-                            }
+                            handles.push(NotificationHandleMacOS::new(id, user_info));
                         }
 
                         if cb.send(handles).is_err() {
@@ -256,10 +241,8 @@ impl NotificationManager for NotificationManagerMacOS {
                     }
                 });
 
-            unsafe {
-                UNUserNotificationCenter::currentNotificationCenter()
-                    .getDeliveredNotificationsWithCompletionHandler(&completion_handler);
-            }
+            UNUserNotificationCenter::currentNotificationCenter()
+                .getDeliveredNotificationsWithCompletionHandler(&completion_handler);
 
             Ok(())
         }
@@ -323,13 +306,11 @@ fn category_to_native_category(category: NotificationCategory) -> Retained<UNNot
                 Action { identifier, title } => {
                     let identifier = NSString::from_str(identifier);
                     let title = NSString::from_str(title);
-                    unsafe {
-                       W(UNNotificationAction::actionWithIdentifier_title_options(
-                            &identifier,
-                            &title,
-                            UNNotificationActionOptions::empty(),
-                        ))
-                    }
+                    W(UNNotificationAction::actionWithIdentifier_title_options(
+                        &identifier,
+                        &title,
+                        UNNotificationActionOptions::empty(),
+                    ))
                 }
                 TextInputAction {
                     identifier,
@@ -341,24 +322,22 @@ fn category_to_native_category(category: NotificationCategory) -> Retained<UNNot
                     let title = NSString::from_str(title);
                     let text_input_button_title = NSString::from_str(input_button_title);
                     let text_input_placeholder = NSString::from_str(input_placeholder);
-                    unsafe {
-                       W(  Retained::cast_unchecked::<UNNotificationAction>(
-                        UNTextInputNotificationAction::actionWithIdentifier_title_options_textInputButtonTitle_textInputPlaceholder(
-                            &identifier, &title, UNNotificationActionOptions::empty(), &text_input_button_title, &text_input_placeholder)))
-                    }
+                    W(unsafe {
+                        Retained::cast_unchecked::<UNNotificationAction>(
+                            UNTextInputNotificationAction::actionWithIdentifier_title_options_textInputButtonTitle_textInputPlaceholder(
+                                &identifier, &title, UNNotificationActionOptions::empty(), &text_input_button_title, &text_input_placeholder))
+                    })
                 },
             }
         })
         .collect();
 
-    unsafe {
-        UNNotificationCategory::categoryWithIdentifier_actions_intentIdentifiers_options(
-            &identifier,
-            &actions,
-            &NSArray::new(),
-            UNNotificationCategoryOptions::empty(),
-        )
-    }
+    UNNotificationCategory::categoryWithIdentifier_actions_intentIdentifiers_options(
+        &identifier,
+        &actions,
+        &NSArray::new(),
+        UNNotificationCategoryOptions::empty(),
+    )
 }
 
 /// wrapper to bypass that the I can't implement traits for objc2's Retained here in this crate

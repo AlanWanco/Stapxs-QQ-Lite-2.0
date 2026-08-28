@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use log::info;
 use tauri::{command, AppHandle};
 use tauri_plugin_store::StoreBuilder;
 use serde_json::Value as JsonValue;

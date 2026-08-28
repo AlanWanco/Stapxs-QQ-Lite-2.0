@@ -1,11 +1,10 @@
 use std::collections::HashMap;
-use log::info;
 use tauri::{command, LogicalPosition, Manager};
 
 #[command]
-pub fn win_close(app_handle: tauri::AppHandle) {
+pub fn win_close(_app_handle: tauri::AppHandle) {
     #[cfg(not(target_os = "macos"))] {
-        let window = app_handle.get_webview_window("main").unwrap();
+        let window = _app_handle.get_webview_window("main").unwrap();
         window.hide().unwrap();
     }
 }

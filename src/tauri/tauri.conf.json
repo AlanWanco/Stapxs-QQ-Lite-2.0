@@ -5,7 +5,7 @@
     "identifier": "cn.stapxs.qqweb",
     "build": {
         "beforeDevCommand": "yarn dev",
-        "devUrl": "http://localhost:8080",
+        "devUrl": "http://localhost:1421",
         "beforeBuildCommand": "yarn build",
         "frontendDist": "../../dist"
     },

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ffi::CStr, fs::{self, File}, io::{self, Write}, path::PathBuf, process::Command, str::FromStr, sync::Arc, time::Duration};
+use std::{collections::HashMap, ffi::CStr, fs::{self, File}, io::{self, Write}, path::PathBuf, process::Command, sync::Arc, time::Duration};
 use crate::{PROXY_PORT};
 
 use log::{debug, error, info};
@@ -12,7 +12,7 @@ use user_notify::NotificationManager;
 
 #[command]
 pub async fn sys_front_loaded(
-    app: AppHandle,
+    _app: AppHandle,
     notifications: State<'_, Arc<dyn NotificationManager>>) -> Result<String, String> {
     match notifications.first_time_ask_for_notification_permission().await {
         Err(err) => {
@@ -78,11 +78,6 @@ pub fn sys_get_release() -> Option<SystemInfo> {
 }
 
 #[command]
-pub fn sys_find_service() -> String {
-    return "".to_string();
-}
-
-#[command]
 pub async fn sys_get_final_redirect_url(data: String) -> Result<String, String> {
     let client = Client::builder()
         .redirect(reqwest::redirect::Policy::custom(|attempt| {
@@ -143,6 +138,7 @@ pub async fn sys_get_api(data: String) -> Result<Value, String> {
 }
 
 #[command]
+#[allow(non_snake_case)]
 pub async fn sys_download(app_handle: AppHandle, downloadPath: String, fileName: String) -> Result<(), String> {
     info!("下载文件：{:?}", downloadPath);
 
@@ -541,6 +537,7 @@ pub fn sys_run_proxy() -> u16 {
 }
 
 #[command]
+#[allow(deprecated)]
 pub fn sys_get_win_color() -> Option<String> {
     #[cfg(target_os = "macos")] {
         use cocoa::{base::nil, foundation::NSAutoreleasePool};
@@ -601,7 +598,10 @@ pub fn sys_get_win_color() -> Option<String> {
             }
         }
     }
-    return Some("636e79".to_string());
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        Some("636e79".to_string())
+    }
 }
 
 // macOS：Touch Bar 支持
@@ -722,6 +722,7 @@ pub async fn sys_get_local_emojis(data: String) -> Result<Vec<HashMap<String, St
 
 /// 保存图片到指定文件夹
 #[command]
+#[allow(non_snake_case)]
 pub async fn sys_save_image(url: String, folder: String, fileName: String) -> Result<Value, String> {
     use std::path::PathBuf;
     

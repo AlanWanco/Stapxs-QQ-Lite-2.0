@@ -78,6 +78,7 @@ function parseMsgToJSON(msg: string, cache: MsgItemElem[]) {
 
     // 在缓存堆中寻找其他需要特殊处理的消息
     cache.forEach((item) => {
+        if (!item) return
         switch (item.type) {
             // 把回复消息移到第一个防止官方端显示错误
             case 'reply':

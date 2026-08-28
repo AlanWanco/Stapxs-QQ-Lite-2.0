@@ -9,9 +9,14 @@ use log4rs::{append::console::ConsoleAppender, config::{Appender, Logger, Root},
 #[cfg(target_os = "macos")]
 use liquid_glass_rs::{GlassOptions, GlassMaterialVariant, GlassViewManager};
 #[cfg(target_os = "macos")]
+#[allow(deprecated)]
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use once_cell::sync::OnceCell;
-use tauri::{ async_runtime::handle, menu::{Menu, MenuEvent, MenuItem}, tray::{TrayIcon, TrayIconBuilder, TrayIconEvent}, AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder };
+use tauri::{ async_runtime::handle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder };
+#[cfg(not(target_os = "macos"))]
+use tauri::AppHandle;
+#[cfg(not(target_os = "macos"))]
+use tauri::{ menu::{Menu, MenuEvent, MenuItem}, tray::{TrayIcon, TrayIconBuilder, TrayIconEvent} };
 use tauri_plugin_store::StoreBuilder;
 use user_notify::{get_notification_manager, NotificationCategory, NotificationCategoryAction};
 
@@ -244,6 +249,7 @@ pub fn run() {
 }
 
 /// 创建主窗体配置
+#[allow(deprecated)]
 fn create_window(app: &mut tauri::App) -> tauri::Result<tauri::WebviewWindow> {
     let win_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("/".into()))
         .title("Stapxs QQ Lite")
@@ -316,46 +322,45 @@ fn create_window(app: &mut tauri::App) -> tauri::Result<tauri::WebviewWindow> {
             opaque: false,
         };
 
-        let mut manager = GlassViewManager::new();
+        let manager = GlassViewManager::new();
         match manager.add_glass_view(ns_view_ptr as *mut std::ffi::c_void, options) {
             Ok(view_id) => {
                 info!("Glass 视图创建成功，ID: {}", view_id);
 
                 // 设置材质变体
-                if let Some(variant_str) = "notification-center".to_owned().into() {
-                    let material = match variant_str.as_str() {
-                        "regular" => GlassMaterialVariant::Regular,
-                        "clear" => GlassMaterialVariant::Clear,
-                        "dock" => GlassMaterialVariant::Dock,
-                        "app-icons" => GlassMaterialVariant::AppIcons,
-                        "widgets" => GlassMaterialVariant::Widgets,
-                        "text" => GlassMaterialVariant::Text,
-                        "av-player" => GlassMaterialVariant::AVPlayer,
-                        "facetime" => GlassMaterialVariant::FaceTime,
-                        "control-center" => GlassMaterialVariant::ControlCenter,
-                        "notification-center" => GlassMaterialVariant::NotificationCenter,
-                        "monogram" => GlassMaterialVariant::Monogram,
-                        "bubbles" => GlassMaterialVariant::Bubbles,
-                        "identity" => GlassMaterialVariant::Identity,
-                        "focus-border" => GlassMaterialVariant::FocusBorder,
-                        "focus-platter" => GlassMaterialVariant::FocusPlatter,
-                        "keyboard" => GlassMaterialVariant::Keyboard,
-                        "sidebar" => GlassMaterialVariant::Sidebar,
-                        "abutted-sidebar" => GlassMaterialVariant::AbuttedSidebar,
-                        "inspector" => GlassMaterialVariant::Inspector,
-                        "control" => GlassMaterialVariant::Control,
-                        "loupe" => GlassMaterialVariant::Loupe,
-                        "slider" => GlassMaterialVariant::Slider,
-                        "camera" => GlassMaterialVariant::Camera,
-                        "cartouche-popover" => GlassMaterialVariant::CartouchePopover,
-                        _ => GlassMaterialVariant::Dock,
-                    };
+                let variant_name = "notification-center";
+                let material = match variant_name {
+                    "regular" => GlassMaterialVariant::Regular,
+                    "clear" => GlassMaterialVariant::Clear,
+                    "dock" => GlassMaterialVariant::Dock,
+                    "app-icons" => GlassMaterialVariant::AppIcons,
+                    "widgets" => GlassMaterialVariant::Widgets,
+                    "text" => GlassMaterialVariant::Text,
+                    "av-player" => GlassMaterialVariant::AVPlayer,
+                    "facetime" => GlassMaterialVariant::FaceTime,
+                    "control-center" => GlassMaterialVariant::ControlCenter,
+                    "notification-center" => GlassMaterialVariant::NotificationCenter,
+                    "monogram" => GlassMaterialVariant::Monogram,
+                    "bubbles" => GlassMaterialVariant::Bubbles,
+                    "identity" => GlassMaterialVariant::Identity,
+                    "focus-border" => GlassMaterialVariant::FocusBorder,
+                    "focus-platter" => GlassMaterialVariant::FocusPlatter,
+                    "keyboard" => GlassMaterialVariant::Keyboard,
+                    "sidebar" => GlassMaterialVariant::Sidebar,
+                    "abutted-sidebar" => GlassMaterialVariant::AbuttedSidebar,
+                    "inspector" => GlassMaterialVariant::Inspector,
+                    "control" => GlassMaterialVariant::Control,
+                    "loupe" => GlassMaterialVariant::Loupe,
+                    "slider" => GlassMaterialVariant::Slider,
+                    "camera" => GlassMaterialVariant::Camera,
+                    "cartouche-popover" => GlassMaterialVariant::CartouchePopover,
+                    _ => GlassMaterialVariant::Dock,
+                };
 
-                    if let Err(e) = manager.set_variant(view_id, material) {
-                        error!("设置 Glass 材质变体失败: {:?}", e);
-                    } else {
-                        info!("Glass 材质变体设置为: {}", "control-center");
-                    }
+                if let Err(e) = manager.set_variant(view_id, material) {
+                    error!("设置 Glass 材质变体失败: {:?}", e);
+                } else {
+                    info!("Glass 材质变体设置为: {}", variant_name);
                 }
 
                 // 将 manager 泄漏以保持 Glass 效果活跃
@@ -431,12 +436,10 @@ fn build_tray(app: AppHandle) -> TrayIcon {
     tray
 }
 
+#[cfg(not(target_os = "macos"))]
 fn show_hidden_app(app: AppHandle) {
     let window = app.get_webview_window("main").unwrap();
-    #[cfg(not(target_os = "macos"))]
     window.show().unwrap();
-    #[cfg(target_os = "macos")]
-    tauri::AppHandle::show(&app).unwrap();
     window.set_focus().unwrap();
 }
 
