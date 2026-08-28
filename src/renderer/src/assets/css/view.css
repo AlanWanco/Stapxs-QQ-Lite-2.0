@@ -692,6 +692,9 @@ textarea:focus {
 .friend-body > div > div a.highlight {
     color: #f20000dd;
 }
+.friend-body > div > div a.draft-preview span {
+    color: #f20000dd;
+}
 /* .friend-body > div > div a.nick {
 } */
 .friend-body.active > div > div a {

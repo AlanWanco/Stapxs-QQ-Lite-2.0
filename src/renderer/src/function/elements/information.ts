@@ -49,6 +49,7 @@ export interface RunTimeDataElem {
 	inch: number
     messageList: any[]
     mergeMsgStack: MergeStackData[]
+    composerDrafts: Map<number, ComposerDraftElem>
     mergeMessageList?: any[] | undefined
     mergeMessageImgList?: any[] | undefined
     fileUploadPending?: File | null // 待确认上传的文件（跨组件生命周期保留）
@@ -74,6 +75,19 @@ export interface RunTimeDataElem {
         allowQuickClose?: boolean // 是否允许快速关闭
         allowClose?: boolean // 是否允许关闭
     }[]
+}
+
+export interface ComposerDraftElem {
+    msg: string
+    preview: string
+    sendCache: MsgItemElem[]
+    composerTokens: Array<{
+        index: number
+        start: number
+        end: number
+        text: string
+    }>
+    imgCache: Array<[number, string]>
 }
 
 export interface ChatInfoElem {

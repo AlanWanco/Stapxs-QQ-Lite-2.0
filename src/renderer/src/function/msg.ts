@@ -2014,6 +2014,7 @@ const baseRuntime = {
     botInfo: {},
     sysConfig: {},
     messageList: [],
+    composerDrafts: new Map(),
     popBoxList: [],
     mergeMsgStack: [],
     fileUploadPending: null,
@@ -2041,5 +2042,6 @@ export function resetRimtime(resetAll = false) {
         runtimeData.groupAssistList = reactive([])
         runtimeData.loginInfo = reactive([])
         runtimeData.messageList = reactive([])
+        runtimeData.composerDrafts = reactive(new Map())
     }
 }

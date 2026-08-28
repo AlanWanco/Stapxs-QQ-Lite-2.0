@@ -1431,6 +1431,7 @@ input {
     padding: 0 13px 0 20px;
     margin-bottom: 20px;
     overflow-y: scroll;
+    user-select: text;
 }
 .jin-pan-body > div {
     background: var(--color-card-2);
@@ -1483,11 +1484,17 @@ input {
     flex-direction: row;
     flex-wrap: wrap;
     display: flex;
+    user-select: text;
+}
+.jin-pan-body > div > div.context span,
+.jin-pan-body > div > div.context a {
+    user-select: text;
 }
 .jin-pan-body > div > div.context > img {
     margin: 0 10px 10px 10px;
     border-radius: 7px;
     max-width: 60%;
+    user-select: none;
 }
 .jin-pan-body > div > div.context > .emoji-face {
     margin: -5px 5px 0 5px;

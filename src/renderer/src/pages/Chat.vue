@@ -643,6 +643,7 @@ import {
     BaseChatInfoElem,
     MsgItemElem,
     SQCodeElem,
+    ComposerDraftElem,
     GroupMemberInfoElem,
     UserFriendElem,
     UserGroupElem,
@@ -662,12 +663,7 @@ import { Img } from '@renderer/function/model/img'
         text: string
     }
 
-    type ComposerSnapshot = {
-        msg: string
-        sendCache: MsgItemElem[]
-        composerTokens: ComposerToken[]
-        imgCache: Array<[number, string]>
-    }
+    type ComposerSnapshot = ComposerDraftElem
 
     export default defineComponent({
         name: 'ViewChat',
@@ -816,7 +812,6 @@ import { Img } from '@renderer/function/model/img'
                 chatMoveOptions,
                 chatImg: undefined as any,
                 sentHistory: new Map<number, ComposerSnapshot[]>(),
-                composerDrafts: new Map<number, ComposerSnapshot>(),
                 historyDraft: null as ComposerSnapshot | null,
                 historyIndex: -1,
                 lastUpKeyTime: 0,
@@ -867,18 +862,16 @@ import { Img } from '@renderer/function/model/img'
                 if (newChat?.show?.id !== oldChat?.show?.id && oldChat?.show?.id !== undefined) {
                     const draft = this.createComposerSnapshot()
                     if (draft.msg !== '' || draft.composerTokens.length > 0) {
-                        this.composerDrafts.set(oldChat.show.id, draft)
+                        runtimeData.composerDrafts.set(oldChat.show.id, draft)
                     } else {
-                        this.composerDrafts.delete(oldChat.show.id)
+                        runtimeData.composerDrafts.delete(oldChat.show.id)
                     }
                 }
                 // 重置部分状态数据
                 const data = (this as any).$options.data(this)
                 this.tags = data.tags
                 this.msgMenus = data.msgMenus
-                this.sendCache = []
-                this.composerTokens = []
-                this.imgCache.clear()
+                this.clearComposer()
                 this.multipleSelectList = []
                 this.historyIndex = -1
                 // 上传状态不在此重置：进度条通过 fileUploadChatId === chat.show.id 控制可见性
@@ -890,9 +883,11 @@ import { Img } from '@renderer/function/model/img'
                 }
                 this.initMenuDisplay()
                 this.$nextTick(() => {
-                    const draft = this.composerDrafts.get(newChat?.show?.id)
+                    const draft = runtimeData.composerDrafts.get(newChat?.show?.id)
                     if (draft) {
                         this.restoreComposerSnapshot(draft)
+                    } else {
+                        this.clearComposer()
                     }
                     this.resizeMainInput()
                 })
@@ -2622,12 +2617,17 @@ import { Img } from '@renderer/function/model/img'
             createComposerSnapshot(): ComposerSnapshot {
                 return {
                     msg: this.msg,
+                    preview: this.getComposerDraftPreview(),
                     sendCache: this.sendCache.map((item: any) => {
                         return item == null ? item : { ...item }
                     }),
                     composerTokens: this.composerTokens.map((token) => ({ ...token })),
                     imgCache: Array.from(this.imgCache.entries()),
                 }
+            },
+
+            getComposerDraftPreview() {
+                return this.msg.replace(/\s+/g, ' ').trim()
             },
 
             restoreComposerSnapshot(snapshot: ComposerSnapshot) {
@@ -2641,6 +2641,15 @@ import { Img } from '@renderer/function/model/img'
                 this.$nextTick(() => {
                     this.resizeMainInput()
                 })
+            },
+
+            clearComposer() {
+                this.msg = ''
+                this.oldMsg = ''
+                this.sendCache = []
+                this.composerTokens = []
+                this.imgCache.clear()
+                this.historyDraft = null
             },
 
             syncComposerTokensWithInput() {
@@ -3153,10 +3162,8 @@ import { Img } from '@renderer/function/model/img'
                     this.historyDraft = null
                     this.oldMsg = ''
                 }
-                this.msg = ''
-                this.sendCache = []
-                this.composerTokens = []
-                this.imgCache.clear()
+                runtimeData.composerDrafts.delete(this.chat.show.id)
+                this.clearComposer()
                 this.scrollBottom()
                 this.cancelReply()
                 this.$nextTick(() => {

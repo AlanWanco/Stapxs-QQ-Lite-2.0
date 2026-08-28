@@ -33,7 +33,10 @@
                 <a v-if="data.highlight" class="highlight">
                     {{ data.highlight }}
                 </a>
-                <a :class="from == 'friend' ? 'nick' : ''" v-html="from == 'friend' ? (data.longNick ?? '') : data.raw_msg" />
+                <a v-if="draftPreview" class="draft-preview">
+                    <span>[{{ $t('草稿') }}]</span>{{ draftPreview }}
+                </a>
+                <a v-else :class="from == 'friend' ? 'nick' : ''" v-html="from == 'friend' ? (data.longNick ?? '') : data.raw_msg" />
                 <div v-if="from == 'message'" style="margin-left: 10px; display: flex">
                     <font-awesome-icon v-if="data.always_top === true" :icon="['fas', 'thumbtack']" />
                 </div>
@@ -46,6 +49,7 @@
     import { defineComponent } from 'vue'
     import { getTrueLang } from '@renderer/function/utils/systemUtil'
     import { getShowName } from '@renderer/function/utils/msgUtil'
+    import { runtimeData } from '@renderer/function/msg'
 
     export default defineComponent({
         name: 'FriendBody',
@@ -55,6 +59,14 @@
                 getShowName: getShowName,
                 trueLang: getTrueLang(),
             }
+        },
+        computed: {
+            draftPreview() {
+                if (this.from !== 'message') return ''
+                const id = this.data.user_id ?? this.data.group_id
+                if (!id) return ''
+                return runtimeData.composerDrafts.get(id)?.preview ?? ''
+            },
         }
     })
 </script>
