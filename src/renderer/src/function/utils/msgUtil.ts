@@ -263,7 +263,18 @@ export function getMsgRawTxt(data: any, html = true): string {
                         .replaceAll('\r', ' ')
                     break
                 case 'forward':
-                    back += '[' + $t('聊天记录') + ']'
+                    if (Array.isArray(message[i].content) && message[i].content.length > 0) {
+                        const lines = message[i].content.map((item: any) => {
+                            const senderName = item.sender?.card && item.sender.card !== ''
+                                ? item.sender.card
+                                : item.sender?.nickname ?? ''
+                            const contentText = getMsgRawTxt(item, false)
+                            return senderName ? `${senderName}: ${contentText}` : contentText
+                        }).filter((item: string) => item.trim() !== '')
+                        back += lines.length > 0 ? lines.join(' | ') : '[' + $t('聊天记录') + ']'
+                    } else {
+                        back += '[' + $t('聊天记录') + ']'
+                    }
                     break
                 case 'face':
                     back += '[' + $t('表情') + ']'

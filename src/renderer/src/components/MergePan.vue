@@ -24,7 +24,8 @@
                         :key="'delete-' + msgIndex.message_id"
                         :data="{ sub_type: 'delete' }" />
                     <!-- 合并转发消息忽略是不是自己的判定 -->
-                    <MsgBody :data="msgIndex" :type="'merge'" 
+                    <MsgBody :data="msgIndex" :type="'merge'"
+                        :search-keyword="searchKeyword"
                         :image-list-header="runtimeData.mergeMessageImgList"
                         @show-menu="(event, data) => $emit('showMenu', event, data)"
                         @dblclick="(data) => $emit('dblclick', data)"
@@ -52,6 +53,7 @@
         components: { NoticeBody, MsgBody },
         inject: ['viewer'],
         emits: ['showMenu', 'dblclick', 'toggleReaction'],
+        props: ['searchKeyword'],
         data() {
             const stack = runtimeData.mergeMsgStack
             const nowData: Ref<MergeStackData|undefined> = ref()
@@ -61,7 +63,7 @@
                 stack,
                 nowData,
                 isShowTime,
-                isDeleteMsg
+                isDeleteMsg,
             }
         },
         mounted() {

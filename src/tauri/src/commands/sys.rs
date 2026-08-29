@@ -640,6 +640,14 @@ pub async fn sys_select_folder() -> Result<Option<String>, String> {
     }
 }
 
+#[command]
+pub fn sys_get_app_data_dir(app: AppHandle) -> Result<String, String> {
+    app.path()
+        .app_data_dir()
+        .map(|path| path.join("messages.db").to_string_lossy().to_string())
+        .map_err(|e| e.to_string())
+}
+
 /// 获取本地表情列表
 ///
 /// # 参数

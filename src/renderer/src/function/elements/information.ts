@@ -28,6 +28,7 @@ export interface RunTimeDataElem {
         msgType: BotMsgType
         canLoadHistory: boolean
 		loadHistoryFail: boolean
+        historyBeforeTime?: number
         openSideBar: boolean
         showGroupAssist: boolean // 群收纳盒是否展开显示
         loginWaveTimer?: any

@@ -102,7 +102,7 @@
                             :title="(!item.summary || item.summary == '') ? $t('预览图片') : item.summary"
                             :alt="$t('图片')"
                             :class=" imgStyle(data.message.length, index, isFace(item))"
-                            :src="backend.proxyUrl(item.url)"
+                            :src="getImgSrc(item.url)"
                             @load="imageLoaded"
                             @error="imgLoadFail"
                             @click="imgClick(item.url)">
@@ -408,6 +408,7 @@ import Emoji from '@renderer/function/model/emoji'
 import EmojiFace from './EmojiFace.vue'
 import LazyLottie from './LazyLottie.vue'
 import { Img } from '@renderer/function/model/img'
+import { dbGetImage, hashUrl } from '@renderer/function/utils/localHistoryUtil'
 
 type Msg = any
 type IUser = any
@@ -416,11 +417,13 @@ const {
     data,
     selected,
     type,
+    searchKeyword,
 } = defineProps<{
     data: any
     selected?: boolean
     type?: string
     imageListHeader?: Img | undefined
+    searchKeyword?: string
 }>()
 
 // 半 setup 半 旧的 api是这样的...旧的emit定义类型太麻烦了...
@@ -462,7 +465,7 @@ function getUserById(id: number): IUser | undefined {
     export default defineComponent({
         name: 'MsgBody',
         inject: ['viewer'],
-        props: ['data', 'type', 'selected', 'imageListHeader'],
+        props: ['data', 'type', 'selected', 'imageListHeader', 'searchKeyword'],
         emits: ['scrollToMsg', 'imageLoaded', 'sendPoke', 'showMenu', 'leftMove', 'rightMove', 'dblclick'],
         data() {
             return {
@@ -480,7 +483,9 @@ function getUserById(id: number): IUser | undefined {
                 getVideo: false,
                 senderInfo: null as any,
                 trueLang: getTrueLang(),
-                textIndex: {} as { [key: string]: number },
+                rawTextIndex: {} as { [key: string]: string },
+                textIndex: {} as { [key: string]: string },
+                resolvedImages: {} as Record<string, string>,
                 // 互动相关
                 msgMove: {
                     move: 0,
@@ -511,13 +516,14 @@ function getUserById(id: number): IUser | undefined {
                     return item.user_id == this.data.sender.user_id
                 },
             )[0]
-            // 处理 textIndex
-            for (let i = 0; i < this.data.message.length; i++) {
-                const item = this.data.message[i]
-                if(item.type == 'text') {
-                    this.parseText(i)
-                }
+            if (runtimeData.sysConfig.enable_local_history && runtimeData.sysConfig.disable_local_history_image_cache !== true) {
+                this.loadCachedImages()
             }
+            // 处理 textIndex
+            this.refreshTextIndex()
+            this.$watch(() => this.searchKeyword, () => {
+                this.refreshTextIndex()
+            })
             // 初始化消息状态（msgBody class）
             if(this.isMe && this.type != 'merge') {
                 this.msgBodyClass += ' me'
@@ -530,6 +536,20 @@ function getUserById(id: number): IUser | undefined {
             }
         },
         methods: {
+            refreshTextIndex() {
+                for (let i = 0; i < this.data.message.length; i++) {
+                    const item = this.data.message[i]
+                    if(item.type == 'text') {
+                        const raw = this.rawTextIndex[i]
+                        if (raw != undefined) {
+                            this.textIndex[i] = this.highlightTextHtml(raw)
+                        } else {
+                            this.parseText(i)
+                        }
+                    }
+                }
+            },
+
             /**
              * 获取消息的纯文本（此方法可能会被遗弃）
              * @param message 消息对象
@@ -613,6 +633,32 @@ function getUserById(id: number): IUser | undefined {
                 if (this.viewer && this.imageListHeader) {
                     (this.viewer as any).openBySrc(this.imageListHeader, url)
                 }
+            },
+
+            async loadCachedImages() {
+                const selfId = runtimeData.loginInfo?.uin
+                if (!selfId) return
+                for (const seg of this.data.message) {
+                    if (seg.type !== 'image' || !seg.url) continue
+                    await this.loadCachedImage(seg.url)
+                }
+            },
+
+            async loadCachedImage(url: string) {
+                if (this.resolvedImages[url]) return this.resolvedImages[url]
+                const selfId = runtimeData.loginInfo?.uin
+                if (!selfId || !url) return undefined
+                const urlHash = await hashUrl(url)
+                const cached = await dbGetImage(selfId, urlHash)
+                if (cached) {
+                    this.resolvedImages[url] = `data:${cached.mimeType};base64,${cached.data}`
+                    return this.resolvedImages[url]
+                }
+                return undefined
+            },
+
+            getImgSrc(url: string) {
+                return this.resolvedImages[url] ?? backend.proxyUrl(url)
             },
 
             recordAudioSrc(item: any) {
@@ -988,7 +1034,48 @@ function getUserById(id: number): IUser | undefined {
                         }
                     })
                 }
-                this.textIndex[index] = text
+                this.rawTextIndex[index] = text
+                this.textIndex[index] = this.highlightTextHtml(text)
+            },
+
+            highlightTextHtml(html: string) {
+                const keyword = ((this as any).searchKeyword ?? '').trim()
+                if (!keyword) return html
+
+                const container = document.createElement('div')
+                container.innerHTML = html
+                const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
+                const textNodes = [] as Text[]
+                let current = walker.nextNode()
+                while (current) {
+                    textNodes.push(current as Text)
+                    current = walker.nextNode()
+                }
+
+                textNodes.forEach((node) => {
+                    const value = node.nodeValue ?? ''
+                    if (!value || value.indexOf(keyword) === -1) return
+                    const fragment = document.createDocumentFragment()
+                    let start = 0
+                    let index = value.indexOf(keyword, start)
+                    while (index !== -1) {
+                        if (index > start) {
+                            fragment.appendChild(document.createTextNode(value.slice(start, index)))
+                        }
+                        const mark = document.createElement('mark')
+                        mark.className = 'search-highlight'
+                        mark.textContent = value.slice(index, index + keyword.length)
+                        fragment.appendChild(mark)
+                        start = index + keyword.length
+                        index = value.indexOf(keyword, start)
+                    }
+                    if (start < value.length) {
+                        fragment.appendChild(document.createTextNode(value.slice(start)))
+                    }
+                    node.parentNode?.replaceChild(fragment, node)
+                })
+
+                return container.innerHTML
             },
 
             loadLinkPreview(domain: string, res: any) {
@@ -1371,6 +1458,12 @@ function getUserById(id: number): IUser | undefined {
                     return
                 }
 
+                if (runtimeData.sysConfig.enable_local_history) {
+                    import('@renderer/function/utils/localHistoryUtil').then(({ saveMessagesWithSideEffects }) => {
+                        saveMessagesWithSideEffects(runtimeData.loginInfo.uin, [this.data])
+                    })
+                }
+
                 const data: MergeStackData = {
                     messageList: [],
                     imageList: [],
@@ -1417,11 +1510,18 @@ function getUserById(id: number): IUser | undefined {
     })
 </script>
 <style>
-    .emoji-like {
-        flex-direction: row;
-        display: flex;
-        width: 100%;
-    }
+.emoji-like {
+    flex-direction: row;
+    display: flex;
+    width: 100%;
+}
+.search-highlight {
+    padding: 0 3px;
+    border-radius: 4px;
+    background: var(--color-main);
+    color: var(--color-font-r);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
     .emoji-like-body {
         display: flex;
         flex-direction: row;

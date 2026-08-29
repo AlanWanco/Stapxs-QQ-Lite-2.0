@@ -285,6 +285,95 @@
                 </label>
             </div>
         </div>
+        <div v-if="backend.type == 'tauri'" class="ss-card">
+            <header>{{ $t('本地历史') }}</header>
+            <div class="opt-item"
+                :style="runtimeData.sysConfig.enable_local_history ? 'background: var(--color-card-1);' : ''">
+                <div :class="checkDefault('enable_local_history')" />
+                <font-awesome-icon :icon="['fas', 'database']" />
+                <div>
+                    <span>{{ $t('启用消息存储') }}</span>
+                    <span>{{ $t('保存消息记录何尝不是一种囤囤鼠') }}</span>
+                </div>
+                <label class="ss-switch">
+                    <input v-model="runtimeData.sysConfig.enable_local_history"
+                        type="checkbox" name="enable_local_history" @change="save($event);loadDbStats()">
+                    <div>
+                        <div />
+                    </div>
+                </label>
+            </div>
+            <div v-if="runtimeData.sysConfig.enable_local_history" class="tip">
+                {{ $t('Stapxs QQ Lite 支持将消息缓存至本地，消息将以加密数据库的方式安全的保存。') }}
+            </div>
+            <div v-if="runtimeData.sysConfig.enable_local_history" class="opt-item">
+                <font-awesome-icon :icon="['fas', 'folder-open']" />
+                <div>
+                    <span>{{ $t('保存路径') }}</span>
+                    <span class="db-path">{{ localHistoryPath || $t('路径加载中...') }}</span>
+                </div>
+                <button class="ss-button" style="width: 100px; font-size: 0.8rem;" @click="backupHistoryPlaceholder">
+                    {{ $t('备份') }}
+                </button>
+            </div>
+            <div v-if="runtimeData.sysConfig.enable_local_history" class="opt-item">
+                <div :class="checkDefault('mixed_load_messages')" />
+                <font-awesome-icon :icon="['fas', 'shuffle']" />
+                <div>
+                    <span>{{ $t('混合加载消息（实验性）') }}</span>
+                    <span>{{ $t('优先加载本地缓存的消息以取得更快的加载速度') }}</span>
+                </div>
+                <label class="ss-switch">
+                    <input v-model="runtimeData.sysConfig.mixed_load_messages"
+                        type="checkbox" name="mixed_load_messages" @change="save($event)">
+                    <div>
+                        <div />
+                    </div>
+                </label>
+            </div>
+            <div v-if="runtimeData.sysConfig.enable_local_history" class="opt-item">
+                <div :class="checkDefault('disable_local_history_image_cache')" />
+                <font-awesome-icon :icon="['fas', 'image']" />
+                <div>
+                    <span>{{ $t('不缓存图片') }}</span>
+                    <span>{{ $t('开启后将删除已缓存图片，仅保留消息文本') }}</span>
+                </div>
+                <label class="ss-switch">
+                    <input v-model="runtimeData.sysConfig.disable_local_history_image_cache"
+                        type="checkbox" name="disable_local_history_image_cache" @change="toggleLocalHistoryImageCache">
+                    <div>
+                        <div />
+                    </div>
+                </label>
+            </div>
+            <div v-if="runtimeData.sysConfig.enable_local_history" class="opt-item">
+                <font-awesome-icon :icon="['fas', 'broom']" />
+                <div>
+                    <span>{{ $t('清理图片缓存') }}</span>
+                    <span>{{ $t('仅清理本地缓存图片，不删除消息记录') }}</span>
+                </div>
+                <button class="ss-button" style="width: 100px; font-size: 0.8rem;" @click="clearLocalHistoryImages">
+                    {{ $t('清理') }}
+                </button>
+            </div>
+            <div v-if="runtimeData.sysConfig.enable_local_history && dbStats != null" class="db-stats-cards">
+                <div class="db-stat-card">
+                    <font-awesome-icon :icon="['fas', 'message']" />
+                    <span class="db-stat-value">{{ dbStats.totalMessages.toLocaleString() }}</span>
+                    <span class="db-stat-label">{{ $t('已存消息') }}</span>
+                </div>
+                <div class="db-stat-card">
+                    <font-awesome-icon :icon="['fas', 'database']" />
+                    <span class="db-stat-value">{{ formatDbSize(dbStats.dbSizeBytes) }}</span>
+                    <span class="db-stat-label">{{ $t('数据库大小') }}</span>
+                </div>
+                <div class="db-stat-card">
+                    <font-awesome-icon :icon="['fas', 'image']" />
+                    <span class="db-stat-value">{{ dbStats.imageCount > 0 ? formatDbSize(dbStats.imageCacheBytes) : '-' }}</span>
+                    <span class="db-stat-label">{{ $t('图片缓存') }}{{ dbStats.imageCount > 0 ? '\u00a0(' + dbStats.imageCount.toLocaleString() + ')' : '' }}</span>
+                </div>
+            </div>
+        </div>
         <div class="ss-card">
             <header>{{ $t('分析信息') }}</header>
             <div
@@ -345,11 +434,13 @@
 
 <script lang="ts">
     import { defineComponent, markRaw } from 'vue'
-    import { runASWEvent as save, checkDefault } from '@renderer/function/option'
+    import { runASWEvent as save, checkDefault, runAS } from '@renderer/function/option'
     import { runtimeData } from '@renderer/function/msg'
 
     import UmamiInfoPan from '@renderer/components/UmamiInfoPan.vue'
 import { backend } from '@renderer/runtime/backend'
+    import { PopInfo, PopType } from '@renderer/function/base'
+    import { dbClearImages, dbGetStats } from '@renderer/function/utils/localHistoryUtil'
 
     export default defineComponent({
         name: 'ViewOptFunction',
@@ -359,9 +450,24 @@ import { backend } from '@renderer/runtime/backend'
                 checkDefault: checkDefault,
                 runtimeData: runtimeData,
                 save: save,
+                runAS,
                 ndt: 0,
                 ndv: false,
+                dbStats: null as null | { totalMessages: number; imageCount: number; imageCacheBytes: number; dbSizeBytes: number },
+                clearImageProgressText: '',
+                localHistoryPath: '',
             }
+        },
+        mounted() {
+            this.loadDbStats()
+            this.loadLocalHistoryPath()
+            this.$watch(() => runtimeData.loginInfo.uin, () => {
+                this.loadDbStats()
+            })
+            this.$watch(() => runtimeData.sysConfig.enable_local_history, () => {
+                this.loadDbStats()
+                this.loadLocalHistoryPath()
+            })
         },
         methods: {
             showUmamiInfo() {
@@ -379,6 +485,34 @@ import { backend } from '@renderer/runtime/backend'
                 setTimeout(() => {
                     this.ndv = false
                 }, 300)
+            },
+            async loadDbStats() {
+                if (!runtimeData.loginInfo?.uin || !runtimeData.sysConfig.enable_local_history) {
+                    this.dbStats = null
+                    return
+                }
+                this.dbStats = await dbGetStats(runtimeData.loginInfo.uin)
+            },
+            async loadLocalHistoryPath() {
+                if (backend.type !== 'tauri') {
+                    this.localHistoryPath = ''
+                    return
+                }
+                this.localHistoryPath = this.$t('路径加载中...')
+                const path = await backend.call(undefined, 'sys:getAppDataDir', true)
+                this.localHistoryPath = path ?? this.$t('路径获取失败')
+            },
+            formatDbSize(bytes: number) {
+                if (bytes < 1024) return `${bytes} B`
+                if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+                if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+                return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
+            },
+            backupHistoryPlaceholder() {
+                new PopInfo().add(
+                    PopType.INFO,
+                    this.$t('聊天记录备份入口先占位，后续再补真正导出逻辑。'),
+                )
             },
             breakLineTip(event: Event) {
                 const sender = event.target as HTMLInputElement
@@ -398,6 +532,99 @@ import { backend } from '@renderer/runtime/backend'
                     }
                     runtimeData.popBoxList.push(popInfo)
                 }
+            },
+            toggleLocalHistoryImageCache(event: Event) {
+                save(event)
+
+                const sender = event.target as HTMLInputElement
+                if (!sender.checked) return
+
+                const selfId = runtimeData.loginInfo?.uin
+                if (!selfId) {
+                    new PopInfo().add(PopType.INFO, this.$t('请连接后在进行操作'))
+                    return
+                }
+
+                const popInfo = {
+                    title: this.$t('提醒'),
+                    html: `<span>${this.$t('确认要关闭图片缓存吗？所有已缓存图片都将被清除！')}</span>`,
+                    button: [
+                        {
+                            text: this.$t('确认'),
+                            fun: async() => {
+                                runtimeData.popBoxList.shift()
+                                await this.runImageCacheCleanup(selfId)
+                            },
+                        },
+                        {
+                            text: this.$t('取消'),
+                            master: true,
+                            fun: () => {
+                                runAS('disable_local_history_image_cache', false)
+                                runtimeData.popBoxList.shift()
+                            },
+                        },
+                    ],
+                }
+                runtimeData.popBoxList.push(popInfo)
+            },
+            async clearLocalHistoryImages() {
+                const selfId = runtimeData.loginInfo?.uin
+                if (!selfId) {
+                    new PopInfo().add(PopType.INFO, this.$t('请连接后在进行操作'))
+                    return
+                }
+                const popInfo = {
+                    title: this.$t('提醒'),
+                    html: `<span>${this.$t('确认要清理本地图片缓存吗？')}</span>`,
+                    button: [
+                        {
+                            text: this.$t('确认'),
+                            fun: async() => {
+                                runtimeData.popBoxList.shift()
+                                await this.runImageCacheCleanup(selfId)
+                            },
+                        },
+                        {
+                            text: this.$t('取消'),
+                            master: true,
+                            fun: () => {
+                                runtimeData.popBoxList.shift()
+                            },
+                        },
+                    ],
+                }
+                runtimeData.popBoxList.push(popInfo)
+            },
+            async runImageCacheCleanup(selfId: string | number) {
+                const progressPop = {
+                    title: this.$t('提醒'),
+                    html: `<span>${this.$t('正在清理图片缓存 0/0（0%）')}</span>`,
+                    allowClose: false,
+                }
+                runtimeData.popBoxList.push(progressPop)
+
+                const result = await dbClearImages(selfId, (progress) => {
+                    const text = this.$t('正在清理图片缓存 {deleted}/{total}（{percent}%）', {
+                        deleted: progress.deleted,
+                        total: progress.total,
+                        percent: progress.progress.toFixed(1),
+                    })
+                    progressPop.html = `<span>${text}</span>`
+                })
+
+                if (runtimeData.popBoxList.length > 0) {
+                    runtimeData.popBoxList.shift()
+                }
+
+                new PopInfo().add(
+                    PopType.INFO,
+                    this.$t('图片缓存清理完成，共删除 {count} 项（{batches} 批）。', {
+                        count: result.deleted,
+                        batches: result.batches,
+                    }),
+                )
+                this.loadDbStats()
             }
         },
     })
@@ -427,5 +654,55 @@ import { backend } from '@renderer/runtime/backend'
         text-decoration: underline;
         color: var(--color-font-1);
         font-size: 0.8rem;
+    }
+
+    .db-stats-cards {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin: 4px 0 8px;
+    }
+
+    .db-stat-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 12px 8px;
+        border-radius: 7px;
+        min-width: 0;
+    }
+
+    .db-stat-card > svg {
+        width: 16px;
+        height: 16px;
+        opacity: 0.5;
+        flex-shrink: 0;
+    }
+
+    .db-stat-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--color-font);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+
+    .db-stat-label {
+        font-size: 0.72rem;
+        color: var(--color-font-2);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+
+    .db-path {
+        word-break: break-all;
+        white-space: normal;
+        line-height: 1.4;
     }
 </style>

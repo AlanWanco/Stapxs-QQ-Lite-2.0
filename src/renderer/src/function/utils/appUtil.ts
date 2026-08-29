@@ -19,6 +19,7 @@ import {
     hslToRgb,
     rgbToHsl,
 } from '@renderer/function/utils/systemUtil'
+import { dbGetLatest } from './localHistoryUtil'
 import {
     markRaw,
     defineAsyncComponent,
@@ -140,8 +141,21 @@ export function openLink(url: string, external = false) {
  * 加载历史消息
  * @param info 聊天基本信息
  */
-export function loadHistory(info: BaseChatInfoElem) {
+export async function loadHistory(info: BaseChatInfoElem) {
     runtimeData.messageList = []
+    if (
+        runtimeData.sysConfig.enable_local_history &&
+        runtimeData.sysConfig.mixed_load_messages !== false
+    ) {
+        const localMsgs = await dbGetLatest(
+            runtimeData.loginInfo.uin,
+            info.id,
+            20,
+        )
+        if (localMsgs.length > 0) {
+            runtimeData.messageList = localMsgs
+        }
+    }
     if (!loadHistoryMessage(info.id, info.type)) {
         new PopInfo().add(
             PopType.ERR,

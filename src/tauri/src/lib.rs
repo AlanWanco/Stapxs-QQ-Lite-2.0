@@ -1,5 +1,6 @@
 mod commands;
 
+use commands::db::DbState;
 use std::collections::HashMap;
 
 use commands::utils::http_proxy::ProxyServer;
@@ -77,6 +78,14 @@ pub fn run() {
             if PROXY_PORT.get().is_some() {
                 info!("代理服务器已启动，端口：{}", PROXY_PORT.get().unwrap());
             }
+
+            let data_dir = app.path().app_data_dir()
+                .expect("无法获取 app data 目录");
+            let enable_local_history = store
+                .get("enable_local_history")
+                .map(|v| v.as_bool().unwrap_or_else(|| v.as_str() == Some("true")))
+                .unwrap_or(false);
+            app.manage(DbState::new(data_dir, enable_local_history));
 
             // 初始化全局通知管理器 ============
             let app_id = app.config().identifier.clone();
@@ -220,6 +229,7 @@ pub fn run() {
             commands::sys::sys_flush_on_message,
             commands::sys::sys_flush_friend_search,
             commands::sys::sys_select_folder,
+            commands::sys::sys_get_app_data_dir,
             commands::sys::sys_get_local_emojis,
             commands::sys::sys_get_default_face_path,
             commands::sys::sys_download_and_extract_zip,
@@ -243,6 +253,17 @@ pub fn run() {
             commands::opt::opt_get_all,
             commands::opt::opt_get,
             commands::opt::opt_clear_all,
+            commands::db::db_save_messages,
+            commands::db::db_get_latest,
+            commands::db::db_get_before,
+            commands::db::db_get_before_by_time,
+            commands::db::db_get_after,
+            commands::db::db_search_messages,
+            commands::db::db_revoke_message,
+            commands::db::db_get_stats,
+            commands::db::db_cache_image,
+            commands::db::db_get_image,
+            commands::db::db_clear_images,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

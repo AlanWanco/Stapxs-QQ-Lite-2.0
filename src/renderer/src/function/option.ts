@@ -90,6 +90,9 @@ export const optDefault: { [key: string]: any } = {
     close_ga: false,
     open_ga_bot: true,
     record_recent_emoji: '100times' as 'none' | 'order' | '100times' | '500times',
+    enable_local_history: false,
+    mixed_load_messages: false,
+    disable_local_history_image_cache: false,
     // Dev
     msg_type: 2,
     log_level: 'err',

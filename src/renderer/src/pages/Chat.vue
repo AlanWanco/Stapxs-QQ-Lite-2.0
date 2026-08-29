@@ -165,6 +165,7 @@
                             :key="msgIndex.fake_message_id ?? msgIndex.message_id"
                             :selected="multipleSelectList.includes(msgIndex.message_id) || tags.menuDisplay.menuSelectedMsgId == msgIndex.message_id"
                             :data="msgIndex"
+                            :search-keyword="msg"
                             @scroll-to-msg="scrollToMsg"
                             @show-menu="showMsgMeun"
                             @image-loaded="imgLoadedScroll" />
@@ -318,7 +319,7 @@
                 <!-- 搜索指示器 -->
                 <div :class="details[3].open ? 'search-tag show' : 'search-tag'">
                     <font-awesome-icon :icon="['fas', 'search']" />
-                    <span>{{ $t('搜索已加载的消息') }}</span>
+                    <span>{{ runtimeData.sysConfig.enable_local_history ? $t('搜索已保存的消息') : $t('搜索已加载的消息') }}</span>
                     <div @click="closeSearch">
                         <font-awesome-icon :icon="['fas', 'xmark']" />
                     </div>
@@ -441,7 +442,7 @@
                             @compositionend="handleCompositionEnd" />
                     </form>
                     <slot name="main-input-button" />
-                    <div @click="sendMsg('sendMsgBack')">
+                    <div @click="details[3].open ? runSearch() : sendMsg('sendMsgBack')">
                         <font-awesome-icon v-if="details[3].open" :icon="['fas', 'search']" />
                         <font-awesome-icon v-else :icon="['fas', 'angle-right']" />
                     </div>
@@ -450,7 +451,7 @@
             <div />
         </div>
         <!-- 合并转发消息预览器 -->
-        <MergePan ref="mergePan" @show-menu="showMsgMeun" @dblclick="msgDblClick" @toggle-reaction="toggleReaction" />
+        <MergePan ref="mergePan" :search-keyword="details[3].open ? msg : ''" @show-menu="showMsgMeun" @dblclick="msgDblClick" @toggle-reaction="toggleReaction" />
         <!-- 消息右击菜单 -->
         <Teleport to="body">
             <div :class="'msg-menu' + (['linux', 'win32', 'darwin'].includes(backend.platform ?? '') ? ' withBar' : '')">
@@ -510,6 +511,10 @@
                     <div v-show="tags.menuDisplay.reedit" @click="reeditMsg">
                         <div><font-awesome-icon :icon="['fas', 'pencil']" /></div>
                         <a>{{ $t('重新编辑') }}</a>
+                    </div>
+                    <div v-show="tags.menuDisplay.resave" @click="resaveSelectedMsg">
+                        <div><font-awesome-icon :icon="['fas', 'database']" /></div>
+                        <a>{{ $t('重存消息') }}</a>
                     </div>
                     <div v-show="tags.menuDisplay.at"
                         @click="selectedMsg ? addSpecialMsg({ msgObj: { type: 'at', qq: Number(selectedMsg.sender.user_id) }, addText: true, }): '';
@@ -768,6 +773,7 @@ import { Img } from '@renderer/function/model/img'
                     menuDisplay: {
                         menuSelectedMsgId: null as string | null,
                         jumpToMsg: false,
+                        resave: false,
                         add: true,
                         relpy: true,
                         forward: true,
@@ -820,6 +826,8 @@ import { Img } from '@renderer/function/model/img'
                 atSelectedIndex: 0,
                 atScrollTimer: null as NodeJS.Timeout | null,
                 atScrollInterval: null as NodeJS.Timeout | null,
+                searchDebounceTimer: null as NodeJS.Timeout | null,
+                searchRequestId: 0,
                 isShowTime,
                 isDeleteMsg,
                 isDev: import.meta.env.DEV,
@@ -1039,10 +1047,22 @@ import { Img } from '@renderer/function/model/img'
              * 消息列表刷新
              */
             chatScroll(event: Event, pass: boolean) {
-                if(pass) return
-
                 const body = event.target as HTMLDivElement
                 const bar = document.getElementById('send-more')
+                if (pass) {
+                    if (
+                        body.scrollTop <= 2 &&
+                        this.tags.historyLoadArmed &&
+                        this.list.length > 0
+                    ) {
+                        this.tags.historyLoadArmed = false
+                        this.loadMoreHistory()
+                    }
+                    if (body.scrollTop > 24) {
+                        this.tags.historyLoadArmed = true
+                    }
+                    return
+                }
                 if (body.scrollTop > 24) {
                     this.tags.historyLoadArmed = true
                 }
@@ -1095,10 +1115,52 @@ import { Img } from '@renderer/function/model/img'
                 ) {
                     // 获取列表第一条消息 ID
                     const firstMsgId = this.list[0].message_id
+                    const firstMsgTime = Number(this.list[0]?.time)
+                    const useMixedHistory =
+                        runtimeData.sysConfig.enable_local_history &&
+                        runtimeData.sysConfig.mixed_load_messages !== false
                     // 锁定加载防止反复触发
                     this.tags.nowGetHistroy = true
 					// 移除加载失败标志
 					runtimeData.tags.loadHistoryFail = false
+                    if (useMixedHistory && Number.isFinite(firstMsgTime)) {
+                        runtimeData.tags.historyBeforeTime = firstMsgTime
+                    } else {
+                        runtimeData.tags.historyBeforeTime = undefined
+                    }
+                    if (useMixedHistory) {
+                        import('@renderer/function/utils/localHistoryUtil').then(async ({ dbGetBefore, dbGetBeforeByTime }) => {
+                            let localMsgs = [] as any[]
+                            if (Number.isFinite(firstMsgTime)) {
+                                localMsgs = await dbGetBeforeByTime(
+                                    runtimeData.loginInfo.uin,
+                                    runtimeData.chatInfo.show.id,
+                                    firstMsgTime,
+                                    20,
+                                )
+                            } else {
+                                localMsgs = await dbGetBefore(
+                                    runtimeData.loginInfo.uin,
+                                    runtimeData.chatInfo.show.id,
+                                    firstMsgId,
+                                    20,
+                                )
+                            }
+                            if (localMsgs.length > 0) {
+                                const existingIds = new Set(runtimeData.messageList.map((m) => String(m.message_id ?? '')))
+                                const addList = localMsgs.filter((m) => {
+                                    const msgId = String(m?.message_id ?? '')
+                                    return msgId.length === 0 || !existingIds.has(msgId)
+                                })
+                                if (addList.length > 0) {
+                                    runtimeData.messageList.splice(0, 0, ...addList)
+                                    if (this.details[3].open) {
+                                        this.runSearch(this.msg)
+                                    }
+                                }
+                            }
+                        })
+                    }
                     // 发起获取历史消息请求
                     const fullPage =
                         runtimeData.jsonMap.message_list?.pagerType == 'full'
@@ -1339,9 +1401,50 @@ import { Img } from '@renderer/function/model/img'
                     const input = event.target as HTMLInputElement | HTMLTextAreaElement | null
                     this.syncInputMirror(input)
                     this.snapSelectionToTokenBoundary(input)
+                    if (this.details[3].open) {
+                        this.runSearch()
+                    }
                 })
                 this.tags.sendTag = 'PASS'
                 setTimeout(() => { this.tags.sendTag = 'REFUSE' }, 50)
+            },
+
+            runSearch(value = this.msg) {
+                if (!this.details[3].open) return
+
+                if (this.searchDebounceTimer) {
+                    clearTimeout(this.searchDebounceTimer)
+                    this.searchDebounceTimer = null
+                }
+
+                if (value.length == 0) {
+                    this.searchRequestId++
+                    this.tags.search.list = reactive(this.list)
+                    return
+                }
+
+                if (runtimeData.sysConfig.enable_local_history) {
+                    const requestId = ++this.searchRequestId
+                    this.searchDebounceTimer = setTimeout(async () => {
+                        const { dbSearchMessages } = await import('@renderer/function/utils/localHistoryUtil')
+                        const results = await dbSearchMessages(
+                            runtimeData.loginInfo.uin,
+                            runtimeData.chatInfo.show.id,
+                            value,
+                        )
+                        if (requestId !== this.searchRequestId || !this.details[3].open) return
+                        this.tags.search.list = results
+                    }, 180)
+                    return
+                }
+
+                this.searchRequestId++
+                this.tags.search.list = this.list.filter(
+                    (item: any) => {
+                        const rawMessage = getMsgRawTxt(item, false)
+                        return rawMessage.indexOf(value) !== -1
+                    },
+                )
             },
 
             syncInputMirror(target?: HTMLTextAreaElement | HTMLInputElement | null) {
@@ -1700,6 +1803,7 @@ import { Img } from '@renderer/function/model/img'
                             // 自己的消息、管理员和群主会显示撤回
                             this.tags.menuDisplay.revoke = true
                         }
+                        this.tags.menuDisplay.resave = runtimeData.sysConfig.enable_local_history === true
                         // 重新编辑判定
                         this.tags.menuDisplay.reedit = this.tags.menuDisplay.revoke && data.sender?.user_id === runtimeData.loginInfo.uin
                         if (runtimeData.chatInfo.show.type == 'group' && data.sender?.user_id !== runtimeData.loginInfo.uin) {
@@ -1824,6 +1928,7 @@ import { Img } from '@renderer/function/model/img'
                 this.tags.menuDisplay = {
                     menuSelectedMsgId : null,
                     jumpToMsg: false,
+                    resave: false,
                     add: true,
                     relpy: true,
                     forward: true,
@@ -2310,6 +2415,19 @@ import { Img } from '@renderer/function/model/img'
                 }
                 
                 this.closeMsgMenu()
+            },
+
+            async resaveSelectedMsg() {
+                const msg = this.selectedMsg
+                if (!msg) return
+                this.closeMsgMenu()
+                if (!runtimeData.sysConfig.enable_local_history) {
+                    new PopInfo().add(PopType.INFO, this.$t('请先启用消息存储'))
+                    return
+                }
+                const { saveMessagesWithSideEffects } = await import('@renderer/function/utils/localHistoryUtil')
+                await saveMessagesWithSideEffects(runtimeData.loginInfo.uin, [msg])
+                new PopInfo().add(PopType.INFO, this.$t('已重新保存消息'))
             },
 
             /**
@@ -2845,7 +2963,7 @@ import { Img } from '@renderer/function/model/img'
                 const file = runtimeData.fileUploadPending
                 runtimeData.fileUploadPending = null
                 if (file) {
-                    this.uploadFileStream(file, file.name || this.$t('未知文件'))
+                    this.sendFile(file, file.name || this.$t('未知文件'))
                 }
             },
 
@@ -2878,6 +2996,7 @@ import { Img } from '@renderer/function/model/img'
                                 {
                                     text: this.$t('发送'),
                                     fun: () => {
+                                        this.sendFile(file, fileName)
                                         runtimeData.popBoxList.shift()
                                     },
                                 },
@@ -2988,7 +3107,9 @@ import { Img } from '@renderer/function/model/img'
                         return
                     }
 
-                    onProgress(end, totalSize)
+                    if (onProgress) {
+                        onProgress(end, totalSize)
+                    }
                     runtimeData.fileUploadProgress = Math.round(((i + 1) / totalChunks) * 95)
                 }
 
@@ -3318,6 +3439,9 @@ import { Img } from '@renderer/function/model/img'
                             // 解除锁定加载
                             this.tags.nowGetHistroy = false
                         }
+                        if (this.details[3].open) {
+                            this.runSearch(this.msg)
+                        }
                         // 刷新图片列表
                         this.rebuildChatImg()
                         // 处理跳入跳转预设
@@ -3495,17 +3619,7 @@ import { Img } from '@renderer/function/model/img'
                 this.syncComposerTokensWithInput()
 
                 if (this.details[3].open) {
-                    const value = input.value
-                    if (value.length == 0) {
-                        this.tags.search.list = reactive(this.list)
-                    } else if (value.length > 0) {
-                        this.tags.search.list = this.list.filter(
-                            (item: any) => {
-                                const rawMessage = getMsgRawTxt(item, false)
-                                return rawMessage.indexOf(value) !== -1
-                            },
-                        )
-                    }
+                    this.runSearch(input.value)
                 }
             },
             openSearch() {
@@ -3513,6 +3627,11 @@ import { Img } from '@renderer/function/model/img'
                 this.tags.showMoreDetail = !this.tags.showMoreDetail
             },
             closeSearch() {
+                if (this.searchDebounceTimer) {
+                    clearTimeout(this.searchDebounceTimer)
+                    this.searchDebounceTimer = null
+                }
+                this.searchRequestId++
                 this.details[3].open = !this.details[3].open
                 this.msg = ''
                 this.tags.search.list = reactive(this.list)

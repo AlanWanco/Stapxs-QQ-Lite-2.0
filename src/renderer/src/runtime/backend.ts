@@ -258,4 +258,10 @@ export const backend = {
         }
         logger.error(null, `添加后端监听失败：${name}(${type})`)
     },
+
+    removeListener(_type: string | undefined, name: string, callBack: (...args: any[]) => void) {
+        if (this.isDesktop() && this.function && 'removeListener' in this.function) {
+            this.function.removeListener(name, callBack)
+        }
+    },
 }
