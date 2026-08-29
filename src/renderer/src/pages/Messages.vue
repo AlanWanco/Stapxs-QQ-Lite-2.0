@@ -20,7 +20,34 @@
                     <div class="base only">
                         <span>{{ $t('消息') }}</span>
                         <div style="flex: 1" />
-                        <font-awesome-icon :icon="['fas', 'trash-can']" @click="cleanList" />
+                        <div class="message-header-action privacy-action"
+                            @mouseenter="showPrivacyMenu"
+                            @mouseleave="hidePrivacyMenuLater">
+                            <font-awesome-icon
+                                :title="$t('截图隐私模式')"
+                                :class="runtimeData.sysConfig.opt_privacy_mode ? 'active' : ''"
+                                :icon="['fas', 'shield-halved']"
+                                @click="togglePrivacyOption('opt_privacy_mode')" />
+                            <div v-show="privacyMenuOpen" class="privacy-dropdown ss-card">
+                                <label>
+                                    <span>{{ $t('显示消息内容') }}</span>
+                                    <input
+                                        v-model="runtimeData.sysConfig.opt_privacy_show_content"
+                                        type="checkbox"
+                                        @change="savePrivacyOption('opt_privacy_show_content')">
+                                    <div class="privacy-switch"><div /></div>
+                                </label>
+                                <label>
+                                    <span>{{ $t('隐藏消息时间') }}</span>
+                                    <input
+                                        v-model="runtimeData.sysConfig.opt_privacy_hide_time"
+                                        type="checkbox"
+                                        @change="savePrivacyOption('opt_privacy_hide_time')">
+                                    <div class="privacy-switch"><div /></div>
+                                </label>
+                            </div>
+                        </div>
+                        <font-awesome-icon :title="$t('全部标记已读')" :icon="['fas', 'check-double']" @click="markAllRead" />
                     </div>
                     <div class="small">
                         <span>{{ $t('消息') }}</span>
@@ -207,13 +234,15 @@
     import { PopInfo, PopType } from '@renderer/function/base'
     import { MenuStatue } from 'vue3-bcui/packages/dist/types'
     import { library } from '@fortawesome/fontawesome-svg-core'
-    import { login as loginInfo } from '@renderer/function/connect'
+    import { Connector, login as loginInfo } from '@renderer/function/connect'
     import { canGroupNotice, isInGroupBox, getShowName, updateBaseOnMsgList } from '@renderer/function/utils/msgUtil'
 
     import {
         faThumbTack,
         faTrashCan,
+        faCheckDouble,
         faCheckToSlot,
+        faShieldHalved,
         faGripLines,
         faBroom,
         faBoxArchive,
@@ -238,6 +267,8 @@
                 } as MenuStatue,
                 menu: Menu.append,
                 showMenu: false,
+                privacyMenuOpen: false,
+                privacyMenuTimer: null as NodeJS.Timeout | null,
                 loginInfo: loginInfo,
                 windowWidth: window.innerWidth,
             }
@@ -258,11 +289,12 @@
             }
         },
         mounted() {
-            library.add(faCheckToSlot, faThumbTack, faTrashCan, faGripLines, faBroom, faBoxArchive, faBoxOpen)
+            library.add(faCheckDouble, faCheckToSlot, faShieldHalved, faThumbTack, faTrashCan, faGripLines, faBroom, faBoxArchive, faBoxOpen)
             window.addEventListener('resize', this.handleWindowResize)
         },
         beforeUnmount() {
             window.removeEventListener('resize', this.handleWindowResize)
+            if (this.privacyMenuTimer) clearTimeout(this.privacyMenuTimer)
         },
         methods: {
             /**
@@ -395,6 +427,15 @@
              *  标记群组消息为已读
              */
             readMsg(data: UserFriendElem & UserGroupElem) {
+                this.markConversationRead(data)
+                // pop
+                new PopInfo().add(
+                    PopType.INFO,
+                    app.config.globalProperties.$t('已标记为已读'),
+                )
+            },
+
+            markConversationRead(data: UserFriendElem & UserGroupElem) {
                 const id = data.group_id ? data.group_id : data.user_id
                 const item = runtimeData.baseOnMsgList.get(id)
                 if(item) {
@@ -407,12 +448,64 @@
                 }
                 // 标记消息已读
                 const type = data.group_id ? 'group' : 'user'
-                loadHistoryMessage(id, type, 1, 'readMemberMessage')
-                // pop
+                this.sendMessageRead(data, id, type)
+                new Notify().closeAll(id.toString())
+            },
+
+            sendMessageRead(data: UserFriendElem & UserGroupElem, id: number, type: 'group' | 'user') {
+                const name = runtimeData.jsonMap.set_message_read?.name
+                const privateName = runtimeData.jsonMap.set_message_read?.private_name ?? name
+                const messageId = data.message_id
+                if (!messageId || !name) {
+                    loadHistoryMessage(id, type, 1, 'readMemberMessage')
+                    return
+                }
+                Connector.send(
+                    type == 'group' ? name : privateName,
+                    {
+                        group_id: type == 'group' ? id : undefined,
+                        user_id: type != 'group' ? id : undefined,
+                        message_id: messageId,
+                    },
+                    'setMessageRead',
+                )
+            },
+
+            markAllRead() {
+                const unreadItems = Array.from(runtimeData.baseOnMsgList.values()).filter((item) => item.new_msg)
+                unreadItems.forEach((item) => this.markConversationRead(item))
+                runtimeData.newMsgCount = 0
+                refreshFavicon()
                 new PopInfo().add(
                     PopType.INFO,
-                    app.config.globalProperties.$t('已标记为已读'),
+                    app.config.globalProperties.$t('已全部标记为已读'),
                 )
+            },
+
+            togglePrivacyOption(name: 'opt_privacy_mode' | 'opt_privacy_show_content' | 'opt_privacy_hide_time') {
+                runtimeData.sysConfig[name] = !runtimeData.sysConfig[name]
+                this.savePrivacyOption(name)
+            },
+
+            savePrivacyOption(name: 'opt_privacy_mode' | 'opt_privacy_show_content' | 'opt_privacy_hide_time') {
+                Option.save(name, runtimeData.sysConfig[name])
+                runOpt(name, runtimeData.sysConfig[name])
+            },
+
+            showPrivacyMenu() {
+                if (this.privacyMenuTimer) {
+                    clearTimeout(this.privacyMenuTimer)
+                    this.privacyMenuTimer = null
+                }
+                this.privacyMenuOpen = true
+            },
+
+            hidePrivacyMenuLater() {
+                if (this.privacyMenuTimer) clearTimeout(this.privacyMenuTimer)
+                this.privacyMenuTimer = setTimeout(() => {
+                    this.privacyMenuOpen = false
+                    this.privacyMenuTimer = null
+                }, 700)
             },
 
             /**

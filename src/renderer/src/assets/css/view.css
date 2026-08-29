@@ -528,6 +528,93 @@ textarea:focus {
     opacity: 0.7;
     height: 1rem;
 }
+.friend-list > div:first-child > div.base > .message-header-action {
+    display: flex;
+    position: relative;
+    align-items: center;
+    margin-right: 12px;
+}
+.friend-list > div:first-child > div.base > .message-header-action > svg {
+    color: var(--color-font);
+    cursor: pointer;
+    opacity: 0.7;
+    height: 1rem;
+}
+.friend-list > div:first-child > div.base > .message-header-action > svg.active {
+    color: var(--color-main);
+    opacity: 1;
+}
+.privacy-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: -8px;
+    z-index: 20;
+    min-width: 150px;
+    padding: 6px;
+    box-shadow: 0 4px 14px var(--color-shader);
+}
+.privacy-dropdown::before {
+    content: '';
+    position: absolute;
+    top: -12px;
+    right: 0;
+    width: 100%;
+    height: 12px;
+}
+.privacy-dropdown label {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between;
+    gap: 12px;
+    width: auto !important;
+    height: auto !important;
+    padding: 7px 8px;
+    border: 0 !important;
+    border-radius: 6px !important;
+    background: transparent !important;
+    opacity: 1 !important;
+    cursor: pointer;
+}
+.privacy-dropdown label:hover {
+    background: var(--color-card-2) !important;
+}
+.privacy-dropdown span {
+    color: var(--color-font);
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+.privacy-dropdown input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+.privacy-switch {
+    position: relative;
+    flex-shrink: 0;
+    width: 30px;
+    height: 17px;
+    border-radius: 999px;
+    background: var(--color-card-2);
+    box-shadow: inset 0 0 0 1px rgba(127, 127, 127, 0.18);
+    transition: background 0.2s;
+}
+.privacy-switch > div {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 11px;
+    height: 11px;
+    border-radius: 999px;
+    background: var(--color-font-2);
+    transition: transform 0.2s, background 0.2s;
+}
+.privacy-dropdown input:checked + .privacy-switch {
+    background: var(--color-main);
+}
+.privacy-dropdown input:checked + .privacy-switch > div {
+    transform: translateX(13px);
+    background: var(--color-font-r);
+}
 .friend-list > div:first-child label {
     height: calc(1rem + 20px);
     align-items: center;
