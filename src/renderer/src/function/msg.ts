@@ -57,6 +57,7 @@ import {
 import { NotifyInfo } from './elements/system'
 import { Notify } from './notify'
 import { backend } from '@renderer/runtime/backend'
+import { addDownloadTask } from '@renderer/components/FileManager.vue'
 import { refreshFavicon } from './favicon'
 import { Img } from './model/img'
 import { getPinyin } from './utils/pinyin'
@@ -907,14 +908,21 @@ const msgFunctions = {
             })
         }
 
-        // 下载文件
         if (msgItem && bodyIndex != -1) {
-            downloadFile(url, fileName, (event: ProgressEvent) => {
-                if (!event.lengthComputable) return
-                const percent = Math.floor((event.loaded / event.total) * 100)
-                msgItem.message[bodyIndex].download_percent = percent
-            }, () => {
-                msgItem.message[bodyIndex].download_percent = undefined
+            addDownloadTask({
+                fileName,
+                fileSize: data.file_size || 0,
+                filePath: '',
+                url,
+                onProgress: (percent) => {
+                    msgItem.message[bodyIndex].download_percent = percent
+                },
+                onComplete: () => {
+                    msgItem.message[bodyIndex].download_percent = undefined
+                },
+                onError: () => {
+                    msgItem.message[bodyIndex].download_percent = undefined
+                },
             })
         }
     },
@@ -946,23 +954,29 @@ const msgFunctions = {
             }
         })
 
-        // 下载事件
-        const onProcess = function (event: ProgressEvent): undefined {
-            if (!event.lengthComputable) return
-            const percent = Math.floor((event.loaded / event.total) * 100)
-            if (listItem) {
-                if (listItem.download_percent == undefined) {
-                    listItem.download_percent = 0
+        addDownloadTask({
+            fileName,
+            fileSize: data.file_size || 0,
+            filePath: '',
+            url,
+            onProgress: (percent) => {
+                if (listItem) {
+                    if (listItem.download_percent == undefined) {
+                        listItem.download_percent = 0
+                    }
+                    listItem.download_percent = percent
                 }
-                listItem.download_percent = percent
-            }
-        }
-
-        // 下载文件
-        downloadFile(url, fileName, onProcess, () => {
-            if (listItem) {
-                listItem.download_percent = undefined
-            }
+            },
+            onComplete: () => {
+                if (listItem) {
+                    listItem.download_percent = undefined
+                }
+            },
+            onError: () => {
+                if (listItem) {
+                    listItem.download_percent = undefined
+                }
+            },
         })
     },
 

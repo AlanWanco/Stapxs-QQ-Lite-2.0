@@ -262,7 +262,7 @@ export function downloadFile(
     name: string,
     onprocess: (event: ProgressEvent & { [key: string]: any }) => undefined,
     oncancel: (event: ProgressEvent & { [key: string]: any }) => undefined,
-) {
+): () => void {
     if (document.location.protocol == 'https:') {
         // 判断下载文件 URL 的协议
         // PS：Chrome 不会对 http 下载的文件进行协议升级
@@ -283,17 +283,24 @@ export function downloadFile(
         } catch (e) {
             logger.error(e as Error, '下载文件失败')
         }
+        return () => undefined
     } else {
-        backend.addListener(undefined, 'sys:downloadBack', (event, data) => {
+        const processCallback = (event: any, data: any) => {
             onprocess(data || event.payload)
-        })
-        backend.addListener(undefined, 'sys:downloadCancel', (event, data) => {
+        }
+        const cancelCallback = (event: any, data: any) => {
             oncancel(data || event.payload)
-        })
+        }
+        backend.addListener(undefined, 'sys:downloadBack', processCallback)
+        backend.addListener(undefined, 'sys:downloadCancel', cancelCallback)
         backend.call(undefined, 'sys:download', false, {
             downloadPath: url,
             fileName: name,
         })
+        return () => {
+            backend.removeListener(undefined, 'sys:downloadBack', processCallback)
+            backend.removeListener(undefined, 'sys:downloadCancel', cancelCallback)
+        }
     }
 }
 
@@ -587,7 +594,7 @@ export async function loadMobile() {
             // 调整输入框高度
             const sendMore = document.getElementById('send-more')
             if(sendMore && keyboardHeight > window.innerHeight / 3) {
-                sendMore.style.paddingBottom = '10px'
+                sendMore.style.paddingBottom = '105px'
             }
 
             const safeArea = await backend.call('SafeArea', 'getSafeArea', true)

@@ -7,6 +7,19 @@ import log4js from 'log4js'
 import { BrowserWindow, ipcMain } from 'electron'
 import { logLevel } from '../index.ts'
 
+export function buildWebSocketUrl(address: string, token?: string) {
+    let url = address.trim()
+    if (!/^wss?:\/\//i.test(url)) {
+        url = 'wss://' + url
+    }
+
+    const parsedUrl = new URL(url)
+    if (token) {
+        parsedUrl.searchParams.set('access_token', token)
+    }
+    return parsedUrl.toString()
+}
+
 export class Connector {
     private logger = log4js.getLogger('connector')
 
@@ -28,14 +41,17 @@ export class Connector {
         this.logger.info('后端连接器已初始化')
     }
 
-    connect(url: string, token: string) {
-        if (url.indexOf('ws://') < 0 && url.indexOf('wss://') < 0) {
-            url = 'wss://' + url
+    connect(url: string, token?: string) {
+        const connectionUrl = buildWebSocketUrl(url, token)
+        const displayUrl = new URL(connectionUrl)
+        if (token) {
+            displayUrl.searchParams.delete('access_token')
         }
+        url = displayUrl.toString()
 
         if (!this.websocket) {
             this.logger.info('正在连接到：', url)
-            this.websocket = new WebSocket(`${url}?access_token=${encodeURIComponent(token)}`)
+            this.websocket = new WebSocket(connectionUrl)
         } else {
             // 如果前端发起了连接请求，说明前端在未连接状态；断开已有连接，重新连接
             // PS：这种情况一般不会发生，大部分情况是因为 debug 模式前端热重载导致的

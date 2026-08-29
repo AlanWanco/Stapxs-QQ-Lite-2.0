@@ -46,6 +46,11 @@
                     <span>{{ $t('列表') }}</span>
                 </li>
                 <div class="side-bar-space" />
+                <li v-if="showFileManagerEntry" :class="tags.showFileManager ? 'active' : ''"
+                    @click="toggleFileManager(undefined)">
+                    <font-awesome-icon :icon="['fas', 'arrow-down']" />
+                    <span>{{ $t('传输') }}</span>
+                </li>
                 <li :class="tags.page == 'Options' ? 'active' : ''" @click="changeTab('设置', 'Options', false)">
                     <font-awesome-icon :icon="['fas', 'gear']" />
                     <span>{{ $t('设置') }}</span>
@@ -161,6 +166,11 @@
                 </div>
             </div>
         </TransitionGroup>
+        <Transition name="music-player-float">
+            <div v-show="tags.showFileManager" class="global-music-player ss-card">
+                <FileManager />
+            </div>
+        </Transition>
         <Transition name="modal">
             <div v-if="runtimeData.popBoxList.length > 0" id="pop-box" class="pop-box">
                 <div :class="'pop-box-body ss-card' +
@@ -226,6 +236,7 @@ import Options from '@renderer/pages/Options.vue'
 import Friends from '@renderer/pages/Friends.vue'
 import Messages from '@renderer/pages/Messages.vue'
 import { backend } from './runtime/backend'
+import FileManager, { panelVisible, closePanel, getDownloadTasks, getUploadTasks } from './components/FileManager.vue'
 import GlobalSessionSearchBar from './components/GlobalSessionSearchBar.vue'
 import NtViewer from './components/ViewerCom.vue'
 import Tooltips from './components/tooltip/Tooltips.vue'
@@ -254,6 +265,7 @@ export default defineComponent({
             tags: {
                 page: 'Home',
                 showChat: false,
+                showFileManager: false,
                 isSavePwdClick: false,
                 savePassword: false,
                 quickLoginSelect: ''
@@ -265,7 +277,10 @@ export default defineComponent({
             },
             backend: backend,
             runtimeData: runtimeData,
-            loginInfo: loginInfo
+            loginInfo: loginInfo,
+            windowWidth: window.innerWidth,
+            panelVisibleUnwatch: null as null | (() => void),
+            fileManagerEntryUnwatch: null as null | (() => void),
         }
     },
     computed: {
@@ -277,11 +292,34 @@ export default defineComponent({
                 return title
             }
             return ''
+        },
+        hasTransferTasks() {
+            return getDownloadTasks().length > 0 || getUploadTasks().length > 0
+        },
+        hasActiveTransferTasks() {
+            return [...getDownloadTasks(), ...getUploadTasks()].some((task) => {
+                return ['pending', 'downloading', 'uploading'].includes(task.status)
+            })
+        },
+        showFileManagerEntry() {
+            if (this.windowWidth <= 500) {
+                return this.hasActiveTransferTasks
+            }
+            return this.hasTransferTasks
         }
     },
     mounted() {
         const logger = new Logger()
         window.moYu = () => { return '\x75\x6e\x64\x65\x66\x69\x6e\x65\x64' }
+        window.addEventListener('resize', this.handleWindowResize)
+        this.panelVisibleUnwatch = this.$watch(() => panelVisible.value, (val: boolean) => {
+            this.tags.showFileManager = val
+        }, { immediate: true })
+        this.fileManagerEntryUnwatch = this.$watch(() => this.showFileManagerEntry, (val: boolean) => {
+            if (!val && this.tags.showFileManager) {
+                this.toggleFileManager(false)
+            }
+        }, { immediate: true })
         // 页面加载完成后
         
         // 禁止所有原生滚动行为（防止缩放模式下的焦点偏移）
@@ -705,6 +743,11 @@ export default defineComponent({
                 Connector.close()
             }
         }
+        },
+    beforeUnmount() {
+        window.removeEventListener('resize', this.handleWindowResize)
+        this.panelVisibleUnwatch?.()
+        this.fileManagerEntryUnwatch?.()
     },
     methods: {
         updateNapcatColor(token: string) {
@@ -826,6 +869,23 @@ export default defineComponent({
             }
         },
 
+        toggleFileManager(open: boolean | undefined) {
+            if (open != undefined) {
+                this.tags.showFileManager = open
+            } else {
+                this.tags.showFileManager = !this.tags.showFileManager
+            }
+            if (this.tags.showFileManager) {
+                panelVisible.value = true
+            } else {
+                closePanel()
+            }
+        },
+
+        handleWindowResize() {
+            this.windowWidth = window.innerWidth
+        },
+
         /**
          * 水波动画启动器
          * @param wave HTML 对象
@@ -930,6 +990,7 @@ export default defineComponent({
          * 移除当前的全局弹窗
          */
         removePopBox() {
+            runtimeData.popBoxList[0]?.onClose?.()
             runtimeData.popBoxList.shift()
         },
 
@@ -980,6 +1041,7 @@ export default defineComponent({
          */
         popQuickClose(allow: boolean | undefined) {
             if (allow != false) {
+                runtimeData.popBoxList[0]?.onClose?.()
                 runtimeData.popBoxList.shift()
             } else {
                 const animeBody = document.getElementById('pop-box')
@@ -1081,6 +1143,46 @@ export default defineComponent({
 
 .modal-leave-active .pop-box-body {
     animation: panelSlideDown 0.2s cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.global-music-player {
+    position: fixed;
+    left: 90px;
+    bottom: 20px;
+    z-index: 33;
+    width: 350px;
+    max-height: min(72vh, 560px);
+    overflow: auto;
+    box-shadow: 0 0 10px var(--color-shader);
+}
+
+.music-player-float-enter-active,
+.music-player-float-leave-active {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.music-player-float-enter-from,
+.music-player-float-leave-to {
+    opacity: 0;
+    transform: translateY(12px);
+}
+
+@media (max-width: 700px) {
+    .global-music-player {
+        left: 100px;
+        bottom: 60px;
+        width: calc(100vw - 200px);
+        max-height: min(66vh, 460px);
+    }
+}
+
+@media (max-width: 500px) {
+    .global-music-player {
+        left: 20px !important;
+        bottom: 60px;
+        width: calc(100vw - 70px);
+        max-height: min(66vh, 460px);
+    }
 }
 
 @keyframes panelSlideUp {

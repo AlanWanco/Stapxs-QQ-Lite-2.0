@@ -99,7 +99,11 @@
                             <span>{{ $t('换个心情 🎵 ~') }}</span>
                         </div>
                         <div class="theme-color-col">
-                            <input id="theme_color_custom" v-model="themeColorRaw" type="color">
+                            <input id="theme_color_custom"
+                                v-model="themeColorRaw"
+                                type="text"
+                                readonly
+                                @click.prevent="themeColorChange">
                             <label class="ss-radio" style="margin-left: 10px;">
                                 <input type="radio" name="theme_color"
                                     :checked="Number(runtimeData.sysConfig.theme_color) > 10"
@@ -504,11 +508,12 @@
 </template>
 
 <script lang="ts">
-    import { defineComponent, toRaw } from 'vue'
+    import { defineComponent, markRaw, toRaw } from 'vue'
     import { runtimeData } from '../../function/msg'
-    import Option, { runASWEvent as save, get, checkDefault, runAS } from '../../function/option'
+    import Option, { runASWEvent as save, get, checkDefault, runAS, run } from '../../function/option'
     import { BrowserInfo, detect } from 'detect-browser'
     import { getDeviceType } from '@renderer/function/utils/systemUtil'
+    import ThemeColorPickerPan from '@renderer/components/ThemeColorPickerPan.vue'
 
     import languages from '../../assets/l10n/_l10nconfig.json'
     import { sendIdentifyData } from '@renderer/function/utils/appUtil'
@@ -540,10 +545,18 @@
                 fsAdaptationShow: 0,
                 usedIcon: '',
                 themeColorRaw: '',
+                themeColorDraft: '#FFFFFF',
+                themeColorHistory: [] as string[],
             }
         },
+        watch: {
+            'runtimeData.sysConfig.theme_color'() {
+                this.themeColorRaw = this.getThemeColorRawValue()
+            },
+        },
         mounted() {
-            this.themeColorRaw = '#' + ('000000' + Number((this.runtimeData.sysConfig.theme_color || 0)).toString(16)).slice(-6)
+            this.themeColorRaw = this.getThemeColorRawValue()
+            this.themeColorHistory = this.loadThemeColorHistory()
             // 一次性初始化一次缩放级别
             const watch = this.$watch(
                 () => runtimeData.sysConfig,
@@ -584,18 +597,122 @@
 
             themeColorChange(event: Event) {
                 event.preventDefault()
+                const originThemeColorValue = Number(this.runtimeData.sysConfig.theme_color ?? 0)
+                this.themeColorDraft = this.getThemeColorRawValue()
+                runtimeData.popBoxList.push({
+                    title: this.$t('主题色'),
+                    allowQuickClose: true,
+                    onClose: () => {
+                        this.restoreThemeColor(originThemeColorValue)
+                    },
+                    template: markRaw(ThemeColorPickerPan),
+                    templateValue: markRaw({
+                        modelValue: this.themeColorDraft,
+                        onChange: (value: string) => {
+                            this.themeColorDraft = this.normalizeHexColor(value)
+                            run('theme_color', parseInt(this.themeColorDraft.slice(1), 16))
+                        },
+                        historyColors: this.themeColorHistory,
+                    }),
+                    button: [
+                        {
+                            text: this.$t('取消'),
+                            fun: () => {
+                                this.restoreThemeColor(originThemeColorValue)
+                                runtimeData.popBoxList[0].onClose = undefined
+                                runtimeData.popBoxList.shift()
+                            },
+                        },
+                        {
+                            text: this.$t('确认'),
+                            master: true,
+                            fun: () => {
+                                const saveColor = this.normalizeHexColor(this.themeColorDraft)
+                                this.themeColorRaw = saveColor
+                                this.themeColorHistory = this.saveThemeColorHistory(saveColor)
+                                runtimeData.popBoxList[0].onClose = undefined
+                                runAS('theme_color', parseInt(saveColor.slice(1), 16))
+                                runtimeData.popBoxList.shift()
+                            },
+                        },
+                    ],
+                })
+            },
 
-                const colorInput = document.getElementById(
-                    'theme_color_custom',
-                ) as HTMLInputElement
-                if (colorInput) {
-                    colorInput.click()
-                    colorInput.onchange = (e) => {
-                        const value = (e.target as HTMLInputElement).value
-                        const saveValue = parseInt(value.replace('#', ''), 16)
-                        runAS('theme_color', saveValue)
-                    }
+            getThemeColorRawValue() {
+                const currentValue = Number(this.runtimeData.sysConfig.theme_color ?? 0)
+                if (currentValue > 10) {
+                    return '#' + ('000000' + currentValue.toString(16)).slice(-6).toUpperCase()
                 }
+                const cssColor = getComputedStyle(document.documentElement).getPropertyValue('--color-main')
+                return this.cssColorToHex(cssColor)
+            },
+
+            restoreThemeColor(themeColorValue: number) {
+                run('theme_color', themeColorValue)
+                this.themeColorRaw = this.getThemeColorRawValue()
+            },
+
+            loadThemeColorHistory() {
+                const source = this.getCookie('theme_color_history')
+                if (!source) return []
+                try {
+                    const parsed = JSON.parse(source)
+                    if (!Array.isArray(parsed)) return []
+                    return parsed
+                        .map((item) => this.normalizeHexColor(String(item)))
+                        .filter((item, index, list) => list.indexOf(item) === index)
+                        .slice(0, 8)
+                } catch {
+                    return []
+                }
+            },
+
+            saveThemeColorHistory(color: string) {
+                const normalized = this.normalizeHexColor(color)
+                const nextHistory = [
+                    normalized,
+                    ...this.themeColorHistory.filter((item) => item !== normalized),
+                ].slice(0, 8)
+                this.setCookie('theme_color_history', JSON.stringify(nextHistory), 3650)
+                return nextHistory
+            },
+
+            getCookie(name: string) {
+                const prefix = `${name}=`
+                const cookie = document.cookie
+                    .split('; ')
+                    .find((item) => item.startsWith(prefix))
+                return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : null
+            },
+
+            setCookie(name: string, value: string, days: number) {
+                const expires = new Date()
+                expires.setDate(expires.getDate() + days)
+                document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`
+            },
+
+            cssColorToHex(color: string) {
+                const value = color.trim()
+                if (value.startsWith('#')) {
+                    return this.normalizeHexColor(value)
+                }
+                const match = value.match(/^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i)
+                if (!match) return '#FFFFFF'
+                return '#' + match.slice(1, 4).map((item) => {
+                    return Number(item).toString(16).padStart(2, '0')
+                }).join('').toUpperCase()
+            },
+
+            normalizeHexColor(color: string | undefined) {
+                const value = (color ?? '').trim()
+                const match = value.match(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/)
+                if (!match) return '#FFFFFF'
+                const hex = match[1]
+                if (hex.length === 3) {
+                    return '#' + hex.split('').map((item) => item + item).join('').toUpperCase()
+                }
+                return '#' + hex.toUpperCase()
             },
 
             blurTip(event: Event) {

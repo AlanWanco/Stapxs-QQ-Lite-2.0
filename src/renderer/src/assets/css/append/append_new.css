@@ -79,6 +79,12 @@ body {
     background: transparent;
 }
 
+.global-music-player {
+    left: 50px !important;
+    background-color: rgba(var(--color-card-rgb), 0.4) !important;
+    backdrop-filter: blur(30px);
+}
+
 .friend-list {
     width: var(--desktop-friend-list-width);
 }

@@ -611,6 +611,7 @@ import {
     defineComponent,
     markRaw,
     reactive,
+    toRaw,
 } from 'vue'
 import { v4 as uuid } from 'uuid'
 import {
@@ -639,6 +640,7 @@ import {
 import { Logger, LogType, PopInfo, PopType } from '@renderer/function/base'
 import { Connector } from '@renderer/function/connect'
 import { runtimeData } from '@renderer/function/msg'
+import { addUploadTask, completeUploadTask, failUploadTask } from '@renderer/components/FileManager.vue'
 import {
     BaseChatInfoElem,
     MsgItemElem,
@@ -664,6 +666,18 @@ import { Img } from '@renderer/function/model/img'
     }
 
     type ComposerSnapshot = ComposerDraftElem
+
+    function cloneMessagePayload<T>(payload: T): T {
+        const rawPayload = toRaw(payload)
+        if (typeof structuredClone === 'function') {
+            try {
+                return structuredClone(rawPayload)
+            } catch {
+                return JSON.parse(JSON.stringify(rawPayload))
+            }
+        }
+        return JSON.parse(JSON.stringify(rawPayload))
+    }
 
     export default defineComponent({
         name: 'ViewChat',
@@ -1923,7 +1937,7 @@ import { Img } from '@renderer/function/model/img'
 
             forwardSelf() {
                 if (this.selectedMsg) {
-                    const msg = JSON.parse(JSON.stringify(this.selectedMsg))
+                    const msg = cloneMessagePayload(this.selectedMsg)
                     sendMsgRaw(
                         this.chat.show.id,
                         this.chat.show.type,
@@ -2886,7 +2900,14 @@ import { Img } from '@renderer/function/model/img'
                 }
             },
             sendFile(file: File, fileName: string | null) {
-                this.uploadFileStream(file, fileName ?? file.name ?? this.$t('未知文件'))
+                const displayName = fileName ?? file.name ?? this.$t('未知文件')
+                addUploadTask({
+                    fileName: displayName,
+                    fileSize: file.size,
+                    execute: (taskId, onProgress) => {
+                        this.uploadFileStream(file, displayName, taskId, onProgress)
+                    },
+                })
             },
 
             /**
@@ -2894,7 +2915,7 @@ import { Img } from '@renderer/function/model/img'
              * 分片大小 512KB，每片超时 30s
              * 上传完成后调 upload_group_file / upload_private_file 发送
              */
-            async uploadFileStream(file: File, fileName: string) {
+            async uploadFileStream(file: File, fileName: string, taskId: string, onProgress: (loaded: number, total: number) => void) {
                 const CHUNK_SIZE = 512 * 1024   // 512 KB
                 const CHUNK_TIMEOUT = 30000      // 30s
                 const popInfo = new PopInfo()
@@ -2907,6 +2928,7 @@ import { Img } from '@renderer/function/model/img'
                 try {
                     buffer = await file.arrayBuffer()
                 } catch (e) {
+                    failUploadTask(taskId, '文件读取失败')
                     popInfo.add(PopType.ERR, this.$t('读取文件失败'))
                     return
                 }
@@ -2960,11 +2982,13 @@ import { Img } from '@renderer/function/model/img'
                     try {
                         await Connector.waitReturn(echo, CHUNK_TIMEOUT)
                     } catch (e) {
+                        failUploadTask(taskId, `文件上传超时（第 ${i + 1} 片）`)
                         runtimeData.fileUploadProgress = -1
                         popInfo.add(PopType.ERR, this.$t('文件上传超时（第 {n} 片）', { n: i + 1 }))
                         return
                     }
 
+                    onProgress(end, totalSize)
                     runtimeData.fileUploadProgress = Math.round(((i + 1) / totalChunks) * 95)
                 }
 
@@ -2979,6 +3003,7 @@ import { Img } from '@renderer/function/model/img'
                 try {
                     completeResp = await Connector.waitReturn(completeEcho, CHUNK_TIMEOUT)
                 } catch (e) {
+                    failUploadTask(taskId, '文件上传完成确认超时')
                     runtimeData.fileUploadProgress = -1
                     popInfo.add(PopType.ERR, this.$t('文件上传完成确认超时'))
                     return
@@ -2988,6 +3013,7 @@ import { Img } from '@renderer/function/model/img'
                 const serverPath: string | undefined =
                     completeResp?.data?.file_path ?? completeResp?.file_path
                 if (!serverPath) {
+                    failUploadTask(taskId, '服务端未返回文件路径')
                     runtimeData.fileUploadProgress = -1
                     popInfo.add(PopType.ERR, this.$t('服务端未返回文件路径'))
                     return
@@ -3018,6 +3044,7 @@ import { Img } from '@renderer/function/model/img'
                     // 忽略错误
                 }
 
+                completeUploadTask(taskId)
                 runtimeData.fileUploadProgress = 100
                 // 自动刷新当前聊天（如果还在这个窗口）
                 if (runtimeData.chatInfo.show.id === chatId) {

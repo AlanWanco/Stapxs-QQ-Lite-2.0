@@ -53,6 +53,10 @@
     .side-bar-space {
         display: none;
     }
+    .global-music-player {
+        bottom: calc(65px + var(--safe-area-bottom)) !important;
+        left: 10px !important;
+    }
     .friend-list {
         background: var(--color-card);
         width: var(--mobile-sidebar-wide);
@@ -168,9 +172,27 @@
     .face-pan div.title > span{
         font-size: 1rem;
     }
+    .face-pan div.system-face-bar {
+        height: 315px;
+    }
     .base-face, .face-stickers {
         height: clamp(12.5rem, 38vh, 20rem);
         padding: 0;
+    }
+    .custom-face-bar .face {
+        margin: 0 10px;
+    }
+    .face > span {
+        width: 70px;
+        height: 70px;
+    }
+    .face > div {
+        width: 50px;
+        height: 50px;
+    }
+    .face > div > .emoji-face {
+        width: 30px;
+        height: 30px;
     }
     .img-sender {
         height: calc(100% - var(--safe-area-top) - calc(var(--safe-area-bottom) + 0.9rem));
@@ -187,7 +209,6 @@
     }
     .msg-img.alone {
         max-width: calc(100% + 1.875rem);
-        margin: -0.625rem -0.9rem;
     }
     /* 设置面板 */
     .opt-tab {
@@ -234,6 +255,7 @@
     }
     .opt-tab .tab-body > div {
         padding: 0 10%;
+        width: 100%;
     }
     .friend-list-space {
         border-left: 1px solid var(--color-card-2);
