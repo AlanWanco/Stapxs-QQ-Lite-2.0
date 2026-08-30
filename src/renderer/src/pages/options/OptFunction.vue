@@ -7,7 +7,7 @@
 <!-- eslint-disable max-len -->
 
 <template>
-    <div class="opt-page">
+    <div ref="functionPage" class="opt-page">
         <div class="ss-card">
             <header>{{ $t('通知选项') }}</header>
             <div class="opt-item">
@@ -456,6 +456,7 @@ import { backend } from '@renderer/runtime/backend'
                 dbStats: null as null | { totalMessages: number; imageCount: number; imageCacheBytes: number; dbSizeBytes: number },
                 clearImageProgressText: '',
                 localHistoryPath: '',
+                functionPageObserver: null as IntersectionObserver | null,
             }
         },
         mounted() {
@@ -468,6 +469,19 @@ import { backend } from '@renderer/runtime/backend'
                 this.loadDbStats()
                 this.loadLocalHistoryPath()
             })
+            // 切到“功能”页时刷新统计，保证看到最新缓存情况。
+            const page = this.$refs.functionPage as HTMLElement | undefined
+            if (page && 'IntersectionObserver' in window) {
+                this.functionPageObserver = new IntersectionObserver((entries) => {
+                    if (entries.some((entry) => entry.isIntersecting)) {
+                        this.loadDbStats()
+                    }
+                }, { threshold: 0.2 })
+                this.functionPageObserver.observe(page)
+            }
+        },
+        beforeUnmount() {
+            this.functionPageObserver?.disconnect()
         },
         methods: {
             showUmamiInfo() {
