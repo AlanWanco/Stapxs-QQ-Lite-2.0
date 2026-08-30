@@ -513,8 +513,8 @@
                         <a>{{ $t('重新编辑') }}</a>
                     </div>
                     <div v-show="tags.menuDisplay.resave" @click="resaveSelectedMsg">
-                        <div><font-awesome-icon :icon="['fas', 'database']" /></div>
-                        <a>{{ $t('重存消息') }}</a>
+                        <div><font-awesome-icon :icon="['fas', 'rotate']" /></div>
+                        <a>{{ $t('重载') }}</a>
                     </div>
                     <div v-show="tags.menuDisplay.at"
                         @click="selectedMsg ? addSpecialMsg({ msgObj: { type: 'at', qq: Number(selectedMsg.sender.user_id) }, addText: true, }): '';
@@ -644,7 +644,7 @@ import {
 } from '@renderer/function/utils/msgUtil'
 import { Logger, LogType, PopInfo, PopType } from '@renderer/function/base'
 import { Connector } from '@renderer/function/connect'
-import { runtimeData } from '@renderer/function/msg'
+import { runtimeData, getMessageList } from '@renderer/function/msg'
 import { addUploadTask, completeUploadTask, failUploadTask } from '@renderer/components/FileManager.vue'
 import {
     BaseChatInfoElem,
@@ -2425,9 +2425,47 @@ import { Img } from '@renderer/function/model/img'
                     new PopInfo().add(PopType.INFO, this.$t('请先启用消息存储'))
                     return
                 }
-                const { saveMessagesWithSideEffects } = await import('@renderer/function/utils/localHistoryUtil')
-                await saveMessagesWithSideEffects(runtimeData.loginInfo.uin, [msg])
-                new PopInfo().add(PopType.INFO, this.$t('已重新保存消息'))
+                const msgId = msg.message_id
+                try {
+                    const type = msg.message_type ?? this.chat.show.type
+                    const chatId = msg.group_id ?? msg.user_id ?? this.chat.show.id
+                    const echo = 'reloadHistory_' + msgId + '_' + Date.now()
+                    const apiName = type === 'group'
+                        ? runtimeData.jsonMap.message_list?.name
+                        : runtimeData.jsonMap.message_list?.private_name ?? runtimeData.jsonMap.message_list?.name
+                    Connector.send(
+                        apiName ?? 'get_chat_history',
+                        {
+                            group_id: type === 'group' ? chatId : undefined,
+                            user_id: type !== 'group' ? chatId : undefined,
+                            message_id: 0,
+                            count: 40,
+                        },
+                        echo,
+                    )
+                    const raw = await Connector.waitReturn(echo)
+                    const parsed = getMsgData('message_list', raw, runtimeData.jsonMap.message_list)
+                    const list = await getMessageList(parsed)
+                    const fullMsg = list?.find((m: any) => String(m.message_id) === String(msgId))
+                    const { saveMessagesWithSideEffects } = await import('@renderer/function/utils/localHistoryUtil')
+                    if (fullMsg) {
+                        const clean = JSON.parse(JSON.stringify(fullMsg))
+                        if (Array.isArray(clean.message)) {
+                            clean.message.forEach((s: any) => {
+                                delete s.record_error
+                                delete s.record_loading
+                                delete s.record_retry_loading
+                                delete s.record_failed
+                            })
+                        }
+                        await saveMessagesWithSideEffects(runtimeData.loginInfo.uin, [clean])
+                        new PopInfo().add(PopType.INFO, this.$t('已重新保存消息'))
+                    } else {
+                        new PopInfo().add(PopType.INFO, this.$t('获取选中消息失败'))
+                    }
+                } catch (e) {
+                    new PopInfo().add(PopType.ERR, this.$t('获取选中消息失败'))
+                }
             },
 
             /**

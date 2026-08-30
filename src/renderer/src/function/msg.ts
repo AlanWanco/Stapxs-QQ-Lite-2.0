@@ -1550,7 +1550,13 @@ async function normalizeMessagesFromPayload(payload: any): Promise<any[] | undef
 }
 
 function normalizeNewIncomingMessage(data: any): any[] {
-    let list = getMsgData('message_list', buildMsgList([data]), msgPath.message_list)
+    // parseMsgList 会原地修改消息段（并删除 seg.data）。
+    // newMsg() 后面还要再用原始 payload 调 saveMsg() 解析一遍，
+    // 所以这里必须先 clone，避免第一次 parse 把 record 的 file/path/url 删掉。
+    const cloned = typeof structuredClone === 'function'
+        ? structuredClone(data)
+        : JSON.parse(JSON.stringify(data))
+    let list = getMsgData('message_list', buildMsgList([cloned]), msgPath.message_list)
     if (list == undefined) return []
     list = parseMsgList(list, msgPath.message_list.type, msgPath.message_value)
     return list
@@ -1789,6 +1795,18 @@ function newMsg(_: string, data: any) {
         return
     }
 
+    // [VoiceDebug] 打印实时消息中的 record 段原始结构
+    try {
+        const rawSegs = data?.message
+        if (Array.isArray(rawSegs)) {
+            rawSegs.forEach((seg: any) => {
+                if (seg?.type === 'record') {
+                    console.log('[VoiceDebug] 实时 record 段 =', JSON.stringify(seg))
+                }
+            })
+        }
+    } catch (e) { /* ignore */ }
+
     const infoList = getMsgData('message_info', data, msgPath.message_info)
     if (infoList != undefined) {
         // 消息基础信息 ============================================
@@ -1895,6 +1913,53 @@ function newMsg(_: string, data: any) {
                     msgPath.message_value,
                 )
                 data = parsed[0]
+            }
+        }
+
+        // [Voice] 实时推送的 record 段可能缺 file（NapCat 只给 file_size）。
+        // 用历史接口拉最近几条完整消息，按 message_id 补全 record 的 file/url。
+        if (data?.message && data.message.some((s: any) => s?.type === 'record' && !s?.file)) {
+            const msgId = data.message_id
+            const type = data.message_type
+            const chatId = data.group_id ?? data.user_id
+            if (msgId && chatId) {
+                const echo = 'voiceHistoryFill_' + msgId + '_' + Date.now()
+                const apiName = type === 'group'
+                    ? runtimeData.jsonMap.message_list?.name
+                    : runtimeData.jsonMap.message_list?.private_name ?? runtimeData.jsonMap.message_list?.name
+                Connector.send(
+                    apiName ?? 'get_chat_history',
+                    {
+                        group_id: type === 'group' ? chatId : undefined,
+                        user_id: type !== 'group' ? chatId : undefined,
+                        message_id: 0,
+                        count: 5,
+                    },
+                    echo,
+                )
+                Connector.waitReturn(echo)
+                    .then(async (raw: any) => {
+                        const parsed = getMsgData('message_list', raw, msgPath.message_list)
+                        const list = await getMessageList(parsed)
+                        const fullMsg = list?.find((m: any) => String(m.message_id) === String(msgId))
+                        const fullRec = fullMsg?.message?.find((s: any) => s?.type === 'record')
+                        if (fullRec?.file && data?.message) {
+                            data.message.forEach((s: any) => {
+                                if (s?.type === 'record' && !s?.file) {
+                                    s.file = fullRec.file
+                                    s.url = fullRec.url ?? s.url
+                                    s.path = fullRec.path ?? s.path
+                                    s.base64 = fullRec.base64 ?? s.base64
+                                }
+                            })
+                            console.log('[Voice] 已补全 record file =', JSON.stringify(fullRec.file))
+                        } else {
+                            console.log('[Voice] 历史补全失败，响应 =', JSON.stringify(list)?.substring(0, 300))
+                        }
+                    })
+                    .catch((e) => {
+                        console.log('[Voice] 历史补全异常 =', e?.message ?? String(e))
+                    })
             }
         }
 

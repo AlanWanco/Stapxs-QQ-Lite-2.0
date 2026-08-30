@@ -686,7 +686,7 @@ function getUserById(id: number): IUser | undefined {
 
             retryRecordAudio(item: any, reason: string) {
                 if (item.record_retry_loading) return
-                const file = item.file ?? item.path
+                const file = this.getRecordFile(item)
                 const nextFormat = item.record_format === 'mp3' ? 'wav' : 'mp3'
                 if (!file || !runtimeData.jsonMap.record_file || item.record_retry_formats?.includes(nextFormat)) {
                     item.record_url = ''
@@ -739,12 +739,24 @@ function getUserById(id: number): IUser | undefined {
                 return ''
             },
 
+            getRecordFile(item: any, preferPath = false) {
+                // 兼容历史/实时两种 record 结构：data.file / file / data.path / path
+                const d = item?.data ?? {}
+                const file = item?.file ?? d?.file
+                const path = item?.path ?? d?.path
+                return preferPath ? (path || file) : (file || path)
+            },
+
             getRecordMessageAudioSrc(item: any) {
-                if (item.base64) return `data:audio/mpeg;base64,${item.base64}`
-                if (typeof item.file === 'string' && item.file.startsWith('base64://')) {
-                    return `data:audio/mpeg;base64,${item.file.slice(9)}`
+                if (item.base64 || item?.data?.base64) {
+                    return `data:audio/mpeg;base64,${item.base64 ?? item?.data?.base64}`
                 }
-                return this.isPlayableRecordUrl(item.url) ? item.url : ''
+                const file = this.getRecordFile(item)
+                if (typeof file === 'string' && file.startsWith('base64://')) {
+                    return `data:audio/mpeg;base64,${file.slice(9)}`
+                }
+                const url = item?.url ?? item?.data?.url
+                return this.isPlayableRecordUrl(url) ? url : ''
             },
 
             isPlayableRecordUrl(url: string | undefined) {
@@ -759,13 +771,15 @@ function getUserById(id: number): IUser | undefined {
                 if (item.record_loading) return this.$t('语音加载中')
                 if (item.record_failed) return this.$t('语音加载失败')
 
-                const file = item.file ?? item.path
+                const file = this.getRecordFile(item)
                 if (!file || !runtimeData.jsonMap.record_file) {
                     item.record_error = !file ? 'missing record file/path' : 'missing record_file api map'
+                    console.log('[Voice] missing record, 完整 item =', JSON.stringify(item))
                     return item.url ? this.$t('语音格式暂不支持') : this.$t('语音暂不可播放')
                 }
 
                 item.record_loading = true
+                console.log('[Voice] 开始转换语音', JSON.stringify({ file, path: this.getRecordFile(item, true), url: item.url, raw: item }))
                 this.loadRecordByFormat(file, 'mp3').then((mp3Result) => {
                     if (mp3Result.url) return mp3Result
                     return this.loadRecordByFormat(file, 'wav').then((wavResult) => {
@@ -794,12 +808,15 @@ function getUserById(id: number): IUser | undefined {
             },
 
             async loadRecordByFormat(file: string, outFormat: 'mp3' | 'wav') {
+                console.log('[Voice] 请求 record_file', JSON.stringify({ file, outFormat }))
                 const data = await Connector.callApi('record_file', {
                     file,
                     out_format: outFormat,
                 })
+                console.log('[Voice] record_file 响应', JSON.stringify(data)?.substring(0, 400))
                 const record = Array.isArray(data) ? data[0] : data
                 const url = this.getRecordResponseUrl(record, outFormat)
+                console.log('[Voice] 解析出的 url', JSON.stringify(url)?.substring(0, 200))
                 if (!url) {
                     return {
                         url: '',
@@ -810,6 +827,12 @@ function getUserById(id: number): IUser | undefined {
                     return { url, error: '' }
                 }
                 if (url.startsWith('/') || url.startsWith('file://')) {
+                    // 本地路径：Tauri 下转 asset 协议 URL 才能播放
+                    const assetUrl = await this.convertLocalPath(url)
+                    console.log('[Voice] 本地路径转 asset', JSON.stringify({ url, assetUrl }))
+                    if (assetUrl !== url) {
+                        return { url: assetUrl, error: '' }
+                    }
                     return {
                         url: '',
                         error: 'bot returned local file path, not accessible by browser: ' + url,
@@ -819,6 +842,18 @@ function getUserById(id: number): IUser | undefined {
                     url: '',
                     error: 'unplayable url/file: ' + url,
                 }
+            },
+
+            async convertLocalPath(path: string): Promise<string> {
+                try {
+                    if (backend.type === 'tauri') {
+                        const { convertFileSrc } = await import('@tauri-apps/api/core')
+                        return convertFileSrc(path)
+                    }
+                } catch (_) {
+                    // ignore
+                }
+                return path
             },
 
             getRecordResponseUrl(record: any, outFormat: 'mp3' | 'wav') {

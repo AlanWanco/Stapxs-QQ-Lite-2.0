@@ -1567,3 +1567,153 @@ msgstr ""
 
 msgid "查看头像"
 msgstr ""
+
+msgid "启用消息存储"
+msgstr "启用消息存储"
+
+msgid "保存消息记录何尝不是一种囤囤鼠"
+msgstr "保存消息记录何尝不是一种囤囤鼠"
+
+msgid "保存路径"
+msgstr "保存路径"
+
+msgid "选择目录"
+msgstr "选择目录"
+
+msgid "路径加载中..."
+msgstr "路径加载中..."
+
+msgid "路径获取失败"
+msgstr "路径获取失败"
+
+msgid "消息存储路径已更新，旧数据已尝试自动迁移。"
+msgstr "消息存储路径已更新，旧数据已尝试自动迁移。"
+
+msgid "请先启用消息存储"
+msgstr "请先启用消息存储"
+
+msgid "本地历史"
+msgstr "本地历史"
+
+msgid "清理图片缓存"
+msgstr "清理图片缓存"
+
+msgid "仅清理本地缓存图片，不删除消息记录"
+msgstr "仅清理本地缓存图片，不删除消息记录"
+
+msgid "清理"
+msgstr "清理"
+
+msgid "正在清理图片缓存 0/0（0%）"
+msgstr "正在清理图片缓存 0/0（0%）"
+
+msgid "正在清理图片缓存 {deleted}/{total}（{percent}%）"
+msgstr "正在清理图片缓存 {deleted}/{total}（{percent}%）"
+
+msgid "图片缓存清理完成，共删除 {count} 项（{batches} 批）。"
+msgstr "图片缓存清理完成，共删除 {count} 项（{batches} 批）。"
+
+msgid "确认要清理本地图片缓存吗？"
+msgstr "确认要清理本地图片缓存吗？"
+
+msgid "确认要关闭图片缓存吗？所有已缓存图片都将被清除！"
+msgstr "确认要关闭图片缓存吗？所有已缓存图片都将被清除！"
+
+msgid "已存消息"
+msgstr "已存消息"
+
+msgid "数据库大小"
+msgstr "数据库大小"
+
+msgid "图片缓存"
+msgstr "图片缓存"
+
+msgid "刷新统计"
+msgstr "刷新统计"
+
+msgid "混合加载消息（实验性）"
+msgstr "混合加载消息（实验性）"
+
+msgid "优先加载本地缓存的消息以取得更快的加载速度"
+msgstr "优先加载本地缓存的消息以取得更快的加载速度"
+
+msgid "不缓存图片"
+msgstr "不缓存图片"
+
+msgid "开启后将删除已缓存图片，仅保留消息文本"
+msgstr "开启后将删除已缓存图片，仅保留消息文本"
+
+msgid "Stapxs QQ Lite 支持将消息缓存至本地，消息将以加密数据库的方式安全的保存。"
+msgstr "Stapxs QQ Lite 支持将消息缓存至本地，消息将以加密数据库的方式安全的保存。"
+
+msgid "重存消息"
+msgstr "重存消息"
+
+msgid "已重新保存消息"
+msgstr "已重新保存消息"
+
+msgid "请连接后在进行操作"
+msgstr "请连接后在进行操作"
+
+msgid "语音消息"
+msgstr "语音消息"
+
+msgid "语音加载中"
+msgstr "语音加载中"
+
+msgid "语音加载失败"
+msgstr "语音加载失败"
+
+msgid "语音暂不可播放"
+msgstr "语音暂不可播放"
+
+msgid "语音格式暂不支持"
+msgstr "语音格式暂不支持"
+
+msgid "搜索已保存的消息"
+msgstr "搜索已保存的消息"
+
+msgid "全部标记已读"
+msgstr "全部标记已读"
+
+msgid "已全部标记为已读"
+msgstr "已全部标记为已读"
+
+msgid "加载历史消息失败"
+msgstr "加载历史消息失败"
+
+msgid "未知文件"
+msgstr "未知文件"
+
+msgid "文件大于 1GB。发送速度可能会非常缓慢；确认要发送吗？"
+msgstr "文件大于 1GB。发送速度可能会非常缓慢；确认要发送吗？"
+
+msgid "文件上传超时（第 {n} 片）"
+msgstr "文件上传超时（第 {n} 片）"
+
+msgid "文件上传完成确认超时"
+msgstr "文件上传完成确认超时"
+
+msgid "服务端未返回文件路径"
+msgstr "服务端未返回文件路径"
+
+msgid "文件发送成功"
+msgstr "文件发送成功"
+
+msgid "图片太大，无法发送"
+msgstr "图片太大，无法发送"
+
+msgid "重载"
+msgstr "重载"
+
+msgid "获取选中消息失败"
+msgstr "获取选中消息失败"
+
+msgid "添加到本地表情"
+msgstr "添加到本地表情"
+
+msgid "重新编辑"
+msgstr "重新编辑"
+
+msgid "加载失败"
+msgstr "加载失败"
