@@ -37,7 +37,7 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
-    "@tauri-apps/api": "^2.9.0",
+    "@tauri-apps/api": "^2.11.0",
     "@tauri-apps/plugin-clipboard-manager": "^2.3.0",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-shell": "~2",
@@ -76,7 +76,7 @@
     "@rushstack/eslint-patch": "^1.10.3",
     "@stapxs/capacitor-sync-version": "^1.0.10",
     "@stapxs/umami-logger-typescript": "^1.0.15",
-    "@tauri-apps/cli": "^2.3.1",
+    "@tauri-apps/cli": "^2.11.0",
     "@types/jsonpath": "^0.2.4",
     "@types/node": "^20.14.8",
     "@types/semver": "^7.5.8",
