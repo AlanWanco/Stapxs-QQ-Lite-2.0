@@ -2,6 +2,7 @@ mod commands;
 
 use commands::db::DbState;
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 use commands::utils::http_proxy::ProxyServer;
 use log::{info, error};
@@ -79,8 +80,14 @@ pub fn run() {
                 info!("代理服务器已启动，端口：{}", PROXY_PORT.get().unwrap());
             }
 
-            let data_dir = app.path().app_data_dir()
+            let default_dir = app.path().app_data_dir()
                 .expect("无法获取 app data 目录");
+            let data_dir = store
+                .get("local_history_path")
+                .and_then(|v| v.as_str().map(|s| s.trim().to_string()))
+                .filter(|s| !s.is_empty())
+                .map(PathBuf::from)
+                .unwrap_or_else(|| default_dir.clone());
             let enable_local_history = store
                 .get("enable_local_history")
                 .map(|v| v.as_bool().unwrap_or_else(|| v.as_str() == Some("true")))
@@ -264,6 +271,7 @@ pub fn run() {
             commands::db::db_cache_image,
             commands::db::db_get_image,
             commands::db::db_clear_images,
+            commands::db::db_set_storage_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

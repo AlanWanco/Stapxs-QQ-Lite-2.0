@@ -91,6 +91,7 @@ export const optDefault: { [key: string]: any } = {
     open_ga_bot: true,
     record_recent_emoji: '100times' as 'none' | 'order' | '100times' | '500times',
     enable_local_history: false,
+    local_history_path: '',
     mixed_load_messages: false,
     disable_local_history_image_cache: false,
     // Dev

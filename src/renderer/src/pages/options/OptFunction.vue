@@ -312,8 +312,8 @@
                     <span>{{ $t('保存路径') }}</span>
                     <span class="db-path">{{ localHistoryPath || $t('路径加载中...') }}</span>
                 </div>
-                <button class="ss-button" style="width: 100px; font-size: 0.8rem;" @click="backupHistoryPlaceholder">
-                    {{ $t('备份') }}
+                <button class="ss-button" style="width: 100px; font-size: 0.8rem;" @click="chooseLocalHistoryPath">
+                    {{ $t('选择目录') }}
                 </button>
             </div>
             <div v-if="runtimeData.sysConfig.enable_local_history" class="opt-item">
@@ -522,11 +522,18 @@ import { backend } from '@renderer/runtime/backend'
                 if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
                 return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
             },
-            backupHistoryPlaceholder() {
-                new PopInfo().add(
-                    PopType.INFO,
-                    this.$t('聊天记录备份入口先占位，后续再补真正导出逻辑。'),
-                )
+            async chooseLocalHistoryPath() {
+                if (backend.type !== 'tauri') return
+                const folder = await backend.call(undefined, 'sys:selectFolder', true)
+                if (!folder) return
+                this.localHistoryPath = this.$t('路径加载中...')
+                const newPath = await backend.call(undefined, 'db:setStoragePath', true, { newDir: folder })
+                if (newPath) {
+                    this.localHistoryPath = newPath
+                    new PopInfo().add(PopType.INFO, this.$t('消息存储路径已更新，旧数据已尝试自动迁移。'))
+                } else {
+                    this.localHistoryPath = this.$t('路径获取失败')
+                }
             },
             breakLineTip(event: Event) {
                 const sender = event.target as HTMLInputElement

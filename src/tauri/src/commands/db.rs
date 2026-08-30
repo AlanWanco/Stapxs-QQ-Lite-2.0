@@ -6,7 +6,8 @@ use rand::RngCore;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Mutex;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, State};
+use tauri_plugin_store::StoreBuilder;
 
 pub struct DbState(pub Mutex<DbStateInner>);
 
@@ -361,7 +362,13 @@ pub struct DbStats {
 }
 
 #[tauri::command]
-pub fn db_get_stats(state: State<DbState>, app_handle: tauri::AppHandle, self_id: String) -> Result<DbStats, String> {
+pub fn db_get_stats(state: State<DbState>, _app_handle: tauri::AppHandle, self_id: String) -> Result<DbStats, String> {
+    // 先取 data_dir（with_conn 会持锁，不能在里面再锁 state.0，否则死锁）
+    let data_dir = {
+        let inner = state.0.lock().map_err(|e| e.to_string())?;
+        inner.data_dir.clone()
+    };
+
     state.with_conn(|conn| {
         let total: i64 = conn.query_row(
             "SELECT COUNT(*) FROM messages WHERE self_id = ?1 AND revoked = 0",
@@ -375,7 +382,6 @@ pub fn db_get_stats(state: State<DbState>, app_handle: tauri::AppHandle, self_id
             |r| Ok((r.get(0)?, r.get(1)?)),
         ).unwrap_or((0, 0));
 
-        let data_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
         let db_size = std::fs::metadata(data_dir.join("messages.db")).map(|m| m.len()).unwrap_or(0);
 
         Ok(DbStats {
@@ -540,4 +546,56 @@ fn row_to_record(row: &rusqlite::Row) -> rusqlite::Result<MsgRecord> {
         raw_message: row.get(8)?,
         revoked: row.get::<_, i64>(9)? != 0,
     })
+}
+
+/// 设置本地历史存储目录，并把现有数据库文件迁移过去。
+/// 仅由用户主动触发，不掺入 opt_save_all。
+#[tauri::command]
+pub fn db_set_storage_path(app: AppHandle, state: State<DbState>, new_dir: String) -> Result<String, String> {
+    let new_dir = PathBuf::from(new_dir.trim());
+    if new_dir.as_os_str().is_empty() {
+        return Err("存储目录不能为空".to_string());
+    }
+    fs::create_dir_all(&new_dir).map_err(|e| format!("创建存储目录失败：{}", e))?;
+
+    let migrated = {
+        let mut inner = state.0.lock().map_err(|e| e.to_string())?;
+        let old_dir = inner.data_dir.clone();
+        if old_dir == new_dir {
+            return Ok(new_dir.join("messages.db").to_string_lossy().to_string());
+        }
+        // 关闭现有连接，避免文件被占用
+        inner.conn = None;
+
+        // 迁移数据库相关文件
+        for name in ["messages.db", "messages.db-wal", "messages.db-shm", "messages.dbkey"] {
+            let src = old_dir.join(name);
+            if !src.exists() {
+                continue;
+            }
+            let dst = new_dir.join(name);
+            if dst.exists() {
+                continue;
+            }
+            match fs::rename(&src, &dst) {
+                Ok(_) => {}
+                Err(_) => {
+                    fs::copy(&src, &dst).map_err(|e| format!("迁移文件 {} 失败：{}", name, e))?;
+                    fs::remove_file(&src).ok();
+                }
+            }
+        }
+        inner.data_dir = new_dir.clone();
+        true
+    };
+
+    if migrated {
+        // 保存配置，下次启动沿用
+        let store = StoreBuilder::new(&app, ".settings.dat").build().map_err(|e| e.to_string())?;
+        store.set("local_history_path", serde_json::Value::String(new_dir.to_string_lossy().to_string()));
+        store.save().map_err(|e| format!("保存配置失败：{}", e))?;
+        info!("本地历史存储目录已迁移到 {:?}", new_dir);
+    }
+
+    Ok(new_dir.join("messages.db").to_string_lossy().to_string())
 }
