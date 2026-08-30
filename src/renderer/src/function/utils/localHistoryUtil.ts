@@ -261,6 +261,22 @@ export interface DbClearImagesResult {
     batches: number
 }
 
+export interface DbExportBackupResult {
+    dbPath: string
+    deltaMessages: number
+    deltaImages: number
+    totalMessages: number
+    totalImages: number
+}
+
+export interface DbImportBackupResult {
+    dbPath: string
+    importedMessages: number
+    importedImages: number
+    totalMessages: number
+    totalImages: number
+}
+
 export async function dbClearImages(
     selfId: string | number,
     onProgress?: (progress: DbClearImagesProgress) => void,
@@ -296,6 +312,28 @@ export async function dbClearImages(
     } finally {
         if (unlisten) await unlisten()
     }
+}
+
+export async function dbExportBackup(selfId: string | number, backupDir: string): Promise<DbExportBackupResult | null> {
+    if (!isTauriHistoryAvailable() || !backupDir) return null
+    return callDb(
+        selfId,
+        'db:exportBackup',
+        { backupDir },
+        null,
+        '[LocalHistory] dbExportBackup 失败',
+    )
+}
+
+export async function dbImportBackup(selfId: string | number, backupDbPath: string): Promise<DbImportBackupResult | null> {
+    if (!isTauriHistoryAvailable() || !backupDbPath) return null
+    return callDb(
+        selfId,
+        'db:importBackup',
+        { backupDbPath },
+        null,
+        '[LocalHistory] dbImportBackup 失败',
+    )
 }
 
 async function cacheImagesFromMsgs(selfId: string | number, msgs: any[]): Promise<void> {

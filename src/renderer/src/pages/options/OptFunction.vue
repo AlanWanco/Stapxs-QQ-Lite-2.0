@@ -317,6 +317,36 @@
                 </button>
             </div>
             <div v-if="runtimeData.sysConfig.enable_local_history" class="opt-item">
+                <font-awesome-icon :icon="['fas', 'hard-drive']" />
+                <div>
+                    <span>{{ $t('备份目录') }}</span>
+                    <span class="db-path">{{ localHistoryBackupPath || $t('未设置') }}</span>
+                </div>
+                <button class="ss-button" style="width: 100px; font-size: 0.8rem;" @click="chooseLocalHistoryBackupPath">
+                    {{ $t('选择目录') }}
+                </button>
+            </div>
+            <div v-if="runtimeData.sysConfig.enable_local_history" class="opt-item">
+                <font-awesome-icon :icon="['fas', 'file-export']" />
+                <div>
+                    <span>{{ $t('导出到备份') }}</span>
+                    <span>{{ $t('将当前本地历史增量合并到备份目录') }}</span>
+                </div>
+                <button class="ss-button" style="width: 100px; font-size: 0.8rem;" @click="exportLocalHistoryBackup">
+                    {{ $t('导出') }}
+                </button>
+            </div>
+            <div v-if="runtimeData.sysConfig.enable_local_history" class="opt-item">
+                <font-awesome-icon :icon="['fas', 'file-import']" />
+                <div>
+                    <span>{{ $t('从备份导入') }}</span>
+                    <span>{{ $t('将 backup.db 中的聊天记录增量合并到当前本地历史') }}</span>
+                </div>
+                <button class="ss-button" style="width: 100px; font-size: 0.8rem;" @click="importLocalHistoryBackup">
+                    {{ $t('导入') }}
+                </button>
+            </div>
+            <div v-if="runtimeData.sysConfig.enable_local_history" class="opt-item">
                 <div :class="checkDefault('mixed_load_messages')" />
                 <font-awesome-icon :icon="['fas', 'shuffle']" />
                 <div>
@@ -440,7 +470,7 @@
     import UmamiInfoPan from '@renderer/components/UmamiInfoPan.vue'
 import { backend } from '@renderer/runtime/backend'
     import { PopInfo, PopType } from '@renderer/function/base'
-    import { dbClearImages, dbGetStats } from '@renderer/function/utils/localHistoryUtil'
+    import { dbClearImages, dbExportBackup, dbGetStats, dbImportBackup } from '@renderer/function/utils/localHistoryUtil'
 
     export default defineComponent({
         name: 'ViewOptFunction',
@@ -456,18 +486,24 @@ import { backend } from '@renderer/runtime/backend'
                 dbStats: null as null | { totalMessages: number; imageCount: number; imageCacheBytes: number; dbSizeBytes: number },
                 clearImageProgressText: '',
                 localHistoryPath: '',
+                localHistoryBackupPath: '',
                 functionPageObserver: null as IntersectionObserver | null,
             }
         },
         mounted() {
             this.loadDbStats()
             this.loadLocalHistoryPath()
+            this.loadLocalHistoryBackupPath()
             this.$watch(() => runtimeData.loginInfo.uin, () => {
                 this.loadDbStats()
             })
             this.$watch(() => runtimeData.sysConfig.enable_local_history, () => {
                 this.loadDbStats()
                 this.loadLocalHistoryPath()
+                this.loadLocalHistoryBackupPath()
+            })
+            this.$watch(() => runtimeData.sysConfig.local_history_backup_path, () => {
+                this.loadLocalHistoryBackupPath()
             })
             // 切到“功能”页时刷新统计，保证看到最新缓存情况。
             const page = this.$refs.functionPage as HTMLElement | undefined
@@ -516,6 +552,13 @@ import { backend } from '@renderer/runtime/backend'
                 const path = await backend.call(undefined, 'sys:getAppDataDir', true)
                 this.localHistoryPath = path ?? this.$t('路径获取失败')
             },
+            loadLocalHistoryBackupPath() {
+                if (backend.type !== 'tauri') {
+                    this.localHistoryBackupPath = ''
+                    return
+                }
+                this.localHistoryBackupPath = runtimeData.sysConfig.local_history_backup_path || ''
+            },
             formatDbSize(bytes: number) {
                 if (bytes < 1024) return `${bytes} B`
                 if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -534,6 +577,83 @@ import { backend } from '@renderer/runtime/backend'
                 } else {
                     this.localHistoryPath = this.$t('路径获取失败')
                 }
+            },
+            async chooseLocalHistoryBackupPath() {
+                if (backend.type !== 'tauri') return
+                const folder = await backend.call(undefined, 'sys:selectFolder', true)
+                if (!folder) return
+                this.localHistoryBackupPath = folder
+                runAS('local_history_backup_path', folder)
+                new PopInfo().add(PopType.INFO, this.$t('聊天记录备份目录已更新'))
+            },
+            async exportLocalHistoryBackup() {
+                const selfId = runtimeData.loginInfo?.uin
+                if (!selfId) {
+                    new PopInfo().add(PopType.INFO, this.$t('请连接后在进行操作'))
+                    return
+                }
+                const backupDir = runtimeData.sysConfig.local_history_backup_path
+                if (!backupDir) {
+                    new PopInfo().add(PopType.INFO, this.$t('请先设置备份目录'))
+                    return
+                }
+                const progressPop = {
+                    title: this.$t('提醒'),
+                    html: `<span>${this.$t('正在导出聊天记录备份...')}</span>`,
+                    allowClose: false,
+                }
+                runtimeData.popBoxList.push(progressPop)
+                const result = await dbExportBackup(selfId, backupDir)
+                if (runtimeData.popBoxList.length > 0) {
+                    runtimeData.popBoxList.shift()
+                }
+                if (!result) {
+                    new PopInfo().add(PopType.ERR, this.$t('聊天记录备份导出失败'))
+                    return
+                }
+                new PopInfo().add(
+                    PopType.INFO,
+                    this.$t('聊天记录已导出到备份，本次新增 {deltaMessages} 条消息和 {deltaImages} 张图片；当前备份共包含 {messages} 条消息和 {images} 张图片。', {
+                        deltaMessages: Number(result.deltaMessages ?? 0).toLocaleString(),
+                        deltaImages: Number(result.deltaImages ?? 0).toLocaleString(),
+                        messages: Number(result.totalMessages ?? 0).toLocaleString(),
+                        images: Number(result.totalImages ?? 0).toLocaleString(),
+                    }),
+                )
+            },
+            async importLocalHistoryBackup() {
+                const selfId = runtimeData.loginInfo?.uin
+                if (!selfId) {
+                    new PopInfo().add(PopType.INFO, this.$t('请连接后在进行操作'))
+                    return
+                }
+                if (backend.type !== 'tauri') return
+                const file = await backend.call(undefined, 'sys:selectFile', true)
+                if (!file) return
+                const progressPop = {
+                    title: this.$t('提醒'),
+                    html: `<span>${this.$t('正在导入聊天记录备份...')}</span>`,
+                    allowClose: false,
+                }
+                runtimeData.popBoxList.push(progressPop)
+                const result = await dbImportBackup(selfId, file)
+                if (runtimeData.popBoxList.length > 0) {
+                    runtimeData.popBoxList.shift()
+                }
+                if (!result) {
+                    new PopInfo().add(PopType.ERR, this.$t('聊天记录备份导入失败'))
+                    return
+                }
+                this.loadDbStats()
+                new PopInfo().add(
+                    PopType.INFO,
+                    this.$t('聊天记录已导入，本次新增 {messages} 条消息和 {images} 张图片；当前本地历史共包含 {totalMessages} 条消息和 {totalImages} 张图片。', {
+                        messages: Number(result.importedMessages ?? 0).toLocaleString(),
+                        images: Number(result.importedImages ?? 0).toLocaleString(),
+                        totalMessages: Number(result.totalMessages ?? 0).toLocaleString(),
+                        totalImages: Number(result.totalImages ?? 0).toLocaleString(),
+                    }),
+                )
             },
             breakLineTip(event: Event) {
                 const sender = event.target as HTMLInputElement

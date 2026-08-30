@@ -1717,3 +1717,54 @@ msgstr "重新编辑"
 
 msgid "加载失败"
 msgstr "加载失败"
+
+msgid "备份目录"
+msgstr "备份目录"
+
+msgid "未设置"
+msgstr "未设置"
+
+msgid "导出到备份"
+msgstr "导出到备份"
+
+msgid "将当前本地历史增量合并到备份目录"
+msgstr "将当前本地历史增量合并到备份目录"
+
+msgid "导出"
+msgstr "导出"
+
+msgid "聊天记录备份目录已更新"
+msgstr "聊天记录备份目录已更新"
+
+msgid "请先设置备份目录"
+msgstr "请先设置备份目录"
+
+msgid "正在导出聊天记录备份..."
+msgstr "正在导出聊天记录备份..."
+
+msgid "聊天记录备份导出失败"
+msgstr "聊天记录备份导出失败"
+
+msgid "聊天记录已导出到备份，当前备份包含 {messages} 条消息和 {images} 张图片。"
+msgstr "聊天记录已导出到备份，当前备份包含 {messages} 条消息和 {images} 张图片。"
+
+msgid "从备份导入"
+msgstr "从备份导入"
+
+msgid "将 backup.db 中的聊天记录增量合并到当前本地历史"
+msgstr "将 backup.db 中的聊天记录增量合并到当前本地历史"
+
+msgid "导入"
+msgstr "导入"
+
+msgid "聊天记录已导出到备份，本次新增 {deltaMessages} 条消息和 {deltaImages} 张图片；当前备份共包含 {messages} 条消息和 {images} 张图片。"
+msgstr "聊天记录已导出到备份，本次新增 {deltaMessages} 条消息和 {deltaImages} 张图片；当前备份共包含 {messages} 条消息和 {images} 张图片。"
+
+msgid "正在导入聊天记录备份..."
+msgstr "正在导入聊天记录备份..."
+
+msgid "聊天记录备份导入失败"
+msgstr "聊天记录备份导入失败"
+
+msgid "聊天记录已导入，本次新增 {messages} 条消息和 {images} 张图片；当前本地历史共包含 {totalMessages} 条消息和 {totalImages} 张图片。"
+msgstr "聊天记录已导入，本次新增 {messages} 条消息和 {images} 张图片；当前本地历史共包含 {totalMessages} 条消息和 {totalImages} 张图片。"

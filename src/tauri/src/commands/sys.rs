@@ -641,6 +641,29 @@ pub async fn sys_select_folder() -> Result<Option<String>, String> {
 }
 
 #[command]
+pub async fn sys_select_file() -> Result<Option<String>, String> {
+    use rfd::AsyncFileDialog;
+
+    let file = AsyncFileDialog::new()
+        .set_title("选择备份文件")
+        .add_filter("SQLite Database", &["db", "sqlite", "sqlite3"])
+        .pick_file()
+        .await;
+
+    match file {
+        Some(handle) => {
+            let path = handle.path().to_string_lossy().to_string();
+            info!("选择的文件路径: {}", path);
+            Ok(Some(path))
+        },
+        None => {
+            info!("用户取消了文件选择");
+            Ok(None)
+        }
+    }
+}
+
+#[command]
 pub fn sys_get_app_data_dir(state: State<'_, crate::commands::db::DbState>) -> Result<String, String> {
     let inner = state.0.lock().map_err(|e| e.to_string())?;
     Ok(inner.data_dir.join("messages.db").to_string_lossy().to_string())

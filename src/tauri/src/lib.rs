@@ -236,6 +236,7 @@ pub fn run() {
             commands::sys::sys_flush_on_message,
             commands::sys::sys_flush_friend_search,
             commands::sys::sys_select_folder,
+            commands::sys::sys_select_file,
             commands::sys::sys_get_app_data_dir,
             commands::sys::sys_get_local_emojis,
             commands::sys::sys_get_default_face_path,
@@ -271,6 +272,8 @@ pub fn run() {
             commands::db::db_cache_image,
             commands::db::db_get_image,
             commands::db::db_clear_images,
+            commands::db::db_export_backup,
+            commands::db::db_import_backup,
             commands::db::db_set_storage_path,
         ])
         .run(tauri::generate_context!())

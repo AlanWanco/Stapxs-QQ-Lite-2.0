@@ -65,6 +65,26 @@ pub struct MsgRecord {
     pub revoked: bool,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DbExportBackupResult {
+    pub db_path: String,
+    pub delta_messages: i64,
+    pub delta_images: i64,
+    pub total_messages: i64,
+    pub total_images: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DbImportBackupResult {
+    pub db_path: String,
+    pub imported_messages: i64,
+    pub imported_images: i64,
+    pub total_messages: i64,
+    pub total_images: i64,
+}
+
 fn get_db_key(db_path: &std::path::Path) -> Result<String, String> {
     #[cfg(target_os = "macos")]
     {
@@ -143,6 +163,12 @@ fn try_open_encrypted(db_path: &std::path::Path) -> rusqlite::Result<Connection>
     conn.execute_batch("SELECT count(*) FROM sqlite_master;")?;
     conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")?;
 
+    ensure_db_schema(&conn)?;
+
+    Ok(conn)
+}
+
+fn ensure_db_schema(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS messages (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -176,10 +202,139 @@ fn try_open_encrypted(db_path: &std::path::Path) -> rusqlite::Result<Connection>
             data       BLOB    NOT NULL,
             created_at INTEGER NOT NULL,
             UNIQUE(self_id, url_hash)
-        );",
+         );",
     )?;
 
+    Ok(())
+}
+
+fn open_backup_db(backup_db_path: &std::path::Path) -> Result<Connection, String> {
+    if let Some(parent) = backup_db_path.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("创建备份目录失败：{}", e))?;
+    }
+
+    let conn = Connection::open(backup_db_path).map_err(|e| e.to_string())?;
+    conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")
+        .map_err(|e| e.to_string())?;
+    ensure_db_schema(&conn).map_err(|e| e.to_string())?;
     Ok(conn)
+}
+
+fn merge_messages_to_backup(source: &Connection, backup: &Connection, source_self_id: &str, target_self_id: &str) -> Result<i64, String> {
+    let mut stmt = source.prepare(
+        "SELECT self_id, message_id, chat_id, chat_type, sender_id, sender_name,
+                seq, time, message, raw_message, revoked, created_at
+         FROM messages
+         WHERE self_id = ?1",
+    ).map_err(|e| e.to_string())?;
+
+    let rows = stmt.query_map(params![source_self_id], |row| {
+        Ok((
+            row.get::<_, String>(1)?,
+            row.get::<_, i64>(2)?,
+            row.get::<_, String>(3)?,
+            row.get::<_, i64>(4)?,
+            row.get::<_, Option<String>>(5)?,
+            row.get::<_, Option<i64>>(6)?,
+            row.get::<_, i64>(7)?,
+            row.get::<_, String>(8)?,
+            row.get::<_, Option<String>>(9)?,
+            row.get::<_, i64>(10)?,
+            row.get::<_, i64>(11)?,
+        ))
+    }).map_err(|e| e.to_string())?;
+
+    let mut inserted = 0i64;
+    for row in rows {
+        let (message_id, chat_id, chat_type, sender_id, sender_name, seq, time, message, raw_message, revoked, created_at) =
+            row.map_err(|e| e.to_string())?;
+        let existed = backup.query_row(
+            "SELECT 1 FROM messages WHERE self_id = ?1 AND message_id = ?2 LIMIT 1",
+            params![target_self_id, &message_id],
+            |_| Ok(()),
+        ).is_ok();
+        backup.execute(
+            "INSERT INTO messages
+                (self_id, message_id, chat_id, chat_type,
+                 sender_id, sender_name, seq, time, message,
+                 raw_message, revoked, created_at)
+             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)
+             ON CONFLICT(self_id, message_id) DO UPDATE SET
+                chat_id=excluded.chat_id,
+                chat_type=excluded.chat_type,
+                sender_id=excluded.sender_id,
+                sender_name=excluded.sender_name,
+                seq=excluded.seq,
+                time=excluded.time,
+                message=excluded.message,
+                raw_message=excluded.raw_message,
+                revoked=excluded.revoked",
+            params![
+                target_self_id,
+                message_id,
+                chat_id,
+                chat_type,
+                sender_id,
+                sender_name,
+                seq,
+                time,
+                message,
+                raw_message,
+                revoked,
+                created_at,
+            ],
+        ).map_err(|e| e.to_string())?;
+        if !existed {
+            inserted += 1;
+        }
+    }
+
+    Ok(inserted)
+}
+
+fn merge_images_to_backup(source: &Connection, backup: &Connection, source_self_id: &str, target_self_id: &str) -> Result<i64, String> {
+    let mut stmt = source.prepare(
+        "SELECT self_id, url_hash, mime_type, data, created_at
+         FROM images
+         WHERE self_id = ?1",
+    ).map_err(|e| e.to_string())?;
+
+    let rows = stmt.query_map(params![source_self_id], |row| {
+        Ok((
+            row.get::<_, String>(1)?,
+            row.get::<_, String>(2)?,
+            row.get::<_, Vec<u8>>(3)?,
+            row.get::<_, i64>(4)?,
+        ))
+    }).map_err(|e| e.to_string())?;
+
+    let mut inserted = 0i64;
+    for row in rows {
+        let (url_hash, mime_type, data, created_at) = row.map_err(|e| e.to_string())?;
+        let existed = backup.query_row(
+            "SELECT 1 FROM images WHERE self_id = ?1 AND url_hash = ?2 LIMIT 1",
+            params![target_self_id, &url_hash],
+            |_| Ok(()),
+        ).is_ok();
+        backup.execute(
+            "INSERT INTO images (self_id, url_hash, mime_type, data, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5)
+             ON CONFLICT(self_id, url_hash) DO UPDATE SET
+                mime_type=excluded.mime_type,
+                data=excluded.data",
+            params![target_self_id, url_hash, mime_type, data, created_at],
+        ).map_err(|e| e.to_string())?;
+        if !existed {
+            inserted += 1;
+        }
+    }
+
+    Ok(inserted)
+}
+
+fn count_backup_rows(conn: &Connection, self_id: &str, table: &str) -> Result<i64, String> {
+    let sql = format!("SELECT COUNT(*) FROM {} WHERE self_id = ?1", table);
+    conn.query_row(&sql, params![self_id], |row| row.get(0)).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -522,6 +677,83 @@ pub fn db_clear_images(state: State<DbState>, app_handle: AppHandle, self_id: St
         );
 
         Ok(DbClearImagesResult { total, deleted, batches })
+    })
+}
+
+#[tauri::command]
+pub fn db_export_backup(state: State<DbState>, self_id: String, backup_dir: String) -> Result<DbExportBackupResult, String> {
+    let backup_root = PathBuf::from(backup_dir.trim());
+    if backup_root.as_os_str().is_empty() {
+        return Err("备份目录不能为空".to_string());
+    }
+
+    state.with_conn(|source| {
+        let backup_db_path = backup_root.join(&self_id).join("messages.backup.db");
+        let mut backup = open_backup_db(&backup_db_path)?;
+        let tx = backup.transaction().map_err(|e| e.to_string())?;
+
+        let delta_messages = merge_messages_to_backup(source, &tx, &self_id, &self_id)?;
+        let delta_images = merge_images_to_backup(source, &tx, &self_id, &self_id)?;
+
+        tx.commit().map_err(|e| e.to_string())?;
+
+        let total_messages = count_backup_rows(&backup, &self_id, "messages")?;
+        let total_images = count_backup_rows(&backup, &self_id, "images")?;
+
+        info!("聊天记录已导出到备份 {:?}", backup_db_path);
+        Ok(DbExportBackupResult {
+            db_path: backup_db_path.to_string_lossy().to_string(),
+            delta_messages,
+            delta_images,
+            total_messages,
+            total_images,
+        })
+    })
+}
+
+#[tauri::command]
+pub fn db_import_backup(state: State<DbState>, self_id: String, backup_db_path: String) -> Result<DbImportBackupResult, String> {
+    let backup_db_path = PathBuf::from(backup_db_path.trim());
+    if backup_db_path.as_os_str().is_empty() {
+        return Err("备份文件不能为空".to_string());
+    }
+    if !backup_db_path.exists() {
+        return Err("备份文件不存在".to_string());
+    }
+
+    state.with_conn(|target| {
+        let backup = open_backup_db(&backup_db_path)?;
+
+        let source_self_id = if count_backup_rows(&backup, &self_id, "messages")? > 0 || count_backup_rows(&backup, &self_id, "images")? > 0 {
+            self_id.clone()
+        } else {
+            backup.query_row(
+                "SELECT self_id FROM messages GROUP BY self_id ORDER BY COUNT(*) DESC LIMIT 1",
+                [],
+                |row| row.get::<_, String>(0),
+            ).or_else(|_| {
+                backup.query_row(
+                    "SELECT self_id FROM images GROUP BY self_id ORDER BY COUNT(*) DESC LIMIT 1",
+                    [],
+                    |row| row.get::<_, String>(0),
+                )
+            }).map_err(|_| "备份文件中没有可导入的数据".to_string())?
+        };
+
+        let delta_messages = merge_messages_to_backup(&backup, target, &source_self_id, &self_id)?;
+        let delta_images = merge_images_to_backup(&backup, target, &source_self_id, &self_id)?;
+
+        let total_messages = count_backup_rows(target, &self_id, "messages")?;
+        let total_images = count_backup_rows(target, &self_id, "images")?;
+
+        info!("聊天记录已从备份导入 {:?}", backup_db_path);
+        Ok(DbImportBackupResult {
+            db_path: backup_db_path.to_string_lossy().to_string(),
+            imported_messages: delta_messages,
+            imported_images: delta_images,
+            total_messages,
+            total_images,
+        })
     })
 }
 
