@@ -40,6 +40,12 @@ pub fn sys_get_platform() -> String {
     }
 }
 
+#[command]
+pub fn sys_debug_log(tag: String, message: String) -> Result<(), String> {
+    info!("[{}] {}", tag, message);
+    Ok(())
+}
+
 use serde::Serialize;
 
 #[derive(Serialize)]

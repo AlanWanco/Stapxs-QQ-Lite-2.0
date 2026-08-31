@@ -91,20 +91,20 @@
                             :src="item.url"
                             :alt="item.summary"
                             @load="imageLoaded"
-                            @error="imgLoadFail">
+                            @error="imgLoadFail($event, item)">
                         <img v-else-if="item.type == 'mface'"
                             :class=" imgStyle(data.message.length, index, true) + ' msg-mface'"
                             :src="item.url"
                             :alt="item.summary"
                             @load="imageLoaded"
-                            @error="imgLoadFail">
+                            @error="imgLoadFail($event, item)">
                         <img v-else-if="item.type == 'image'"
                             :title="(!item.summary || item.summary == '') ? $t('预览图片') : item.summary"
                             :alt="$t('图片')"
                             :class=" imgStyle(data.message.length, index, isFace(item))"
                             :src="getImgSrc(item.url)"
                             @load="imageLoaded"
-                            @error="imgLoadFail"
+                            @error="imgLoadFail($event, item)"
                             @click="imgClick(item.url)">
                         <template v-else-if="item.type == 'face'">
                             <EmojiFace :emoji="Emoji.get(Number(item.id))" class="msg-face" />
@@ -231,7 +231,7 @@
                                         </div>
                                     </template>
                                     <div v-else>
-                                        {{ $t('加载失败') }}
+                                        {{ getForwardFailText(item) }}
                                     </div>
                                 </div>
                                 <div>
@@ -437,6 +437,7 @@ const emit = defineEmits<{
     toggleReaction: [msg: any, emojiId: number, isLiked: boolean]
     showMenu: [event: MenuEventData, msg: Msg]
     dblclick: [msg: Msg]
+    reloadLocalMessage: [msg: Msg]
 }>()
 
 const msgMain = useTemplateRef<HTMLDivElement>('msgMain')
@@ -466,7 +467,7 @@ function getUserById(id: number): IUser | undefined {
         name: 'MsgBody',
         inject: ['viewer'],
         props: ['data', 'type', 'selected', 'imageListHeader', 'searchKeyword'],
-        emits: ['scrollToMsg', 'imageLoaded', 'sendPoke', 'showMenu', 'leftMove', 'rightMove', 'dblclick'],
+        emits: ['scrollToMsg', 'imageLoaded', 'sendPoke', 'showMenu', 'leftMove', 'rightMove', 'dblclick', 'reloadLocalMessage'],
         data() {
             return {
                 Emoji,
@@ -486,6 +487,10 @@ function getUserById(id: number): IUser | undefined {
                 rawTextIndex: {} as { [key: string]: string },
                 textIndex: {} as { [key: string]: string },
                 resolvedImages: {} as Record<string, string>,
+                imageCacheStatus: {} as Record<string, {
+                    state: 'hit' | 'miss' | 'no-self' | 'empty-url'
+                    urlHash: string
+                }>,
                 // 互动相关
                 msgMove: {
                     move: 0,
@@ -647,18 +652,88 @@ function getUserById(id: number): IUser | undefined {
             async loadCachedImage(url: string) {
                 if (this.resolvedImages[url]) return this.resolvedImages[url]
                 const selfId = runtimeData.loginInfo?.uin
-                if (!selfId || !url) return undefined
+                if (!url) {
+                    this.imageCacheStatus[url] = { state: 'empty-url', urlHash: '' }
+                    return undefined
+                }
+                if (!selfId) {
+                    this.imageCacheStatus[url] = { state: 'no-self', urlHash: '' }
+                    return undefined
+                }
                 const urlHash = await hashUrl(url)
                 const cached = await dbGetImage(selfId, urlHash)
                 if (cached) {
+                    this.imageCacheStatus[url] = { state: 'hit', urlHash }
                     this.resolvedImages[url] = `data:${cached.mimeType};base64,${cached.data}`
                     return this.resolvedImages[url]
+                }
+                this.imageCacheStatus[url] = { state: 'miss', urlHash }
+                if (import.meta.env.DEV && backend.type === 'tauri') {
+                    backend.call(undefined, 'sys:debugLog', false, {
+                        tag: 'LocalHistory',
+                        message: `renderImage:cacheMiss ${JSON.stringify({
+                            messageId: String(this.data?.message_id ?? ''),
+                            fromLocalDb: this.data?._from_local_db === true,
+                            url,
+                            urlHash,
+                        })}`,
+                    })
                 }
                 return undefined
             },
 
             getImgSrc(url: string) {
+                if (this.data?._from_local_db === true) {
+                    return this.resolvedImages[url] ?? ''
+                }
                 return this.resolvedImages[url] ?? backend.proxyUrl(url)
+            },
+
+            getMsgSourceLabel() {
+                return this.data?._from_local_db ? this.$t('本地聊天记录缓存') : 'NapCat'
+            },
+
+            formatSourceLabel(source: string | undefined) {
+                if (!source) return this.getMsgSourceLabel()
+                if (source === 'local-db') return this.$t('本地聊天记录缓存')
+                return source
+            },
+
+            getImageSourceLabel(item: any) {
+                if (item?.url && this.resolvedImages[item.url]) {
+                    return this.$t('本地图片缓存')
+                }
+                return this.$t('本地图片缓存未命中')
+            },
+
+            getImageCacheErrorText(item: any) {
+                const url = String(item?.url ?? '')
+                const status = this.imageCacheStatus[url]
+                if (!this.data?._from_local_db) {
+                    return this.$t('当前图片消息对象来自服务器，本地缓存诊断仅适用于本地聊天记录')
+                }
+                if (!url) {
+                    return this.$t('消息里的图片 URL 为空，无法查询本地图片缓存')
+                }
+                if (!status) {
+                    return this.$t('尚未完成本地图片缓存查询')
+                }
+                if (status.state === 'hit') {
+                    return this.$t('本地图片缓存已命中，但图片元素仍然加载失败')
+                }
+                if (status.state === 'no-self') {
+                    return this.$t('当前未拿到登录账号，无法查询本地图片缓存')
+                }
+                if (status.state === 'empty-url') {
+                    return this.$t('消息里的图片 URL 为空，无法查询本地图片缓存')
+                }
+                return this.$t('本地图片缓存未命中，当前不会再回退到旧的 NapCat URL')
+            },
+
+            getForwardFailText(item: any) {
+                const code = item?.forward_error_code ?? 'forward-load-failed'
+                const source = this.formatSourceLabel(item?.forward_source)
+                return `${this.$t('加载失败')} [${code}] ${this.$t('消息来源')}：${source}`
             },
 
             recordAudioSrc(item: any) {
@@ -938,7 +1013,7 @@ function getUserById(id: number): IUser | undefined {
             /**
              * 图片加载失败
              */
-            imgLoadFail(event: Event) {
+            imgLoadFail(event: Event, item?: any) {
                 const sender = event.currentTarget as HTMLImageElement
                 const parent = sender.parentNode as HTMLDivElement
                 parent.style.display = 'flex'
@@ -963,7 +1038,7 @@ function getUserById(id: number): IUser | undefined {
                 parent.appendChild(svg)
                 // 新建 span
                 const span = document.createElement('span')
-                span.innerText = this.$t('加载图片失败')
+                span.innerText = `${this.$t('加载图片失败')} [local-image-cache-failed]`
                 span.style.marginTop = '10px'
                 span.style.fontSize = '0.8rem'
                 span.style.color = 'var(--color-font-2)'
@@ -971,11 +1046,48 @@ function getUserById(id: number): IUser | undefined {
                     span.style.color = 'var(--color-font-1-r)'
                 }
                 parent.appendChild(span)
+                const code = document.createElement('code')
+                const url = String(item?.url ?? '')
+                const status = this.imageCacheStatus[url]
+                code.innerText = `${this.$t('消息来源')}：${this.getMsgSourceLabel()} | ${this.$t('图片来源')}：${this.getImageSourceLabel(item)} | ${this.$t('缓存诊断')}：${this.getImageCacheErrorText(item)}${status?.urlHash ? ` | urlHash: ${status.urlHash}` : ''}${url ? ` | url: ${url}` : ''}`
+                code.style.marginTop = '8px'
+                code.style.fontSize = '0.68rem'
+                code.style.whiteSpace = 'pre-wrap'
+                code.style.wordBreak = 'break-all'
+                code.style.opacity = '0.85'
+                parent.appendChild(code)
+                if (import.meta.env.DEV && backend.type === 'tauri') {
+                    backend.call(undefined, 'sys:debugLog', false, {
+                        tag: 'LocalHistory',
+                        message: `renderImage:loadFailed ${JSON.stringify({
+                            messageId: String(this.data?.message_id ?? ''),
+                            fromLocalDb: this.data?._from_local_db === true,
+                            url,
+                            urlHash: status?.urlHash ?? '',
+                            cacheState: status?.state ?? 'unknown',
+                            currentSrc: sender.currentSrc || sender.src,
+                        })}`,
+                    })
+                }
+                const reload = document.createElement('button')
+                reload.innerText = this.$t('清除本地记录并重载')
+                reload.style.marginTop = '10px'
+                reload.style.fontSize = '0.72rem'
+                reload.style.padding = '6px 10px'
+                reload.style.border = '1px solid var(--color-card-3)'
+                reload.style.borderRadius = '8px'
+                reload.style.background = 'var(--color-card-1)'
+                reload.style.color = this.isMe ? 'var(--color-font-1-r)' : 'var(--color-font-2)'
+                reload.style.cursor = 'pointer'
+                reload.onclick = () => {
+                    this.$emit('reloadLocalMessage', this.data)
+                }
+                parent.appendChild(reload)
                 // 链接
                 const a = document.createElement('a')
                 a.innerText = this.$t('预览图片')
                 a.target = '__blank'
-                a.href = sender.src
+                a.href = url || sender.src
                 a.style.marginTop = '10px'
                 a.style.fontSize = '0.7rem'
                 a.style.color = 'var(--color-font-2)'
@@ -1489,7 +1601,8 @@ function getUserById(id: number): IUser | undefined {
             openMerge(){
                 const seg = this.data.message[0]
                 if (!seg.content) {
-                    new PopInfo().add(PopType.ERR, this.$t('合并转发解析失败'))
+                    const failText = `${this.$t('合并转发解析失败')} [${seg.forward_error_code ?? 'forward-load-failed'}]\n${this.$t('消息来源')}：${this.formatSourceLabel(seg.forward_source)}${seg.forward_error_detail ? `\n${this.$t('错误详情')}：${seg.forward_error_detail}` : ''}`
+                    new PopInfo().add(PopType.ERR, failText)
                     return
                 }
 

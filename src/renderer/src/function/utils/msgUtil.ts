@@ -544,7 +544,6 @@ export function updateLastestHistory(item: UserFriendElem & UserGroupElem) {
             message_type: runtimeData.jsonMap.message_list.message_type[type],
             group_id: id,
             user_id: id,
-            message_seq: 0,
             message_id: 0,
             count: 1,
         },

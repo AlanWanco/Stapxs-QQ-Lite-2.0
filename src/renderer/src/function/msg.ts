@@ -41,7 +41,7 @@ import {
     sendIdentifyData,
     sendStatEvent,
 } from '@renderer/function/utils/appUtil'
-import { reactive, markRaw, defineAsyncComponent, nextTick } from 'vue'
+import { reactive, markRaw, defineAsyncComponent } from 'vue'
 import { PopInfo, PopType, Logger, LogType } from './base'
 import { Connector, login } from './connect'
 import {
@@ -656,21 +656,7 @@ const msgFunctions = {
             runtimeData.tags.loadHistoryFail = true
             return
         }
-        const pan = document.getElementById('msgPan')
-        if (pan) {
-            const oldScrollHeight = pan.scrollHeight
-            saveMsg(msg, 'top').then(() => {
-                nextTick(() => {
-                    setTimeout(() => {
-                        logger.debug(`滚动前高度：${oldScrollHeight}，当前高度：${pan.scrollHeight}，滚动位置：${pan.scrollHeight - oldScrollHeight}`)
-                        pan.style.scrollBehavior = 'unset'
-                        // 纠正滚动位置
-                        pan.scrollTop = pan.scrollHeight - oldScrollHeight
-                        pan.style.scrollBehavior = 'smooth'
-                    }, 200);
-                })
-            })
-        }
+        saveMsg(msg, 'top')
     },
 
     getChatHistoryOnMsg: (
@@ -1449,6 +1435,7 @@ function saveClassInfo(
 async function saveMsg(msg: any, append = undefined as undefined | string) {
     let list = await normalizeMessagesFromPayload(msg)
     if (list != undefined) {
+        const unfilteredList = [...list]
         const historyBeforeTime = Number(runtimeData.tags.historyBeforeTime)
         const hasHistoryBeforeTime = Number.isFinite(historyBeforeTime)
         // 检查消息是否是当前聊天的消息
@@ -1478,10 +1465,17 @@ async function saveMsg(msg: any, append = undefined as undefined | string) {
         }
 
         if (hasHistoryBeforeTime && append === 'top' && list.length < 1) {
-            runtimeData.tags.historyBeforeTime = undefined
-            return
+            list = unfilteredList
         }
 
+        if (append === 'top') {
+            runtimeData.watch.historyLoadSummaryEvent = {
+                token: (runtimeData.tags as any).historyLoadToken ?? '',
+                chatId: runtimeData.chatInfo.show.id,
+                serverMessages: list.length,
+                serverImages: countImagesInMessages(list),
+            }
+        }
         saveMessagesWithSideEffects(runtimeData.loginInfo.uin, list)
         // 如果分页不是增量的，就不使用追加
         if (
@@ -1604,6 +1598,21 @@ function hasImageMessage(msg: any): boolean {
     return getImageSegments(msg).length > 0
 }
 
+function countImagesInMessages(msgs: any[]): number {
+    let count = 0
+    const walk = (items: any[]) => {
+        for (const item of items) {
+            if (!Array.isArray(item?.message)) continue
+            for (const seg of item.message) {
+                if (seg?.type === 'image') count++
+                if (Array.isArray(seg?.content)) walk(seg.content)
+            }
+        }
+    }
+    walk(msgs)
+    return count
+}
+
 function hasResolvableImageSource(msg: any): boolean {
     const imgs = getImageSegments(msg)
     if (imgs.length === 0) return false
@@ -1719,24 +1728,33 @@ async function msgPreprocess(msg: any): Promise<any> {
 
     //#region == 合并转发解析 ==============================
     if (msg.message.at(0)?.type === 'forward') {
-        const forwardId = msg.message.at(0).id
+        const forwardSeg = msg.message.at(0)
+        const forwardId = forwardSeg.id
+        forwardSeg.forward_source = msg?._from_local_db ? 'local-db' : 'NapCat'
         if (forwardId) {
             try {
-                if (msg.message.at(0).content && msg.message.at(0).content.length > 0) {
+                if (forwardSeg.content && forwardSeg.content.length > 0) {
                     // 如果 content 里已经有内容了就直接用 content 里的内容
-                    const data = await getMessageList(msg.message.at(0).content)
-                    if (data) msg.message.at(0).content = data
+                    const data = await getMessageList(forwardSeg.content)
+                    if (data) forwardSeg.content = data
                 } else {
                     // 否则调用接口获取
                     const originData = await Connector.callApi('forward_msg', { id: forwardId })
                     const data = await getMessageList(originData)
-                    if (data) msg.message.at(0).content = data
+                    if (data) forwardSeg.content = data
                 }
+                forwardSeg.forward_error_code = undefined
+                forwardSeg.forward_error_detail = undefined
             } catch (e) {
+                const detail = e instanceof Error ? e.message : String(e)
+                forwardSeg.forward_error_code = 'forward-load-failed'
+                forwardSeg.forward_error_detail = detail
                 logger.error(e as unknown as Error, '合并转发解析失败')
             }
         } else {
-            msg.message.at(0).content = []
+            forwardSeg.content = []
+            forwardSeg.forward_error_code = 'missing-forward-id'
+            forwardSeg.forward_error_detail = 'forward segment has no id'
         }
     }
     //#endregion
@@ -2197,6 +2215,7 @@ const baseRuntime = {
         canLoadHistory: true,
         loadHistoryFail: false,
         historyBeforeTime: undefined,
+        historyLoadToken: '',
         openSideBar: true,
         showGroupAssist: false,
         viewer: { index: 0 },
@@ -2212,6 +2231,12 @@ const baseRuntime = {
     watch: {
         backTimes: 0,
         chatImgVersion: 0,
+        historyLoadSummaryEvent: undefined as undefined | {
+            token: string
+            chatId: number
+            serverMessages: number
+            serverImages: number
+        },
     },
     chatInfo: {
         show: { type: '', id: 0, name: '', avatar: '' },

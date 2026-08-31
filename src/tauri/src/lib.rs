@@ -216,6 +216,7 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .invoke_handler(tauri::generate_handler![
             commands::sys::sys_front_loaded,
+            commands::sys::sys_debug_log,
             commands::sys::sys_get_platform,
             commands::sys::sys_get_release,
             commands::sys::sys_create_menu,
@@ -268,10 +269,13 @@ pub fn run() {
             commands::db::db_get_after,
             commands::db::db_search_messages,
             commands::db::db_revoke_message,
+            commands::db::db_delete_message,
+            commands::db::db_save_message_images,
             commands::db::db_get_stats,
             commands::db::db_cache_image,
             commands::db::db_get_image,
             commands::db::db_clear_images,
+            commands::db::db_clear_all,
             commands::db::db_export_backup,
             commands::db::db_import_backup,
             commands::db::db_set_storage_path,

@@ -386,6 +386,16 @@
                     {{ $t('清理') }}
                 </button>
             </div>
+            <div v-if="runtimeData.sysConfig.enable_local_history" class="opt-item">
+                <font-awesome-icon :icon="['fas', 'trash-can']" />
+                <div>
+                    <span>{{ $t('清空本地消息数据库') }}</span>
+                    <span>{{ $t('删除本地消息、图片缓存和图片状态记录，以便重新构建') }}</span>
+                </div>
+                <button class="ss-button" style="width: 100px; font-size: 0.8rem;" @click="clearLocalHistoryAll">
+                    {{ $t('清空') }}
+                </button>
+            </div>
             <div v-if="runtimeData.sysConfig.enable_local_history && dbStats != null" class="db-stats-cards">
                 <div class="db-stat-card">
                     <font-awesome-icon :icon="['fas', 'message']" />
@@ -470,7 +480,7 @@
     import UmamiInfoPan from '@renderer/components/UmamiInfoPan.vue'
 import { backend } from '@renderer/runtime/backend'
     import { PopInfo, PopType } from '@renderer/function/base'
-    import { dbClearImages, dbExportBackup, dbGetStats, dbImportBackup } from '@renderer/function/utils/localHistoryUtil'
+    import { dbClearAll, dbClearImages, dbExportBackup, dbGetStats, dbImportBackup } from '@renderer/function/utils/localHistoryUtil'
 
     export default defineComponent({
         name: 'ViewOptFunction',
@@ -724,6 +734,40 @@ import { backend } from '@renderer/runtime/backend'
                             fun: async() => {
                                 runtimeData.popBoxList.shift()
                                 await this.runImageCacheCleanup(selfId)
+                            },
+                        },
+                        {
+                            text: this.$t('取消'),
+                            master: true,
+                            fun: () => {
+                                runtimeData.popBoxList.shift()
+                            },
+                        },
+                    ],
+                }
+                runtimeData.popBoxList.push(popInfo)
+            },
+            async clearLocalHistoryAll() {
+                const selfId = runtimeData.loginInfo?.uin
+                if (!selfId) {
+                    new PopInfo().add(PopType.INFO, this.$t('请连接后在进行操作'))
+                    return
+                }
+                const popInfo = {
+                    title: this.$t('提醒'),
+                    html: `<span>${this.$t('确认要清空本地消息数据库吗？这会删除本地消息、图片缓存和图片状态记录。')}</span>`,
+                    button: [
+                        {
+                            text: this.$t('确认'),
+                            fun: async() => {
+                                runtimeData.popBoxList.shift()
+                                const ok = await dbClearAll(selfId)
+                                if (!ok) {
+                                    new PopInfo().add(PopType.ERR, this.$t('清空本地消息数据库失败'))
+                                    return
+                                }
+                                this.loadDbStats()
+                                new PopInfo().add(PopType.INFO, this.$t('本地消息数据库已清空'))
                             },
                         },
                         {

@@ -65,6 +65,17 @@ pub struct MsgRecord {
     pub revoked: bool,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct MessageImageRecord {
+    pub message_id: String,
+    pub seg_index: i64,
+    pub url: String,
+    pub url_hash: String,
+    pub cache_status: String,
+    pub last_error: Option<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DbExportBackupResult {
@@ -203,6 +214,28 @@ fn ensure_db_schema(conn: &Connection) -> rusqlite::Result<()> {
             created_at INTEGER NOT NULL,
             UNIQUE(self_id, url_hash)
          );",
+    )?;
+
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS message_images (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            self_id      TEXT    NOT NULL,
+            message_id   TEXT    NOT NULL,
+            seg_index    INTEGER NOT NULL,
+            url          TEXT    NOT NULL,
+            url_hash     TEXT    NOT NULL,
+            cache_status TEXT    NOT NULL DEFAULT 'pending',
+            last_error   TEXT,
+            created_at   INTEGER NOT NULL,
+            updated_at   INTEGER NOT NULL,
+            UNIQUE(self_id, message_id, seg_index)
+         );
+
+         CREATE INDEX IF NOT EXISTS idx_message_images_message
+            ON message_images(self_id, message_id);
+
+         CREATE INDEX IF NOT EXISTS idx_message_images_hash
+            ON message_images(self_id, url_hash);",
     )?;
 
     Ok(())
@@ -507,6 +540,17 @@ pub fn db_revoke_message(state: State<DbState>, self_id: String, message_id: Str
     })
 }
 
+#[tauri::command]
+pub fn db_delete_message(state: State<DbState>, self_id: String, message_id: String) -> Result<bool, String> {
+    state.with_conn(|conn| {
+        let n = conn.execute(
+            "DELETE FROM messages WHERE self_id = ?1 AND message_id = ?2",
+            params![self_id, message_id],
+        ).map_err(|e| e.to_string())?;
+        Ok(n > 0)
+    })
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DbStats {
@@ -587,6 +631,57 @@ pub fn db_cache_image(state: State<DbState>, self_id: String, url_hash: String, 
             params![self_id, url_hash, mime_type, bytes, now],
         ).map_err(|e| e.to_string())?;
         Ok(())
+    })
+}
+
+#[tauri::command]
+pub fn db_save_message_images(state: State<DbState>, self_id: String, images: Vec<MessageImageRecord>) -> Result<usize, String> {
+    state.with_conn(|conn| {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs() as i64;
+        let mut inserted = 0usize;
+        for image in &images {
+            let n = conn.execute(
+                "INSERT INTO message_images
+                    (self_id, message_id, seg_index, url, url_hash, cache_status, last_error, created_at, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+                 ON CONFLICT(self_id, message_id, seg_index) DO UPDATE SET
+                    url=excluded.url,
+                    url_hash=excluded.url_hash,
+                    cache_status=excluded.cache_status,
+                    last_error=excluded.last_error,
+                    updated_at=excluded.updated_at",
+                params![
+                    self_id,
+                    image.message_id,
+                    image.seg_index,
+                    image.url,
+                    image.url_hash,
+                    image.cache_status,
+                    image.last_error,
+                    now,
+                    now,
+                ],
+            ).map_err(|e| e.to_string())?;
+            inserted += n;
+        }
+        Ok(inserted)
+    })
+}
+
+#[tauri::command]
+pub fn db_clear_all(state: State<DbState>, _self_id: String) -> Result<bool, String> {
+    state.with_conn(|conn| {
+        conn.execute("DELETE FROM message_images", [])
+            .map_err(|e| e.to_string())?;
+        conn.execute("DELETE FROM images", [])
+            .map_err(|e| e.to_string())?;
+        conn.execute("DELETE FROM messages", [])
+            .map_err(|e| e.to_string())?;
+        let _ = conn.execute_batch("VACUUM;");
+        Ok(true)
     })
 }
 

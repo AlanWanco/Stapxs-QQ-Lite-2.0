@@ -1275,6 +1275,69 @@ msgstr ""
 msgid "获取历史记录失败"
 msgstr ""
 
+msgid "获取历史记录失败，点击重试"
+msgstr ""
+
+msgid "服务器已加载 {serverMessages} 条消息 {serverImages} 张图片"
+msgstr ""
+
+msgid "查看来源诊断"
+msgstr ""
+
+msgid "本地图片缓存未命中"
+msgstr ""
+
+msgid "缓存诊断"
+msgstr ""
+
+msgid "当前图片消息对象来自服务器，本地缓存诊断仅适用于本地聊天记录"
+msgstr ""
+
+msgid "消息里的图片 URL 为空，无法查询本地图片缓存"
+msgstr ""
+
+msgid "尚未完成本地图片缓存查询"
+msgstr ""
+
+msgid "本地图片缓存已命中，但图片元素仍然加载失败"
+msgstr ""
+
+msgid "当前未拿到登录账号，无法查询本地图片缓存"
+msgstr ""
+
+msgid "本地图片缓存未命中，当前不会再回退到旧的 NapCat URL"
+msgstr ""
+
+msgid "消息来源诊断"
+msgstr ""
+
+msgid "消息对象来源"
+msgstr ""
+
+msgid "消息类型"
+msgstr ""
+
+msgid "序号"
+msgstr ""
+
+msgid "发送者"
+msgstr ""
+
+msgid "图片段"
+msgstr ""
+
+msgid "图片来源判断"
+msgstr ""
+
+msgid "合并转发来源"
+msgstr ""
+
+msgid "合并转发错误"
+msgstr ""
+
+msgid "合并转发内容条数"
+msgstr ""
+
 msgid "当前会话"
 msgstr ""
 
@@ -1598,6 +1661,24 @@ msgstr "本地历史"
 msgid "清理图片缓存"
 msgstr "清理图片缓存"
 
+msgid "清空本地消息数据库"
+msgstr "清空本地消息数据库"
+
+msgid "删除本地消息、图片缓存和图片状态记录，以便重新构建"
+msgstr "删除本地消息、图片缓存和图片状态记录，以便重新构建"
+
+msgid "确认要清空本地消息数据库吗？这会删除本地消息、图片缓存和图片状态记录。"
+msgstr "确认要清空本地消息数据库吗？这会删除本地消息、图片缓存和图片状态记录。"
+
+msgid "清空本地消息数据库失败"
+msgstr "清空本地消息数据库失败"
+
+msgid "本地消息数据库已清空"
+msgstr "本地消息数据库已清空"
+
+msgid "清空"
+msgstr "清空"
+
 msgid "仅清理本地缓存图片，不删除消息记录"
 msgstr "仅清理本地缓存图片，不删除消息记录"
 
@@ -1706,8 +1787,17 @@ msgstr "图片太大，无法发送"
 msgid "重载"
 msgstr "重载"
 
+msgid "重新拉取并覆盖本地记录"
+msgstr "重新拉取并覆盖本地记录"
+
 msgid "获取选中消息失败"
 msgstr "获取选中消息失败"
+
+msgid "清除本地记录并重载"
+msgstr "清除本地记录并重载"
+
+msgid "已重新拉取并覆盖本地记录"
+msgstr "已重新拉取并覆盖本地记录"
 
 msgid "添加到本地表情"
 msgstr "添加到本地表情"
@@ -1768,3 +1858,18 @@ msgstr "聊天记录备份导入失败"
 
 msgid "聊天记录已导入，本次新增 {messages} 条消息和 {images} 张图片；当前本地历史共包含 {totalMessages} 条消息和 {totalImages} 张图片。"
 msgstr "聊天记录已导入，本次新增 {messages} 条消息和 {images} 张图片；当前本地历史共包含 {totalMessages} 条消息和 {totalImages} 张图片。"
+
+msgid "本地聊天记录缓存"
+msgstr "本地聊天记录缓存"
+
+msgid "本地图片缓存"
+msgstr "本地图片缓存"
+
+msgid "消息来源"
+msgstr "消息来源"
+
+msgid "图片来源"
+msgstr "图片来源"
+
+msgid "错误详情"
+msgstr "错误详情"

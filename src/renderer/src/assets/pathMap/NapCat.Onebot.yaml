@@ -69,6 +69,7 @@ message_list:
         group: group
     list:
         message_id: /message_id
+        seq_id: /real_seq
         target_id: /target_id
         message_type: /message_type
         time: /time

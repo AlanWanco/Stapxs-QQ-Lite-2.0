@@ -88,6 +88,14 @@
                 </div>
             </div>
         </Transition>
+        <Transition name="upload-progress">
+            <div v-if="historyLoadSummary.visible && historyLoadSummary.chatId === chat.show.id" class="upload-progress-bar history-load-summary-bar" style="display: flex; justify-content: center; width: 100%;">
+                <div class="upload-progress-info history-load-summary-info" style="display: flex; justify-content: center; width: 100%; text-align: center;">
+                    <font-awesome-icon :icon="['fas', 'clock-rotate-left']" />
+                    <span>{{ historyLoadSummary.text }}</span>
+                </div>
+            </div>
+        </Transition>
         <!-- 加载中指示器 -->
         <div :class=" 'loading' + (tags.nowGetHistroy && runtimeData.tags.canLoadHistory ? ' show' : '')">
             <font-awesome-icon :icon="['fas', 'spinner']" />
@@ -105,7 +113,7 @@
                 </div>
                 <div v-if="runtimeData.tags.loadHistoryFail" class="note note-nomsg">
                     <hr>
-                    <a>{{ $t('获取历史记录失败') }}</a>
+                    <a style="cursor: pointer; text-decoration: underline;" @click="retryLoadHistory">{{ $t('获取历史记录失败，点击重试') }}</a>
                 </div>
                 <!-- 时间戳，在下滑加载的时候会显示，方便在大段的相连消息上让用户知道消息时间 -->
                 <NoticeBody v-if="tags.nowGetHistroy && list.length > 0"
@@ -135,6 +143,7 @@
                             @show-menu="showMsgMeun"
                             @scroll-to-msg="scrollToMsg"
                             @image-loaded="imgLoadedScroll"
+                            @reload-local-message="reloadLocalMessage"
                             @right-move="replyMsg"
                             @send-poke="sendPoke"
                             @toggle-reaction="toggleReaction" />
@@ -168,7 +177,8 @@
                             :search-keyword="msg"
                             @scroll-to-msg="scrollToMsg"
                             @show-menu="showMsgMeun"
-                            @image-loaded="imgLoadedScroll" />
+                            @image-loaded="imgLoadedScroll"
+                            @reload-local-message="reloadLocalMessage" />
                     </template>
                 </TransitionGroup>
             </template>
@@ -514,7 +524,11 @@
                     </div>
                     <div v-show="tags.menuDisplay.resave" @click="resaveSelectedMsg">
                         <div><font-awesome-icon :icon="['fas', 'rotate']" /></div>
-                        <a>{{ $t('重载') }}</a>
+                        <a>{{ $t('重新拉取并覆盖本地记录') }}</a>
+                    </div>
+                    <div v-show="tags.menuDisplay.sourceInfo" @click="showSelectedMsgSourceInfo">
+                        <div><font-awesome-icon :icon="['fas', 'circle-info']" /></div>
+                        <a>{{ $t('查看来源诊断') }}</a>
                     </div>
                     <div v-show="tags.menuDisplay.at"
                         @click="selectedMsg ? addSpecialMsg({ msgObj: { type: 'at', qq: Number(selectedMsg.sender.user_id) }, addText: true, }): '';
@@ -636,11 +650,13 @@ import {
 } from '@renderer/function/utils/systemUtil'
 import {
     getMsgRawTxt,
+    getMsgData,
     sendMsgRaw,
     getShowName,
     isShowTime,
     isDeleteMsg,
     getImageUrlData,
+    buildMsgList,
 } from '@renderer/function/utils/msgUtil'
 import { Logger, LogType, PopInfo, PopType } from '@renderer/function/base'
 import { Connector } from '@renderer/function/connect'
@@ -760,6 +776,7 @@ import { Img } from '@renderer/function/model/img'
                     nowGetHistroy: false,
                     historyLoadArmed: true,
                     showBottomButton: true,
+                    shouldStickBottom: false,
                     showMoreDetail: false,
                     showMsgMenu: false,
                     msgMenuOpenTime: 0,
@@ -783,6 +800,7 @@ import { Img } from '@renderer/function/model/img'
                         copyImg: false,
                         viewAvatar: false,
                         downloadImg: false as string | false,
+                        sourceInfo: false,
                         startChat: false,
                         revoke: false,
                         reedit: false,
@@ -838,7 +856,24 @@ import { Img } from '@renderer/function/model/img'
                 historyIndex: -1,
                 lastUpKeyTime: 0,
                 backButtonHandle: null as { remove: () => void } | null,
-             }
+                historyLoadSummary: {
+                    visible: false,
+                    chatId: -1,
+                    text: '',
+                    token: '',
+                    hideTimer: null as NodeJS.Timeout | null,
+                },
+                pendingHistoryLoadSummary: null as null | {
+                    token: string
+                    chatId: number
+                    localMessages: number
+                    localImages: number
+                    serverMessages: number
+                    serverImages: number
+                    localDone: boolean
+                    serverDone: boolean
+                },
+              }
         },
         computed: {
             fileUploadPending() {
@@ -931,6 +966,15 @@ import { Img } from '@renderer/function/model/img'
             this.$watch(() => runtimeData.watch.chatImgVersion, () => {
                 this.rebuildChatImg()
             })
+            this.$watch(() => runtimeData.watch.historyLoadSummaryEvent, (event: any) => {
+                if (!event || !this.pendingHistoryLoadSummary) return
+                if (String(event.token ?? '') !== this.pendingHistoryLoadSummary.token) return
+                if (Number(event.chatId ?? -1) !== this.chat.show.id) return
+                this.pendingHistoryLoadSummary.serverMessages = Number(event.serverMessages ?? 0)
+                this.pendingHistoryLoadSummary.serverImages = Number(event.serverImages ?? 0)
+                this.pendingHistoryLoadSummary.serverDone = true
+                if (this.pendingHistoryLoadSummary.localDone) this.showHistoryLoadSummary()
+            })
             //精华消息列表刷新
             this.$watch(
                 () => this.chat.info.jin_info.list.length,
@@ -957,6 +1001,10 @@ import { Img } from '@renderer/function/model/img'
         },
         beforeUnmount() {
             window.removeEventListener('click', this.handleOutsideClick)
+            if (this.historyLoadSummary.hideTimer) {
+                clearTimeout(this.historyLoadSummary.hideTimer)
+                this.historyLoadSummary.hideTimer = null
+            }
             // 移除 backButton listener，防止组件重建时重复注册
             if (this.backButtonHandle) {
                 this.backButtonHandle.remove()
@@ -1049,6 +1097,8 @@ import { Img } from '@renderer/function/model/img'
             chatScroll(event: Event, pass: boolean) {
                 const body = event.target as HTMLDivElement
                 const bar = document.getElementById('send-more')
+                const atBottom = this.isMsgPanNearBottom(body)
+                this.tags.shouldStickBottom = atBottom
                 if (pass) {
                     if (
                         body.scrollTop <= 2 &&
@@ -1061,6 +1111,7 @@ import { Img } from '@renderer/function/model/img'
                     if (body.scrollTop > 24) {
                         this.tags.historyLoadArmed = true
                     }
+                    this.tags.showBottomButton = !atBottom
                     return
                 }
                 if (body.scrollTop > 24) {
@@ -1076,9 +1127,10 @@ import { Img } from '@renderer/function/model/img'
                     this.loadMoreHistory()
                 }
                 // 底部
-                if ((body.scrollTop + body.clientHeight + 10) >= body.scrollHeight) {
+                if (atBottom) {
                     this.NewMsgNum = 0
                     this.tags.showBottomButton = false
+                    this.tags.shouldStickBottom = true
                     // 去除阴影
                     if (bar) {
                         bar.style.transition = 'background .3s'
@@ -1087,11 +1139,13 @@ import { Img } from '@renderer/function/model/img'
                 }
                 // 显示回到底部
                 if (
+                    !atBottom &&
                     body.scrollTop <
-                        body.scrollHeight - body.clientHeight * 2 &&
+                    body.scrollHeight - body.clientHeight * 2 &&
                     this.tags.showBottomButton !== true
                 ) {
                     this.tags.showBottomButton = true
+                    this.tags.shouldStickBottom = false
                 }
                 // 添加阴影
                 if (
@@ -1105,6 +1159,38 @@ import { Img } from '@renderer/function/model/img'
                 }
             },
 
+            isMsgPanNearBottom(pan?: HTMLDivElement | null, tolerance = 10) {
+                const body = pan ?? document.getElementById('msgPan') as HTMLDivElement | null
+                if (!body) return this.tags.showBottomButton !== true
+                return body.scrollTop + body.clientHeight + tolerance >= body.scrollHeight
+            },
+
+            getMsgPanState(pan?: HTMLDivElement | null) {
+                const body = pan ?? document.getElementById('msgPan') as HTMLDivElement | null
+                if (!body) {
+                    return { top: -1, clientHeight: -1, scrollHeight: -1, atBottom: false }
+                }
+                return {
+                    top: Math.round(body.scrollTop),
+                    clientHeight: Math.round(body.clientHeight),
+                    scrollHeight: Math.round(body.scrollHeight),
+                    atBottom: this.isMsgPanNearBottom(body),
+                }
+            },
+
+            debugScroll(tag: string, extra: Record<string, any> = {}) {
+                void tag
+                void extra
+            },
+
+            debugReload(tag: string, extra: Record<string, any> = {}) {
+                if (!import.meta.env.DEV || backend.type !== 'tauri') return
+                backend.call(undefined, 'sys:debugLog', false, {
+                    tag: 'LocalReload',
+                    message: `${tag} ${JSON.stringify({ chatId: this.chat.show.id, ...extra })}`,
+                })
+            },
+
             /**
              * 加载更多历史消息
              */
@@ -1113,16 +1199,46 @@ import { Img } from '@renderer/function/model/img'
                     !this.tags.nowGetHistroy &&
                     runtimeData.tags.canLoadHistory !== false
                 ) {
+                    const firstMsg = this.list[0]
+                    if (!firstMsg) return
                     // 获取列表第一条消息 ID
-                    const firstMsgId = this.list[0].message_id
-                    const firstMsgTime = Number(this.list[0]?.time)
+                    const firstMsgId = firstMsg.message_id
+                    const firstMsgTime = Number(firstMsg?.time)
+                    const historyLoadToken = `${this.chat.show.id}-${Date.now()}`
                     const useMixedHistory =
                         runtimeData.sysConfig.enable_local_history &&
                         runtimeData.sysConfig.mixed_load_messages !== false
+                    this.pendingHistoryLoadSummary = {
+                        token: historyLoadToken,
+                        chatId: this.chat.show.id,
+                        localMessages: 0,
+                        localImages: 0,
+                        serverMessages: 0,
+                        serverImages: 0,
+                        localDone: !useMixedHistory,
+                        serverDone: false,
+                    }
+                    runtimeData.tags.historyLoadToken = historyLoadToken
+                    runtimeData.watch.historyLoadSummaryEvent = undefined
                     // 锁定加载防止反复触发
                     this.tags.nowGetHistroy = true
+					this.debugScroll('loadMoreHistory:start', {
+					    firstMsgId,
+					    firstMsgTime,
+					    useMixedHistory,
+					})
 					// 移除加载失败标志
 					runtimeData.tags.loadHistoryFail = false
+                    const historyLoadDeadline = window.setTimeout(() => {
+                        if (!this.tags.nowGetHistroy) return
+                        this.tags.nowGetHistroy = false
+                        runtimeData.tags.historyBeforeTime = undefined
+                        runtimeData.tags.loadHistoryFail = true
+                        this.debugReload('loadMoreHistory:timeout', {
+                            firstMsgId: String(firstMsgId ?? ''),
+                            useMixedHistory,
+                        })
+                    }, 10000)
                     if (useMixedHistory && Number.isFinite(firstMsgTime)) {
                         runtimeData.tags.historyBeforeTime = firstMsgTime
                     } else {
@@ -1153,11 +1269,25 @@ import { Img } from '@renderer/function/model/img'
                                     return msgId.length === 0 || !existingIds.has(msgId)
                                 })
                                 if (addList.length > 0) {
+                                    if (this.pendingHistoryLoadSummary?.token === historyLoadToken) {
+                                        this.pendingHistoryLoadSummary.localMessages = addList.length
+                                        this.pendingHistoryLoadSummary.localImages = this.countImagesInMessages(addList)
+                                    }
                                     runtimeData.messageList.splice(0, 0, ...addList)
                                     if (this.details[3].open) {
                                         this.runSearch(this.msg)
                                     }
                                 }
+                            }
+                            if (this.pendingHistoryLoadSummary?.token === historyLoadToken) {
+                                this.pendingHistoryLoadSummary.localDone = true
+                                if (this.pendingHistoryLoadSummary.serverDone) this.showHistoryLoadSummary()
+                            }
+                        })
+                        .catch(() => {
+                            if (this.pendingHistoryLoadSummary?.token === historyLoadToken) {
+                                this.pendingHistoryLoadSummary.localDone = true
+                                if (this.pendingHistoryLoadSummary.serverDone) this.showHistoryLoadSummary()
                             }
                         })
                     }
@@ -1184,15 +1314,118 @@ import { Img } from '@renderer/function/model/img'
                     )
                 }
             },
+            countImagesInMessages(msgs: any[]) {
+                let count = 0
+                const walk = (items: any[]) => {
+                    for (const item of items) {
+                        if (!Array.isArray(item?.message)) continue
+                        for (const seg of item.message) {
+                            if (seg?.type === 'image') count++
+                            if (Array.isArray(seg?.content)) walk(seg.content)
+                        }
+                    }
+                }
+                walk(msgs)
+                return count
+            },
+            async showSelectedMsgSourceInfo() {
+                const msg = this.selectedMsg
+                if (!msg) return
+                this.closeMsgMenu()
+
+                const lines = [
+                    `${this.$t('消息 ID')}：${String(msg.message_id ?? '')}`,
+                    `${this.$t('消息对象来源')}：${msg?._from_local_db === true ? this.$t('本地聊天记录缓存') : 'NapCat / Server'}`,
+                    `${this.$t('消息类型')}：${String(msg.message_type ?? '')}`,
+                    `${this.$t('时间')}：${String(msg.time ?? '')}`,
+                    `${this.$t('序号')}：${String(msg.message_seq ?? msg.seq_id ?? msg.seq ?? '')}`,
+                    `${this.$t('发送者')}：${String(msg.sender?.user_id ?? '')}`,
+                ]
+
+                const imageSegs = Array.isArray(msg.message)
+                    ? msg.message.filter((seg: any) => seg?.type === 'image')
+                    : []
+                if (imageSegs.length > 0) {
+                    const { dbGetImage, hashUrl } = await import('@renderer/function/utils/localHistoryUtil')
+                    lines.push('')
+                    lines.push(`${this.$t('图片段')}：${imageSegs.length}`)
+                    for (const [index, seg] of imageSegs.entries()) {
+                        const url = String(seg?.url ?? '')
+                        const urlHash = url ? await hashUrl(url) : ''
+                        const cached = urlHash ? await dbGetImage(runtimeData.loginInfo.uin, urlHash) : null
+                        lines.push(`#${index + 1} ${this.$t('图片来源判断')}：${cached ? this.$t('本地图片缓存') : 'NapCat URL'}`)
+                        lines.push(`  url: ${url || '(empty)'}`)
+                        lines.push(`  cache: ${cached ? 'hit' : 'miss'}`)
+                    }
+                }
+
+                const forwardSeg = Array.isArray(msg.message)
+                    ? msg.message.find((seg: any) => seg?.type === 'forward')
+                    : null
+                if (forwardSeg) {
+                    lines.push('')
+                    lines.push(`${this.$t('合并转发来源')}：${String(forwardSeg.forward_source ?? (msg?._from_local_db === true ? 'local-db' : 'NapCat'))}`)
+                    lines.push(`${this.$t('合并转发错误')}：${String(forwardSeg.forward_error_code ?? 'none')}`)
+                    lines.push(`${this.$t('合并转发内容条数')}：${Array.isArray(forwardSeg.content) ? forwardSeg.content.length : 0}`)
+                    if (forwardSeg.forward_error_detail) {
+                        lines.push(`${this.$t('错误详情')}：${String(forwardSeg.forward_error_detail)}`)
+                    }
+                }
+
+                const escapeHtml = (text: string) => text
+                    .replaceAll('&', '&amp;')
+                    .replaceAll('<', '&lt;')
+                    .replaceAll('>', '&gt;')
+
+                runtimeData.popBoxList.push({
+                    title: this.$t('消息来源诊断'),
+                    html: `<pre style="white-space: pre-wrap; word-break: break-word; margin: 0; line-height: 1.6;">${escapeHtml(lines.join('\n'))}</pre>`,
+                    allowQuickClose: true,
+                })
+            },
+            showHistoryLoadSummary() {
+                if (!this.pendingHistoryLoadSummary) return
+                const summary = this.pendingHistoryLoadSummary
+                if (!summary.localDone || !summary.serverDone) return
+                this.historyLoadSummary.visible = true
+                this.historyLoadSummary.chatId = summary.chatId
+                this.historyLoadSummary.token = summary.token
+                this.historyLoadSummary.text = this.$t(
+                    '服务器已加载 {serverMessages} 条消息 {serverImages} 张图片',
+                    {
+                        serverMessages: summary.serverMessages,
+                        serverImages: summary.serverImages,
+                    },
+                )
+                if (this.historyLoadSummary.hideTimer) {
+                    clearTimeout(this.historyLoadSummary.hideTimer)
+                }
+                this.historyLoadSummary.hideTimer = setTimeout(() => {
+                    if (this.historyLoadSummary.token !== summary.token) return
+                    this.historyLoadSummary.visible = false
+                }, 2500)
+            },
+            retryLoadHistory() {
+                if (this.tags.nowGetHistroy) return
+                runtimeData.tags.loadHistoryFail = false
+                runtimeData.tags.canLoadHistory = true
+                runtimeData.tags.historyBeforeTime = undefined
+                if (this.list.length > 0) {
+                    this.loadMoreHistory()
+                    return
+                }
+                loadHistoryFirst(this.chat.show)
+            },
 
             /**
              * 消息区滚动到指定位置
              * @param where 位置（px）
              * @param showAnimation 是否使用动画
              */
-            scrollTo(where: number | undefined, showAnimation = true) {
+            scrollTo(where: number | undefined, showAnimation = true, reason = 'scrollTo') {
                 const pan = document.getElementById('msgPan')
-                if (pan !== null && where) {
+                if (pan !== null && where !== undefined) {
+                    const before = this.getMsgPanState(pan)
                     if (showAnimation === false) {
                         pan.style.scrollBehavior = 'unset'
                     } else {
@@ -1200,12 +1433,21 @@ import { Img } from '@renderer/function/model/img'
                     }
                     pan.scrollTop = where
                     pan.style.scrollBehavior = 'smooth'
+                    this.debugScroll(reason, {
+                        before,
+                        targetTop: Math.round(where),
+                        showAnimation,
+                        afterTop: Math.round(pan.scrollTop),
+                    })
                 }
             },
-            scrollBottom(showAnimation = false) {
+            scrollBottom(showAnimation = false, reason = 'scrollBottom') {
                 const pan = document.getElementById('msgPan')
                 if (pan !== null) {
-                    this.scrollTo(pan.scrollHeight, showAnimation)
+                    this.NewMsgNum = 0
+                    this.tags.showBottomButton = false
+                    this.tags.shouldStickBottom = true
+                    this.scrollTo(pan.scrollHeight, showAnimation, reason)
                 }
             },
             scrollToMsg(message_id: string) {
@@ -1216,12 +1458,19 @@ import { Img } from '@renderer/function/model/img'
             imgLoadedScroll(height: number) {
                 const pan = document.getElementById('msgPan')
                 if(pan) {
-                    if(this.list.length <= 20 && !this.tags.showBottomButton) {
-                        this.scrollBottom()
-                    } else {
-                        // 纠正滚动位置
-                        this.scrollTo(pan.scrollTop + height, false)
+                    // 图片是异步加载的。若当前就在底部，必须持续贴住底部，
+                    // 否则晚到的高度补偿会把视口“拉回”到旧位置，看起来像自动上跳。
+                    if (this.tags.shouldStickBottom) {
+                        this.debugScroll('imgLoadedScroll:stickBottom', {
+                            height,
+                            reason: 'sticky-intent',
+                        })
+                        this.scrollBottom(false, 'imgLoadedScroll:scrollBottom')
+                        return
                     }
+                    // 不在底部时，才保持当前可视锚点不变。
+                    this.debugScroll('imgLoadedScroll:keepAnchor', { height })
+                    this.scrollTo(pan.scrollTop + height, false, 'imgLoadedScroll:keepAnchor')
                 }
             },
 
@@ -1804,6 +2053,7 @@ import { Img } from '@renderer/function/model/img'
                             this.tags.menuDisplay.revoke = true
                         }
                         this.tags.menuDisplay.resave = runtimeData.sysConfig.enable_local_history === true
+                        this.tags.menuDisplay.sourceInfo = true
                         // 重新编辑判定
                         this.tags.menuDisplay.reedit = this.tags.menuDisplay.revoke && data.sender?.user_id === runtimeData.loginInfo.uin
                         if (runtimeData.chatInfo.show.type == 'group' && data.sender?.user_id !== runtimeData.loginInfo.uin) {
@@ -1936,6 +2186,7 @@ import { Img } from '@renderer/function/model/img'
                     copy: true,
                     copySelect: false,
                         downloadImg: false,
+                        sourceInfo: false,
                         startChat: false,
                         revoke: false,
                         reedit: false,
@@ -2421,33 +2672,33 @@ import { Img } from '@renderer/function/model/img'
                 const msg = this.selectedMsg
                 if (!msg) return
                 this.closeMsgMenu()
+                await this.reloadLocalMessage(msg)
+            },
+            replaceVisibleMessage(nextMsg: any) {
+                const replaceIn = (list: any[]) => {
+                    const index = list.findIndex((item: any) => String(item.message_id) === String(nextMsg.message_id))
+                    if (index >= 0) {
+                        list.splice(index, 1, nextMsg)
+                    }
+                }
+
+                replaceIn(this.list)
+                replaceIn(this.tags.search.list)
+                if (this.selectedMsg && String(this.selectedMsg.message_id) === String(nextMsg.message_id)) {
+                    this.selectedMsg = nextMsg
+                }
+            },
+            async reloadLocalMessage(msg?: any) {
+                const targetMsg = msg ?? this.selectedMsg
+                if (!targetMsg) return
                 if (!runtimeData.sysConfig.enable_local_history) {
                     new PopInfo().add(PopType.INFO, this.$t('请先启用消息存储'))
                     return
                 }
-                const msgId = msg.message_id
+                const msgId = targetMsg.message_id
                 try {
-                    const type = msg.message_type ?? this.chat.show.type
-                    const chatId = msg.group_id ?? msg.user_id ?? this.chat.show.id
-                    const echo = 'reloadHistory_' + msgId + '_' + Date.now()
-                    const apiName = type === 'group'
-                        ? runtimeData.jsonMap.message_list?.name
-                        : runtimeData.jsonMap.message_list?.private_name ?? runtimeData.jsonMap.message_list?.name
-                    Connector.send(
-                        apiName ?? 'get_chat_history',
-                        {
-                            group_id: type === 'group' ? chatId : undefined,
-                            user_id: type !== 'group' ? chatId : undefined,
-                            message_id: 0,
-                            count: 40,
-                        },
-                        echo,
-                    )
-                    const raw = await Connector.waitReturn(echo)
-                    const parsed = getMsgData('message_list', raw, runtimeData.jsonMap.message_list)
-                    const list = await getMessageList(parsed)
-                    const fullMsg = list?.find((m: any) => String(m.message_id) === String(msgId))
-                    const { saveMessagesWithSideEffects } = await import('@renderer/function/utils/localHistoryUtil')
+                    const fullMsg = await this.fetchSelectedMsgForReload(targetMsg)
+                    const { dbDeleteMessage, saveMessagesWithSideEffects } = await import('@renderer/function/utils/localHistoryUtil')
                     if (fullMsg) {
                         const clean = JSON.parse(JSON.stringify(fullMsg))
                         if (Array.isArray(clean.message)) {
@@ -2458,13 +2709,199 @@ import { Img } from '@renderer/function/model/img'
                                 delete s.record_failed
                             })
                         }
+                        await dbDeleteMessage(runtimeData.loginInfo.uin, String(msgId))
                         await saveMessagesWithSideEffects(runtimeData.loginInfo.uin, [clean])
-                        new PopInfo().add(PopType.INFO, this.$t('已重新保存消息'))
+                        this.replaceVisibleMessage(clean)
+                        this.debugReload('reloadLocalMessage:success', {
+                            messageId: String(msgId),
+                            fromLocalDb: targetMsg?._from_local_db === true,
+                            imageCount: Array.isArray(clean.message)
+                                ? clean.message.filter((seg: any) => seg?.type === 'image').length
+                                : 0,
+                        })
+                        new PopInfo().add(PopType.INFO, this.$t('已重新拉取并覆盖本地记录'))
                     } else {
+                        this.debugReload('reloadLocalMessage:notFound', {
+                            messageId: String(msgId),
+                            fromLocalDb: targetMsg?._from_local_db === true,
+                        })
                         new PopInfo().add(PopType.INFO, this.$t('获取选中消息失败'))
                     }
                 } catch (e) {
+                    this.debugReload('reloadLocalMessage:error', {
+                        messageId: String(msgId),
+                        error: e instanceof Error ? e.message : String(e),
+                    })
                     new PopInfo().add(PopType.ERR, this.$t('获取选中消息失败'))
+                }
+            },
+            async fetchSelectedMsgForReload(msg: any) {
+                const msgId = msg?.message_id
+                if (!msgId) return null
+
+                const type = msg.message_type ?? this.chat.show.type
+                const chatId = msg.group_id ?? msg.user_id ?? this.chat.show.id
+                const apiName = type === 'group'
+                    ? runtimeData.jsonMap.message_list?.name
+                    : runtimeData.jsonMap.message_list?.private_name ?? runtimeData.jsonMap.message_list?.name
+                const targetTime = Number(msg?.time ?? 0)
+                const targetSeq = Number(msg?.message_seq ?? msg?.seq_id ?? msg?.seq ?? 0)
+
+                this.debugReload('reloadLocalMessage:start', {
+                    messageId: String(msgId),
+                    messageType: type,
+                    chatId,
+                    targetTime,
+                    targetSeq,
+                    fromLocalDb: msg?._from_local_db === true,
+                    apiName: apiName ?? 'get_chat_history',
+                })
+
+                const fetchHistoryPage = async (anchorMessageId: string | number, count: number) => {
+                    const echo = 'reloadHistory_' + msgId + '_' + anchorMessageId + '_' + count + '_' + Date.now()
+                    Connector.send(
+                        apiName ?? 'get_chat_history',
+                        {
+                            group_id: type === 'group' ? chatId : undefined,
+                            user_id: type !== 'group' ? chatId : undefined,
+                            message_seq: anchorMessageId,
+                            message_id: anchorMessageId,
+                            reverse_order: false,
+                            count,
+                        },
+                        echo,
+                    )
+                    const raw = await Connector.waitReturn(echo)
+                    const parsed = getMsgData('message_list', raw, runtimeData.jsonMap.message_list)
+                    const list = await getMessageList(parsed)
+                    this.debugReload('fetchHistoryPage', {
+                        messageId: String(msgId),
+                        anchorMessageId: String(anchorMessageId),
+                        count,
+                        got: list?.length ?? 0,
+                        first: list?.[0]?.message_id ? String(list[0].message_id) : '',
+                        last: list?.at(-1)?.message_id ? String(list.at(-1).message_id) : '',
+                    })
+                    return list ?? []
+                }
+
+                const findInPage = (list: any[] | undefined) => {
+                    return list?.find((m: any) => String(m.message_id) === String(msgId)) ?? null
+                }
+
+                const getOlderAnchorFromPage = (list: any[] | undefined, currentAnchor: string | number) => {
+                    if (!list || list.length === 0) return undefined
+                    const sorted = [...list].sort((a: any, b: any) => {
+                        const timeDiff = Number(a?.time ?? 0) - Number(b?.time ?? 0)
+                        if (timeDiff !== 0) return timeDiff
+                        const seqA = Number(a?.message_seq ?? a?.seq_id ?? a?.seq ?? 0)
+                        const seqB = Number(b?.message_seq ?? b?.seq_id ?? b?.seq ?? 0)
+                        if (seqA !== seqB) return seqA - seqB
+                        return String(a?.message_id ?? '').localeCompare(String(b?.message_id ?? ''))
+                    })
+                    return sorted.find((item: any) => String(item?.message_id ?? '') !== String(currentAnchor))?.message_id
+                }
+
+                const searchPagedHistory = async (startAnchor: string | number, count: number, maxPages: number, label: string) => {
+                    let anchor: string | number = startAnchor
+                    const visited = new Set<string>()
+                    for (let i = 0; i < maxPages; i++) {
+                        const key = String(anchor)
+                        if (!key || visited.has(key)) {
+                            this.debugReload('searchPagedHistory:stop', {
+                                messageId: String(msgId),
+                                label,
+                                reason: visited.has(key) ? 'repeated-anchor' : 'empty-anchor',
+                                anchorMessageId: key,
+                                page: i,
+                            })
+                            break
+                        }
+                        visited.add(key)
+
+                        const list = await fetchHistoryPage(anchor, count)
+                        const hit = findInPage(list)
+                        const oldest = [...list].sort((a: any, b: any) => {
+                            const timeDiff = Number(a?.time ?? 0) - Number(b?.time ?? 0)
+                            if (timeDiff !== 0) return timeDiff
+                            return String(a?.message_id ?? '').localeCompare(String(b?.message_id ?? ''))
+                        })[0]
+                        if (hit) {
+                            this.debugReload('searchPagedHistory:hit', {
+                                messageId: String(msgId),
+                                label,
+                                anchorMessageId: key,
+                                page: i,
+                                got: list.length,
+                                hitMessageId: String(hit.message_id ?? ''),
+                                hitTime: Number(hit.time ?? 0),
+                                hitSeq: Number(hit.message_seq ?? hit.seq_id ?? hit.seq ?? 0),
+                                first: list[0]?.message_id ? String(list[0].message_id) : '',
+                                last: list.at(-1)?.message_id ? String(list.at(-1)?.message_id) : '',
+                            })
+                            return hit
+                        }
+                        if (!list || list.length === 0) {
+                            this.debugReload('searchPagedHistory:stop', {
+                                messageId: String(msgId),
+                                label,
+                                reason: 'empty-page',
+                                anchorMessageId: key,
+                                page: i,
+                                targetTime,
+                                targetSeq,
+                            })
+                            break
+                        }
+
+                        const nextAnchor = getOlderAnchorFromPage(list, anchor)
+                        this.debugReload('searchPagedHistory:page', {
+                            messageId: String(msgId),
+                            label,
+                            page: i,
+                            anchorMessageId: key,
+                            nextAnchorMessageId: nextAnchor ? String(nextAnchor) : '',
+                            got: list.length,
+                            first: list[0]?.message_id ? String(list[0].message_id) : '',
+                            firstTime: Number(list[0]?.time ?? 0),
+                            firstSeq: Number(list[0]?.message_seq ?? list[0]?.seq_id ?? list[0]?.seq ?? 0),
+                            last: list.at(-1)?.message_id ? String(list.at(-1)?.message_id) : '',
+                            lastTime: Number(list.at(-1)?.time ?? 0),
+                            lastSeq: Number(list.at(-1)?.message_seq ?? list.at(-1)?.seq_id ?? list.at(-1)?.seq ?? 0),
+                            oldestMessageId: oldest?.message_id ? String(oldest.message_id) : '',
+                            oldestTime: Number(oldest?.time ?? 0),
+                            oldestSeq: Number(oldest?.message_seq ?? oldest?.seq_id ?? oldest?.seq ?? 0),
+                            targetTime,
+                            targetSeq,
+                        })
+                        if (!nextAnchor || String(nextAnchor) === key) {
+                            this.debugReload('searchPagedHistory:stop', {
+                                messageId: String(msgId),
+                                label,
+                                reason: 'no-progress',
+                                anchorMessageId: key,
+                                nextAnchorMessageId: nextAnchor ? String(nextAnchor) : '',
+                                page: i,
+                                got: list.length,
+                                first: list[0]?.message_id ? String(list[0].message_id) : '',
+                                last: list.at(-1)?.message_id ? String(list.at(-1)?.message_id) : '',
+                            })
+                            break
+                        }
+                        anchor = nextAnchor
+                    }
+                    return null
+                }
+
+                try {
+                    return await searchPagedHistory(0, 100, 200, 'latest-anchor')
+                } catch (e) {
+                    this.debugReload('searchPagedHistory:error', {
+                        messageId: String(msgId),
+                        label: 'latest-anchor',
+                        error: e instanceof Error ? e.message : String(e),
+                    })
+                    return null
                 }
             },
 
@@ -3415,42 +3852,40 @@ import { Img } from '@renderer/function/model/img'
 
                 // =================== 刷新统计数据 ===================
 
-                // 判断新消息数量（回到底部按钮显示、不在加载历史消息、不是首次加载消息）
-                if (
-                    this.tags.showBottomButton &&
-                    !this.tags.nowGetHistroy &&
-                    oldLength > 0
-                ) {
-                    if (this.NewMsgNum !== 0) {
-                        this.NewMsgNum =
-                            this.NewMsgNum + Math.abs(newLength - oldLength)
-                    } else {
-                        this.NewMsgNum = Math.abs(newLength - oldLength)
-                    }
-                }
-                // 清屏重新加载消息列表（超过 n 条消息、回到底部按钮不显示）
-                // PS：也就是说只在消息底部时才会触发，以防止你是在看历史消息攒满了刷掉
-                if (
-                    this.list.length > 200 &&
-                    !this.tags.nowGetHistroy &&
-                    !this.tags.showBottomButton
-                ) {
-                    runtimeData.messageList = []
-                    const info = {
-                        type: this.chat.show.type,
-                        id: this.chat.show.id,
-                        name: this.chat.show.name,
-                        avatar: this.chat.show.avatar,
-                        jump: this.chat.show.jump,
-                    } as BaseChatInfoElem
-                    loadHistoryFirst(info)
-                    this.tags.nowGetHistroy = true
-                }
-
-                // =================== 渲染监听操作 ===================
-
                 const pan = document.getElementById('msgPan')
                 if (pan !== null) {
+                    const wasAtBottom = this.isMsgPanNearBottom(pan)
+                    const shouldStickBottom = this.tags.shouldStickBottom || wasAtBottom
+                    this.tags.shouldStickBottom = shouldStickBottom
+                    // 判断新消息数量（不在底部、不在加载历史消息、不是首次加载消息）
+                    if (!wasAtBottom && !this.tags.nowGetHistroy && oldLength > 0) {
+                        if (this.NewMsgNum !== 0) {
+                            this.NewMsgNum =
+                                this.NewMsgNum + Math.abs(newLength - oldLength)
+                        } else {
+                            this.NewMsgNum = Math.abs(newLength - oldLength)
+                        }
+                    }
+                    // 清屏重新加载消息列表（超过 n 条消息、当前确实在底部）
+                    if (
+                        this.list.length > 200 &&
+                        !this.tags.nowGetHistroy &&
+                        wasAtBottom
+                    ) {
+                        runtimeData.messageList = []
+                        const info = {
+                            type: this.chat.show.type,
+                            id: this.chat.show.id,
+                            name: this.chat.show.name,
+                            avatar: this.chat.show.avatar,
+                            jump: this.chat.show.jump,
+                        } as BaseChatInfoElem
+                        loadHistoryFirst(info)
+                        this.tags.nowGetHistroy = true
+                    }
+
+                    // =================== 渲染监听操作 ===================
+
                     // 渲染前的数据
                     const height = pan.scrollHeight
                     // const top = pan.scrollTop
@@ -3463,17 +3898,20 @@ import { Img } from '@renderer/function/model/img'
                                 this.scrollTo(
                                     newPan.scrollHeight - height,
                                     false,
+                                    'updateList:historyAdjust',
                                 )
                             }
                             // 新消息自动下滚（只要回到底部按钮没显示就算是在最底部、首次加载（不需要滚动动画））
                             if (!this.tags.nowGetHistroy) {
-                                if (!this.tags.showBottomButton) {
-                                    this.scrollTo(newPan.scrollHeight)
+                                if (shouldStickBottom) {
+                                    this.scrollTo(newPan.scrollHeight, true, 'updateList:autoBottom')
                                 }
                                 if (oldLength <= 0) {
-                                    this.scrollTo(newPan.scrollHeight, false)
+                                    this.scrollTo(newPan.scrollHeight, false, 'updateList:firstLoadBottom')
                                 }
                             }
+                            this.tags.showBottomButton = !this.isMsgPanNearBottom(newPan)
+                            this.tags.shouldStickBottom = !this.tags.showBottomButton
                             // 解除锁定加载
                             this.tags.nowGetHistroy = false
                         }
@@ -3852,6 +4290,10 @@ import { Img } from '@renderer/function/model/img'
 </script>
 
 <style scoped>
+    #msgPan {
+        overflow-anchor: none;
+    }
+
     /* 消息动画 */
     .msglist-move {
         transition: all 0.3s;
@@ -3887,5 +4329,18 @@ import { Img } from '@renderer/function/model/img'
 
     .pan-leave-to {
         opacity: 0;
+    }
+
+    .history-load-summary-bar {
+        background: color-mix(in srgb, var(--color-card-1) 84%, var(--color-main) 16%);
+        justify-content: center;
+    }
+
+    .history-load-summary-info {
+        justify-content: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
     }
 </style>
