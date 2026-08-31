@@ -629,6 +629,7 @@ import MergePan from '@renderer/components/MergePan.vue'
 import {
     defineComponent,
     markRaw,
+    nextTick,
     reactive,
     toRaw,
 } from 'vue'
@@ -1186,7 +1187,7 @@ import { Img } from '@renderer/function/model/img'
             debugReload(tag: string, extra: Record<string, any> = {}) {
                 if (!import.meta.env.DEV || backend.type !== 'tauri') return
                 backend.call(undefined, 'sys:debugLog', false, {
-                    tag: 'LocalReload',
+                    tag: '消息重载',
                     message: `${tag} ${JSON.stringify({ chatId: this.chat.show.id, ...extra })}`,
                 })
             },
@@ -1450,10 +1451,43 @@ import { Img } from '@renderer/function/model/img'
                     this.scrollTo(pan.scrollHeight, showAnimation, reason)
                 }
             },
-            scrollToMsg(message_id: string) {
-                if (!scrollToMsg(message_id, true)) {
+            async scrollToMsg(message_id: string) {
+                if (scrollToMsg(message_id, true)) return
+
+                const targetId = String(message_id).replace(/^chat-/, '')
+                this.debugReload('回复定位：当前列表未找到目标', { targetId })
+                if (!runtimeData.sysConfig.enable_local_history || !targetId) {
                     new PopInfo().add(PopType.INFO, this.$t('无法定位上下文'))
+                    return
                 }
+
+                const { dbGetMessage } = await import('@renderer/function/utils/localHistoryUtil')
+                const localMsg = await dbGetMessage(
+                    runtimeData.loginInfo.uin,
+                    Number(this.chat.show.id),
+                    targetId,
+                )
+                if (!localMsg) {
+                    this.debugReload('回复定位：本地缓存未找到目标', { targetId })
+                    new PopInfo().add(PopType.INFO, this.$t('无法定位上下文'))
+                    return
+                }
+
+                if (!this.list.some((item: any) => String(item.message_id) === targetId)) {
+                    const insertAt = this.list.findIndex(
+                        (item: any) => Number(item.time ?? 0) > Number(localMsg.time ?? 0),
+                    )
+                    if (insertAt < 0) this.list.push(localMsg)
+                    else this.list.splice(insertAt, 0, localMsg)
+                }
+                await nextTick()
+                const located = scrollToMsg(message_id, true)
+                this.debugReload('回复定位：本地缓存目标已插入', {
+                    targetId,
+                    located,
+                    listLength: this.list.length,
+                })
+                if (!located) new PopInfo().add(PopType.INFO, this.$t('无法定位上下文'))
             },
             imgLoadedScroll(height: number) {
                 const pan = document.getElementById('msgPan')
@@ -2680,18 +2714,30 @@ import { Img } from '@renderer/function/model/img'
                     if (index >= 0) {
                         list.splice(index, 1, nextMsg)
                     }
+                    return index >= 0
                 }
 
-                replaceIn(this.list)
-                replaceIn(this.tags.search.list)
+                const replacedInList = replaceIn(this.list)
+                const replacedInSearch = replaceIn(this.tags.search.list)
                 if (this.selectedMsg && String(this.selectedMsg.message_id) === String(nextMsg.message_id)) {
                     this.selectedMsg = nextMsg
                 }
+                this.debugReload('可见消息替换完成', {
+                    messageId: String(nextMsg.message_id ?? ''),
+                    replacedInList,
+                    replacedInSearch,
+                })
             },
             async reloadLocalMessage(msg?: any) {
                 const targetMsg = msg ?? this.selectedMsg
-                if (!targetMsg) return
+                if (!targetMsg) {
+                    this.debugReload('未开始：没有选中的消息')
+                    return
+                }
                 if (!runtimeData.sysConfig.enable_local_history) {
+                    this.debugReload('未开始：本地消息存储未启用', {
+                        messageId: String(targetMsg.message_id ?? ''),
+                    })
                     new PopInfo().add(PopType.INFO, this.$t('请先启用消息存储'))
                     return
                 }
@@ -2759,21 +2805,53 @@ import { Img } from '@renderer/function/model/img'
 
                 const fetchHistoryPage = async (anchorMessageId: string | number, count: number) => {
                     const echo = 'reloadHistory_' + msgId + '_' + anchorMessageId + '_' + count + '_' + Date.now()
-                    Connector.send(
-                        apiName ?? 'get_chat_history',
-                        {
-                            group_id: type === 'group' ? chatId : undefined,
-                            user_id: type !== 'group' ? chatId : undefined,
-                            message_seq: anchorMessageId,
-                            message_id: anchorMessageId,
-                            reverse_order: false,
-                            count,
-                        },
+                    const request = {
+                        group_id: type === 'group' ? chatId : undefined,
+                        user_id: type !== 'group' ? chatId : undefined,
+                        message_seq: anchorMessageId,
+                        message_id: anchorMessageId,
+                        reverse_order: false,
+                        count,
+                    }
+                    this.debugReload('发送服务器历史请求', {
+                        messageId: String(msgId),
                         echo,
-                    )
-                    const raw = await Connector.waitReturn(echo)
+                        apiName: apiName ?? 'get_chat_history',
+                        request,
+                    })
+                    if (import.meta.env.VITE_APP_SSE_MODE === 'true') {
+                        Connector.sendSeeMod(apiName ?? 'get_chat_history', request, echo)
+                    } else {
+                        Connector.sendRaw(apiName ?? 'get_chat_history', request, echo)
+                    }
+                    let raw: any
+                    try {
+                        raw = await Connector.waitReturn(echo)
+                    } catch (e) {
+                        this.debugReload('服务器历史请求失败', {
+                            messageId: String(msgId),
+                            echo,
+                            anchorMessageId: String(anchorMessageId),
+                            error: e instanceof Error ? e.message : String(e),
+                        })
+                        throw e
+                    }
+                    this.debugReload('收到服务器历史响应', {
+                        messageId: String(msgId),
+                        echo,
+                        responseType: Array.isArray(raw) ? 'array' : typeof raw,
+                        responseKeys: raw && typeof raw === 'object' ? Object.keys(raw) : [],
+                        dataKeys: raw?.data && typeof raw.data === 'object' ? Object.keys(raw.data) : [],
+                    })
                     const parsed = getMsgData('message_list', raw, runtimeData.jsonMap.message_list)
                     const list = await getMessageList(parsed)
+                    this.debugReload('服务器响应解析完成', {
+                        messageId: String(msgId),
+                        echo,
+                        parsedType: Array.isArray(parsed) ? 'array' : typeof parsed,
+                        parsedCount: Array.isArray(parsed) ? parsed.length : 0,
+                        normalizedCount: list?.length ?? 0,
+                    })
                     this.debugReload('fetchHistoryPage', {
                         messageId: String(msgId),
                         anchorMessageId: String(anchorMessageId),
@@ -2841,6 +2919,13 @@ import { Img } from '@renderer/function/model/img'
                             })
                             return hit
                         }
+                        this.debugReload('当前历史页未找到目标消息', {
+                            messageId: String(msgId),
+                            label,
+                            anchorMessageId: key,
+                            page: i,
+                            got: list.length,
+                        })
                         if (!list || list.length === 0) {
                             this.debugReload('searchPagedHistory:stop', {
                                 messageId: String(msgId),

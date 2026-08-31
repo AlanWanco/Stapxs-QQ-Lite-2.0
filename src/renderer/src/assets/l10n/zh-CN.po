@@ -1948,3 +1948,45 @@ msgstr "暂无上传任务"
 
 msgid "正在查询本地图片缓存"
 msgstr "正在查询本地图片缓存"
+
+msgid "群文件"
+msgstr "群文件"
+
+msgid "自定义标题栏文字"
+msgstr "自定义标题栏文字"
+
+msgid "修改顶部标题栏显示的文字内容（仅限桌面端）"
+msgstr "修改顶部标题栏显示的文字内容（仅限桌面端）"
+
+msgid "标题内容模板"
+msgstr "标题内容模板"
+
+msgid "支持占位符：{version} 版本号, {nickname} 昵称"
+msgstr "支持占位符：{version} 版本号, {nickname} 昵称"
+
+msgid "自定义官方表情目录"
+msgstr "自定义官方表情目录"
+
+msgid "开启后将使用手动指定的目录而非应用内置下载目录"
+msgstr "开启后将使用手动指定的目录而非应用内置下载目录"
+
+msgid "本地图片表情路径"
+msgstr "本地图片表情路径"
+
+msgid "用于设置聊天面板“本地表情”选项卡的图片目录"
+msgstr "用于设置聊天面板“本地表情”选项卡的图片目录"
+
+msgid "重新选择"
+msgstr "重新选择"
+
+msgid "重载自定义样式"
+msgstr "重载自定义样式"
+
+msgid "立即重新加载当前注入的样式"
+msgstr "立即重新加载当前注入的样式"
+
+msgid "消息 ID"
+msgstr "消息 ID"
+
+msgid "时间"
+msgstr "时间"

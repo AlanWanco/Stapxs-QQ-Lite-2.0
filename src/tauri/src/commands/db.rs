@@ -1,5 +1,5 @@
 use base64::{engine::general_purpose, Engine as _};
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use log::{debug, info};
 use rand::RngCore;
@@ -433,6 +433,23 @@ pub fn db_get_latest(state: State<DbState>, self_id: String, chat_id: i64, n: i6
             .collect();
         list.reverse();
         Ok(list)
+    })
+}
+
+#[tauri::command]
+pub fn db_get_message(state: State<DbState>, self_id: String, chat_id: i64, message_id: String) -> Result<Option<MsgRecord>, String> {
+    state.with_conn(|conn| {
+        let mut stmt = conn.prepare(
+            "SELECT message_id, chat_id, chat_type, sender_id, sender_name,
+                    seq, time, message, raw_message, revoked
+             FROM messages
+             WHERE self_id = ?1 AND chat_id = ?2 AND message_id = ?3
+             LIMIT 1",
+        ).map_err(|e| e.to_string())?;
+
+        stmt.query_row(params![self_id, chat_id, message_id], row_to_record)
+            .optional()
+            .map_err(|e| e.to_string())
     })
 }
 

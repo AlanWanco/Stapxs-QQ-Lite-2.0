@@ -280,6 +280,21 @@ export async function dbGetLatest(selfId: string | number, chatId: number, n: nu
     return callDbRecordList(selfId, 'db:getLatest', { chatId, n }, '[LocalHistory] dbGetLatest 失败')
 }
 
+export async function dbGetMessage(selfId: string | number, chatId: number, messageId: string): Promise<any | null> {
+    if (!isTauriHistoryAvailable()) return null
+    try {
+        const record: LocalMsgRecord | null = await backend.call(undefined, 'db:getMessage', true, {
+            selfId: String(selfId),
+            chatId,
+            messageId,
+        })
+        return record ? deserializeRecord(record) : null
+    } catch (e) {
+        logger.error(e as Error, '[LocalHistory] dbGetMessage 失败')
+        return null
+    }
+}
+
 export async function dbGetBefore(selfId: string | number, chatId: number, messageId: string, n: number): Promise<any[]> {
     return callDbRecordList(selfId, 'db:getBefore', { chatId, messageId, n }, '[LocalHistory] dbGetBefore 失败')
 }

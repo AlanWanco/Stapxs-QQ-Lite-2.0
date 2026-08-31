@@ -416,7 +416,7 @@ import Emoji from '@renderer/function/model/emoji'
 import EmojiFace from './EmojiFace.vue'
 import LazyLottie from './LazyLottie.vue'
 import { Img } from '@renderer/function/model/img'
-import { dbGetImage, hashUrl } from '@renderer/function/utils/localHistoryUtil'
+import { dbGetImage, dbGetMessage, hashUrl } from '@renderer/function/utils/localHistoryUtil'
 
 type Msg = any
 type IUser = any
@@ -494,6 +494,7 @@ function getUserById(id: number): IUser | undefined {
                 trueLang: getTrueLang(),
                 rawTextIndex: {} as { [key: string]: string },
                 textIndex: {} as { [key: string]: string },
+                replyPreview: {} as Record<string, string>,
                 resolvedImages: {} as Record<string, string>,
                 imageCacheStatus: {} as Record<string, {
                     state: 'hit' | 'miss' | 'no-self' | 'empty-url'
@@ -535,6 +536,7 @@ function getUserById(id: number): IUser | undefined {
             } else {
                 this.imageCacheReady = true
             }
+            this.loadReplyPreviews()
             // 处理 textIndex
             this.refreshTextIndex()
             this.$watch(() => this.searchKeyword, () => {
@@ -1310,6 +1312,7 @@ function getUserById(id: number): IUser | undefined {
              * @param message_id
              */
             getRepMsg(message_id: string) {
+                if (this.replyPreview[message_id]) return this.replyPreview[message_id]
                 const list = this.runtimeData.messageList.filter((item) => {
                     return item.message_id == message_id
                 })
@@ -1321,6 +1324,27 @@ function getUserById(id: number): IUser | undefined {
                     else return this.$t('（获取回复消息失败）')
                 }
                 return null
+            },
+
+            async loadReplyPreviews() {
+                if (!runtimeData.sysConfig.enable_local_history) return
+                const ids = new Set<string>()
+                for (const item of this.data.message ?? []) {
+                    if (item?.type === 'reply' && item.id != null) ids.add(String(item.id))
+                }
+                for (const messageId of ids) {
+                    if (this.replyPreview[messageId]) continue
+                    const localMsg = await dbGetMessage(
+                        runtimeData.loginInfo.uin,
+                        Number(this.data.group_id ?? this.data.user_id ?? runtimeData.chatInfo.show.id),
+                        messageId,
+                    )
+                    if (!localMsg) continue
+                    const name = localMsg.sender?.card && localMsg.sender.card !== ''
+                        ? localMsg.sender.card
+                        : localMsg.sender?.nickname ?? ''
+                    this.replyPreview[messageId] = `<span class="reply-name">${name}</span>: ${getMsgRawTxt(localMsg)}`
+                }
             },
 
             /**

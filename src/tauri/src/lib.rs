@@ -264,6 +264,7 @@ pub fn run() {
             commands::opt::opt_clear_all,
             commands::db::db_save_messages,
             commands::db::db_get_latest,
+            commands::db::db_get_message,
             commands::db::db_get_before,
             commands::db::db_get_before_by_time,
             commands::db::db_get_after,
