@@ -98,14 +98,22 @@
                             :alt="item.summary"
                             @load="imageLoaded"
                             @error="imgLoadFail($event, item)">
-                        <img v-else-if="item.type == 'image'"
-                            :title="(!item.summary || item.summary == '') ? $t('预览图片') : item.summary"
-                            :alt="$t('图片')"
-                            :class=" imgStyle(data.message.length, index, isFace(item))"
-                            :src="getImgSrc(item.url)"
-                            @load="imageLoaded"
-                            @error="imgLoadFail($event, item)"
-                            @click="imgClick(item.url)">
+                        <template v-else-if="item.type == 'image'">
+                            <span v-if="isLocalImagePending(item.url)" class="msg-text">
+                                {{ $t('正在查询本地图片缓存') }}
+                            </span>
+                            <span v-else-if="isLocalImageMissing(item.url)" class="msg-text">
+                                {{ getImageCacheErrorText(item) }}
+                            </span>
+                            <img v-else
+                                :title="(!item.summary || item.summary == '') ? $t('预览图片') : item.summary"
+                                :alt="$t('图片')"
+                                :class=" imgStyle(data.message.length, index, isFace(item))"
+                                :src="getImgSrc(item.url)"
+                                @load="imageLoaded"
+                                @error="imgLoadFail($event, item)"
+                                @click="imgClick(item.url)">
+                        </template>
                         <template v-else-if="item.type == 'face'">
                             <EmojiFace :emoji="Emoji.get(Number(item.id))" class="msg-face" />
                         </template>
@@ -491,6 +499,7 @@ function getUserById(id: number): IUser | undefined {
                     state: 'hit' | 'miss' | 'no-self' | 'empty-url'
                     urlHash: string
                 }>,
+                imageCacheReady: false,
                 // 互动相关
                 msgMove: {
                     move: 0,
@@ -523,6 +532,8 @@ function getUserById(id: number): IUser | undefined {
             )[0]
             if (runtimeData.sysConfig.enable_local_history && runtimeData.sysConfig.disable_local_history_image_cache !== true) {
                 this.loadCachedImages()
+            } else {
+                this.imageCacheReady = true
             }
             // 处理 textIndex
             this.refreshTextIndex()
@@ -642,11 +653,26 @@ function getUserById(id: number): IUser | undefined {
 
             async loadCachedImages() {
                 const selfId = runtimeData.loginInfo?.uin
-                if (!selfId) return
-                for (const seg of this.data.message) {
-                    if (seg.type !== 'image' || !seg.url) continue
-                    await this.loadCachedImage(seg.url)
+                if (!selfId) {
+                    this.imageCacheReady = true
+                    return
                 }
+                try {
+                    for (const seg of this.data.message) {
+                        if (seg.type !== 'image' || !seg.url) continue
+                        await this.loadCachedImage(seg.url)
+                    }
+                } finally {
+                    this.imageCacheReady = true
+                }
+            },
+
+            isLocalImagePending(url: string) {
+                return this.data?._from_local_db === true && !this.imageCacheReady && !!url
+            },
+
+            isLocalImageMissing(url: string) {
+                return this.data?._from_local_db === true && this.imageCacheReady && !this.resolvedImages[url]
             },
 
             async loadCachedImage(url: string) {
@@ -668,7 +694,7 @@ function getUserById(id: number): IUser | undefined {
                     return this.resolvedImages[url]
                 }
                 this.imageCacheStatus[url] = { state: 'miss', urlHash }
-                if (import.meta.env.DEV && backend.type === 'tauri') {
+                if (this.data?._from_local_db === true && import.meta.env.DEV && backend.type === 'tauri') {
                     backend.call(undefined, 'sys:debugLog', false, {
                         tag: 'LocalHistory',
                         message: `renderImage:cacheMiss ${JSON.stringify({

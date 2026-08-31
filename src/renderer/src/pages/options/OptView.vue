@@ -525,6 +525,7 @@
             return {
                 napcat: import.meta.env.VITE_NAPCAT,
                 backend: backend,
+                        languages: languages,
                         get: get,
                         runtimeData: runtimeData,
                         checkDefault: checkDefault,

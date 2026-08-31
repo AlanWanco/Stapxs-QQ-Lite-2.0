@@ -1873,3 +1873,78 @@ msgstr "图片来源"
 
 msgid "错误详情"
 msgstr "错误详情"
+
+msgid "界面缩放"
+msgstr "界面缩放"
+
+msgid "不建议缩放到 70% 以下或 130% 以上"
+msgstr "不建议缩放到 70% 以下或 130% 以上"
+
+msgid "重置界面缩放"
+msgstr "重置界面缩放"
+
+msgid "界面太怪了就点我"
+msgstr "界面太怪了就点我"
+
+msgid "重置"
+msgstr "重置"
+
+msgid "字体缩放"
+msgstr "字体缩放"
+
+msgid "调整界面字体大小"
+msgstr "调整界面字体大小"
+
+msgid "重置字体缩放"
+msgstr "重置字体缩放"
+
+msgid "一键复原！"
+msgstr "一键复原！"
+
+msgid "独立显示消息"
+msgstr "独立显示消息"
+
+msgid "始终让自己的消息显示在右边"
+msgstr "始终让自己的消息显示在右边"
+
+msgid "发送历史记录"
+msgstr "发送历史记录"
+
+msgid "Shift+↑/↓ 切换上一条/下一条已发送消息（仅当前会话）"
+msgstr "Shift+↑/↓ 切换上一条/下一条已发送消息（仅当前会话）"
+
+msgid "高级选项"
+msgstr "高级选项"
+
+msgid "全局代理地址"
+msgstr "全局代理地址"
+
+msgid "用于下载表情和自动解析网站（范例：http://127.0.0.1:7890），留空则不使用"
+msgstr "用于下载表情和自动解析网站（范例：http://127.0.0.1:7890），留空则不使用"
+
+msgid "自动解析外链"
+msgstr "自动解析外链"
+
+msgid "是否在聊天中自动解析国外站点卡片 (Twitter, YouTube 等)"
+msgstr "是否在聊天中自动解析国外站点卡片 (Twitter, YouTube 等)"
+
+msgid "QQ 官方表情管理"
+msgstr "QQ 官方表情管理"
+
+msgid "下载或配置官方小黄脸表情资源"
+msgstr "下载或配置官方小黄脸表情资源"
+
+msgid "一键下载"
+msgstr "一键下载"
+
+msgid "下载"
+msgstr "下载"
+
+msgid "暂无下载任务"
+msgstr "暂无下载任务"
+
+msgid "暂无上传任务"
+msgstr "暂无上传任务"
+
+msgid "正在查询本地图片缓存"
+msgstr "正在查询本地图片缓存"
