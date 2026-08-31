@@ -110,7 +110,7 @@ pub fn run() {
             let rt = handle();
 
             let app_handle = app.handle().clone();
-            manager.register(
+            if let Err(err) = manager.register(
                     Box::new(move |response| {
                         let app_handle_clone = app_handle.clone();
                         rt.spawn(async move {
@@ -157,8 +157,9 @@ pub fn run() {
                         });
                     }),
                     categories,
-                )
-                .unwrap();
+                ) {
+                log::error!("初始化通知回调失败，继续启动应用：{err:?}");
+            }
             #[cfg(not(any(target_os = "macos", target_os = "windows")))]
             {
                 // remove all notifications that are still there from previous sessions,
