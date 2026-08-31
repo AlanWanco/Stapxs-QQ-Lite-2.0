@@ -154,7 +154,9 @@ function deriveChatId(selfId: string | number, msgs: any[]): number | undefined 
         firstMsg?.infoList?.group_id ??
         firstMsg?.group_id ??
         firstMsg?.infoList?.target_id ??
-        firstMsg?.target_id
+        firstMsg?.infoList?.private_id ??
+        firstMsg?.target_id ??
+        firstMsg?.private_id
     if (chatId != null) return Number(chatId)
 
     for (const item of msgs) {
@@ -191,11 +193,13 @@ export function msgToRecord(msg: any): LocalMsgRecord | null {
     const messageId = sanitizedMsg.message_id
     if (!messageId) return null
 
-    const chatId: number =
-        sanitizedMsg.infoList?.group_id ??
-        sanitizedMsg.group_id ??
-        sanitizedMsg.infoList?.target_id ??
-        sanitizedMsg.target_id
+        const chatId: number =
+            sanitizedMsg.infoList?.group_id ??
+            sanitizedMsg.group_id ??
+            sanitizedMsg.infoList?.target_id ??
+            sanitizedMsg.infoList?.private_id ??
+            sanitizedMsg.target_id ??
+            sanitizedMsg.private_id
     if (chatId == null) return null
 
     const chatType: string =

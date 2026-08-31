@@ -2709,7 +2709,8 @@ import { Img } from '@renderer/function/model/img'
                 await this.reloadLocalMessage(msg)
             },
             replaceVisibleMessage(nextMsg: any) {
-                const replaceIn = (list: any[]) => {
+                const replaceIn = (list: any[] | undefined) => {
+                    if (!Array.isArray(list)) return false
                     const index = list.findIndex((item: any) => String(item.message_id) === String(nextMsg.message_id))
                     if (index >= 0) {
                         list.splice(index, 1, nextMsg)
