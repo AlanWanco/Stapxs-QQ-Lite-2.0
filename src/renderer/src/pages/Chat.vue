@@ -20,7 +20,7 @@
         @v-move-right.prevent="exitWin()">
         <slot name="chat-extra" />
         <!-- 桌面端顶部空间占位，避免被 top-bar 遮挡 -->
-        <div v-if="['linux', 'win32'].includes(backend.platform ?? '')" class="top-spacer" />
+        <div v-if="!detached && ['linux', 'win32'].includes(backend.platform ?? '')" class="top-spacer" />
         <!-- 聊天基本信息 -->
         <div class="info" @click="closeAllPanels">
             <font-awesome-icon :icon="['fas', 'bars-staggered']" @click="openLeftBar" />
