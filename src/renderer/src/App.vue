@@ -5,7 +5,7 @@
         {{ ' / client: ' + appClient.type }}
         {{ ' / fps: ' + fps.value }}
     </div>
-    <div v-if="['linux', 'win32'].includes(backend.platform ?? '')"
+    <div v-if="!isChatWindow && ['linux', 'win32'].includes(backend.platform ?? '')"
         :class="'top-bar' + ((backend.platform == 'win32' && dev) ? ' win' : '') + (backend.type == 'tauri' ? ' tauri' : '')"
         name="appbar"
         data-tauri-drag-region="true"
@@ -24,7 +24,7 @@
             </div>
         </div>
     </div>
-    <div v-if="backend.platform == 'darwin'" class="controller mac-controller"
+    <div v-if="!isChatWindow && backend.platform == 'darwin'" class="controller mac-controller"
         data-tauri-drag-region="true" />
     <div id="base-app">
         <div v-if="!isChatWindow" class="main-body">
