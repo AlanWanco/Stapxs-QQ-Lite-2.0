@@ -240,6 +240,10 @@ body {
     display: none !important;
 }
 
+.chat-pan.detached > div.more > div:nth-child(2) {
+    padding-bottom: 20px !important;
+}
+
 /* Linux 移动端模式（<500px）- 全屏 message-list */
 @media (max-width: 500px) {
     /* message-list 全屏 */
