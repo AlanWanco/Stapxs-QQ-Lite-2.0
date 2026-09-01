@@ -15,7 +15,7 @@
 <template>
     <div
         id="chat-pan"
-        :class="'chat-pan' + (runtimeData.tags.openSideBar ? ' open' : '') + (['linux', 'win32', 'darwin'].includes(backend.platform ?? '') ? ' withBar' : '') ">
+         :class="'chat-pan' + (detached ? ' detached' : '') + (runtimeData.tags.openSideBar ? ' open' : '') + (['linux', 'win32', 'darwin'].includes(backend.platform ?? '') ? ' withBar' : '') ">
         <span v-if="tags.fullscreen" class="shell-pan-title">admin@{{ new URL(runtimeData.sysConfig.address).hostname }}:/Volumes/Contacts/{{ runtimeData.chatInfo.show.id }}</span>
         <div id="shell-pan" class="shell-pan">
             <div>
@@ -187,7 +187,7 @@
 
     export default defineComponent({
         name: 'ChatShell',
-        props: ['chat', 'list', 'mumberInfo'],
+        props: ['chat', 'list', 'mumberInfo', 'detached'],
         data() {
             return {
                 URL: URL,

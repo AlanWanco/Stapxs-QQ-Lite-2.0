@@ -225,6 +225,21 @@ body {
     }
 }
 
+/* Detached chat windows must not inherit tablet sidebar offsets. */
+.chat-pan.detached,
+.chat-pan.detached.withBar,
+.chat-pan.detached.open {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    transform: none !important;
+}
+.chat-pan.detached > div.info > svg,
+.chat-pan.detached > div.info > svg.back {
+    display: none !important;
+}
+
 /* Linux 移动端模式（<500px）- 全屏 message-list */
 @media (max-width: 500px) {
     /* message-list 全屏 */

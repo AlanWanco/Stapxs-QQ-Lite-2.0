@@ -172,6 +172,24 @@ input {
     }
 }
 
+/* Detached chat windows must not inherit tablet sidebar offsets. */
+.chat-pan.detached,
+.chat-pan.detached.withBar,
+.chat-pan.detached.open {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    transform: none !important;
+}
+.chat-pan.detached > div.info > svg,
+.chat-pan.detached > div.info > svg.back {
+    display: none !important;
+}
+.chat-pan.detached > div.more > div:nth-child(2) {
+    padding-bottom: 20px !important;
+}
+
 /* macOS 移动端模式（<500px）- 全屏 message-list */
 @media (max-width: 500px) {
     /* message-list 全屏 */
@@ -244,4 +262,23 @@ input {
     .friend-list-space {
         display: none !important;
     }
+}
+
+.chat-pan.detached > div.more > div:nth-child(2) {
+    padding-bottom: 20px !important;
+}
+
+/* Keep detached windows independent from every responsive rule above. */
+.chat-pan.detached,
+.chat-pan.detached.withBar,
+.chat-pan.detached.open {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    transform: none !important;
+}
+.chat-pan.detached > div.info > svg,
+.chat-pan.detached > div.info > svg.back {
+    display: none !important;
 }

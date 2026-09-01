@@ -45,7 +45,7 @@ import xss from 'xss'
 export default defineComponent({
     name: 'ChatGlagame',
     components: { Chat },
-    props: ['chat', 'list', 'imgView'],
+    props: ['chat', 'list', 'imgView', 'detached'],
     data() {
         return {
             onLoading: false,

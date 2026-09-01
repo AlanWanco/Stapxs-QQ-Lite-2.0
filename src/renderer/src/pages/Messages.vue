@@ -200,6 +200,9 @@
                 <li id="clear_system_notice" icon="fa-solid fa-broom">
                     {{ $t('清空通知') }}
                 </li>
+                <li id="open_chat_window" icon="fa-solid fa-up-right-from-square">
+                    {{ $t('在独立窗口打开') }}
+                </li>
             </ul>
         </BcMenu>
         <div :class="'friend-list-space' + (runtimeData.tags.openSideBar ? ' open' : '') + (!loginInfo.status || runtimeData.chatInfo.show.id == 0 ? '' : ' has-chat')">
@@ -256,7 +259,7 @@
         name: 'VueMessages',
         components: { FriendBody, BcMenu },
         props: ['chat'],
-        emits: ['userClick', 'loadHistory'],
+        emits: ['userClick', 'openChatWindow', 'loadHistory'],
         data() {
             return {
                 runtimeData: runtimeData,
@@ -600,6 +603,20 @@
                             this.clearSystemNotices()
                             break
                         }
+                        case 'open_chat_window': {
+                            if (item && backend.type === 'tauri' && backend.isDesktop()) {
+                                const id = item.user_id ? item.user_id : item.group_id
+                                this.$emit('openChatWindow', {
+                                    type: item.user_id ? 'user' : 'group',
+                                    id,
+                                    name: getShowName(item.group_name || item.nickname, item.remark),
+                                    avatar: item.user_id
+                                        ? 'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + item.user_id
+                                        : 'https://p.qlogo.cn/gh/' + item.group_id + '/' + item.group_id + '/0',
+                                })
+                            }
+                            break
+                        }
                     }
                 }
                 this.menu.select = undefined
@@ -674,6 +691,9 @@
                 // 置顶的不显示移除
                 if (item.always_top) {
                     info.list = ['canceltop']
+                }
+                if (backend.type === 'tauri' && backend.isDesktop()) {
+                    info.list.push('open_chat_window')
                 }
                 if (item.new_msg) {
                     info.list.push('readed')

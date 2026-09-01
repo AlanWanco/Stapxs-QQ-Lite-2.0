@@ -229,3 +229,22 @@
         margin-top: 0.3rem;
     }
 }
+
+.chat-pan.detached > div.more > div:nth-child(2) {
+    padding-bottom: 20px !important;
+}
+
+/* Detached chat windows are full-window, not tablet/mobile layouts. */
+.chat-pan.detached,
+.chat-pan.detached.withBar,
+.chat-pan.detached.open {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    transform: none !important;
+}
+.chat-pan.detached > div.info > svg,
+.chat-pan.detached > div.info > svg.back {
+    display: none !important;
+}

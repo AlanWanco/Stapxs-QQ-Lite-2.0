@@ -1990,3 +1990,9 @@ msgstr "消息 ID"
 
 msgid "时间"
 msgstr "时间"
+
+msgid "在独立窗口打开"
+msgstr "在独立窗口打开"
+
+msgid "清空通知"
+msgstr "清空通知"

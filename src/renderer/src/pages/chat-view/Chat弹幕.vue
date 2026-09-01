@@ -11,7 +11,8 @@
     <div
         id="chat-pan"
         :class="
-            'chat-pan' +
+                'chat-pan' +
+                (detached ? ' detached' : '') +
                 (runtimeData.tags.openSideBar ? ' open' : '') +
                 (['linux', 'win32', 'darwin'].includes(backend.platform ?? '') ? ' withBar' : '')
         ">
@@ -342,7 +343,7 @@
     export default defineComponent({
         name: 'ChatDan',
         components: { vueDanmaku },
-        props: ['chat', 'list', 'mumberInfo'],
+        props: ['chat', 'list', 'mumberInfo', 'detached'],
         data() {
             return {
                 backend,

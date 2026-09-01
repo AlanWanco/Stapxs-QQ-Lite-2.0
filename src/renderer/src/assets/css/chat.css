@@ -24,6 +24,15 @@ input {
     right: 0;
     top: 0;
 }
+.chat-pan.detached {
+    left: 0 !important;
+    right: 0;
+    width: 100%;
+    transform: none !important;
+}
+.chat-pan.detached > div.info > svg {
+    display: none !important;
+}
 /* 桌面端顶部空间占位，避免被 top-bar 遮挡 */
 .top-spacer {
     height: 40px;
@@ -2303,4 +2312,20 @@ div.tiny-session-body > div:nth-child(3) > div > svg {
 
 textarea#main-input-ex {
     font-family: Helvetica, Arial, Verdana, Tahoma, sans-serif;
+}
+
+/* Detached chat windows do not use the responsive sidebar layout. */
+.chat-pan.detached {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    transform: none !important;
+}
+.chat-pan.detached > div.info > svg,
+.chat-pan.detached > div.info > svg.back {
+    display: none !important;
 }

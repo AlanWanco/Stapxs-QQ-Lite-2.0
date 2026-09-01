@@ -27,7 +27,7 @@
     <div v-if="backend.platform == 'darwin'" class="controller mac-controller"
         data-tauri-drag-region="true" />
     <div id="base-app">
-        <div class="main-body">
+        <div v-if="!isChatWindow" class="main-body">
             <ul :style="get('fs_adaptation') > 0 ? `padding-bottom: ${get('fs_adaptation')}px;` : ''">
                 <li id="bar-home" :class="(tags.page == 'Home' ? 'active' : '') +
                     (loginInfo.status ? ' hiden-home' : '')"
@@ -136,7 +136,7 @@
                     </div>
                 </div>
                 <div v-if="tags.page == 'Messages'" id="messageTab">
-                    <Messages :chat="runtimeData.chatInfo" @user-click="changeChat" @load-history="loadHistory" />
+                    <Messages :chat="runtimeData.chatInfo" @user-click="changeChat" @open-chat-window="openChatWindow" @load-history="loadHistory" />
                 </div>
                 <div v-if="tags.page == 'Friends'" id="friendTab">
                     <Friends :list="runtimeData.userList" @load-history="loadHistory" @user-click="changeChat" />
@@ -150,12 +150,14 @@
         <component :is="runtimeData.pageView.chatView" v-if="
             loginInfo.status &&
                 runtimeData.chatInfo &&
-                runtimeData.chatInfo.show.id != 0"
+                runtimeData.chatInfo.show.id != 0 &&
+                (isChatWindow || tags.showChat)"
             v-show="tags.showChat"
             ref="chat" :mumber-info="runtimeData.chatInfo.info.now_member_info == undefined ?
                 {} : runtimeData.chatInfo.info.now_member_info"
             :merge-list="runtimeData.mergeMessageList"
             :list="runtimeData.messageList" :chat="runtimeData.chatInfo"
+            :detached="isChatWindow"
             @user-click="changeChat" />
         <TransitionGroup class="app-msg" name="appmsg" tag="div">
             <div v-for="msg in appMsgs" :key="'appmsg-' + msg.id">
@@ -281,6 +283,10 @@ export default defineComponent({
             windowWidth: window.innerWidth,
             panelVisibleUnwatch: null as null | (() => void),
             fileManagerEntryUnwatch: null as null | (() => void),
+            isChatWindow: new URLSearchParams(window.location.search).get('chatWindow') === '1',
+            chatWindowKey: '',
+            chatWindows: {} as Record<string, any>,
+            restoringMainChat: false,
         }
     },
     computed: {
@@ -310,6 +316,33 @@ export default defineComponent({
     },
     mounted() {
         const logger = new Logger()
+        if (this.isChatWindow) {
+            const params = new URLSearchParams(window.location.search)
+            const chatType = params.get('type') === 'group' ? 'group' : 'user'
+            const chatId = Number(params.get('id') ?? 0)
+            const chatName = params.get('name') ?? ''
+            this.chatWindowKey = `${chatType}:${chatId}`
+            const startChat = () => {
+                if (loginInfo.status && chatId > 0) {
+                    runtimeData.tags.openSideBar = false
+                    this.changeChat({
+                        id: chatId,
+                        type: chatType,
+                        name: chatName,
+                        avatar: params.get('avatar') ?? '',
+                    } as BaseChatInfoElem)
+                    this.tags.showChat = true
+                    const chat = {
+                        id: chatId,
+                        type: chatType,
+                        name: chatName,
+                        avatar: params.get('avatar') ?? '',
+                    } as BaseChatInfoElem
+                    App.loadHistory(chat)
+                }
+            }
+            this.$watch(() => loginInfo.status, startChat, { immediate: true })
+        }
         window.moYu = () => { return '\x75\x6e\x64\x65\x66\x69\x6e\x65\x64' }
         window.addEventListener('resize', this.handleWindowResize)
         this.panelVisibleUnwatch = this.$watch(() => panelVisible.value, (val: boolean) => {
@@ -939,6 +972,21 @@ export default defineComponent({
          * @param data 切换信息
          */
         changeChat(data: BaseChatInfoElem) {
+            const detachedWindow = !this.isChatWindow
+                ? this.chatWindows[`${data.type}:${data.id}`]
+                : undefined
+            if (detachedWindow) {
+                this.tags.showChat = false
+                void detachedWindow.setFocus().catch((e: unknown) => {
+                    void backend.call(undefined, 'sys:debugLog', false, {
+                        tag: '独立窗口',
+                        message: `点击已拆出聊天时聚焦失败 ${JSON.stringify({
+                            chatKey: `${data.type}:${data.id}`,
+                            error: e instanceof Error ? e.message : String(e),
+                        })}`,
+                    })
+                })
+            }
             // 设置聊天信息
             runtimeData.chatInfo = {
                 show: data,
@@ -963,6 +1011,9 @@ export default defineComponent({
             }
             runtimeData.tags.canLoadHistory = true // 重置终止加载标志
             runtimeData.tags.loadHistoryFail = false // 重置加载失败标志
+            if (!this.isChatWindow) {
+                this.tags.showChat = !detachedWindow
+            }
             if (data.type == 'group') {
                 // 获取自己在群内的资料
                 Connector.send(
@@ -984,6 +1035,82 @@ export default defineComponent({
 
             // 清理通知
             backend.call(undefined, 'sys:closeAllNotice', false, String(data.id))
+        },
+
+        async openChatWindow(data: BaseChatInfoElem) {
+            const key = `${data.type}:${data.id}`
+            const hidingCurrentChat = runtimeData.chatInfo.show.type === data.type && runtimeData.chatInfo.show.id === data.id
+            const previousShowChat = this.tags.showChat
+            const debugWindow = (message: string, extra: Record<string, any> = {}) => {
+                if (!import.meta.env.DEV || backend.type !== 'tauri') return
+                void backend.call(undefined, 'sys:debugLog', false, {
+                    tag: '独立窗口',
+                    message: `${message} ${JSON.stringify({ chatKey: key, ...extra })}`,
+                })
+            }
+            debugWindow('开始打开')
+            if (hidingCurrentChat) this.tags.showChat = false
+            const existing = this.chatWindows[key]
+            if (existing) {
+                try {
+                    await existing.setFocus()
+                    debugWindow('已有窗口已聚焦')
+                    this.tags.showChat = false
+                } catch (e) {
+                    debugWindow('已有窗口聚焦失败', { error: e instanceof Error ? e.message : String(e) })
+                }
+                return
+            }
+            const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow')
+            const params = new URLSearchParams({
+                chatWindow: '1',
+                type: data.type,
+                id: String(data.id),
+                name: data.name ?? '',
+                avatar: data.avatar ?? '',
+            })
+            const label = `chat-${data.type}-${data.id}`
+            const child = new WebviewWindow(label, {
+                url: `/?${params.toString()}`,
+                title: data.name ?? '聊天',
+                width: 850,
+                height: 650,
+                resizable: true,
+            })
+            this.chatWindows[key] = child
+            const created = await new Promise<boolean>((resolve) => {
+                void child.once('tauri://created', () => {
+                    debugWindow('窗口创建成功', { label })
+                    resolve(true)
+                })
+                void child.once('tauri://error', (event) => {
+                    debugWindow('窗口创建失败', { label, error: event.payload })
+                    resolve(false)
+                })
+            })
+            if (!created) {
+                delete this.chatWindows[key]
+                if (hidingCurrentChat) this.tags.showChat = previousShowChat
+                return
+            }
+            // Hide the main panel only when it is showing this detached chat.
+            if (runtimeData.chatInfo.show.type === data.type && runtimeData.chatInfo.show.id === data.id) {
+                this.tags.showChat = false
+            }
+            await child.once('tauri://destroyed', () => {
+                delete this.chatWindows[key]
+                debugWindow('窗口已关闭', { label })
+                this.restoringMainChat = true
+                this.changeChat(data)
+                this.tags.showChat = true
+                this.restoringMainChat = false
+            })
+            try {
+                await child.setFocus()
+                debugWindow('窗口已聚焦', { label })
+            } catch (e) {
+                debugWindow('窗口聚焦失败', { label, error: e instanceof Error ? e.message : String(e) })
+            }
         },
 
         /**

@@ -11,8 +11,9 @@
 
 <template>
     <div id="chat-pan"
-        v-move="chatMoveOptions"
+        v-move="detached ? undefined : chatMoveOptions"
         :class="'chat-pan' +
+            (detached ? ' detached' : '') +
             (runtimeData.tags.openSideBar ? ' open' : '') +
             (['linux', 'win32', 'darwin'].includes(backend.platform ?? '') ? ' withBar' : '')"
         :style="`background-image: url(${runtimeData.sysConfig.chat_background});`"
@@ -704,7 +705,7 @@ import { Img } from '@renderer/function/model/img'
     export default defineComponent({
         name: 'ViewChat',
         inject: ['viewer'],
-        props: ['chat', 'list', 'imgView'],
+        props: ['chat', 'list', 'imgView', 'detached'],
         data() {
             //#region == 窗口移动相关 ==================================================
             const chatMoveOptions: VMoveOptions<HTMLDivElement> = {
@@ -4316,6 +4317,7 @@ import { Img } from '@renderer/function/model/img'
             },
 
             openLeftBar() {
+                if (this.detached) return
                 runtimeData.tags.openSideBar = !runtimeData.tags.openSideBar
                 // 展开消息列表时，收回 chatpan（移动端 ≤500px 由 CSS translateX 处理，无需清 id）
                 const w = window.innerWidth
