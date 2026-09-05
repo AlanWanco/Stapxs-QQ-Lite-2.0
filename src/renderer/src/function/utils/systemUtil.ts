@@ -454,3 +454,104 @@ export async function copyToClipboard(content: ClipboardItem[] | string) {
     else
         await window.navigator.clipboard.write(content)
 }
+
+function isProxyClipboardUrl(value: string): boolean {
+    if (!backend.proxy || value === '') return false
+
+    try {
+        const url = new URL(value)
+        return url.protocol === 'http:' &&
+            url.hostname === 'localhost' &&
+            url.port === String(backend.proxy) &&
+            url.pathname === '/proxy' &&
+            url.searchParams.has('url')
+    } catch {
+        return false
+    }
+}
+
+/**
+ * 判断剪贴板是否包含图片，或包含本应用代理生成的图片 URL。
+ * 必须在 paste 事件处理函数同步阶段调用，避免默认文本粘贴抢先执行。
+ */
+export function hasClipboardImageData(data: DataTransfer | null | undefined): boolean {
+    if (!data) return false
+
+    const isImageType = (type: string) => type.toLowerCase().startsWith('image/')
+    if (Array.from(data.items).some((item) => isImageType(item.type)) ||
+        Array.from(data.types).some(isImageType)) {
+        return true
+    }
+
+    return ['text/plain', 'text/uri-list'].some((type) => {
+        let text = ''
+        try {
+            text = data.getData(type)
+        } catch {
+            return false
+        }
+        return text.split(/\r?\n/).some((line) => isProxyClipboardUrl(line.trim()))
+    })
+}
+
+async function dataUrlToFile(dataUrl: string, fileName: string): Promise<File> {
+    const response = await fetch(dataUrl)
+    const blob = await response.blob()
+    return new File([blob], fileName, { type: blob.type || 'image/png' })
+}
+
+async function rgbaToPngBlob(rgba: Uint8Array, width: number, height: number): Promise<Blob | null> {
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+
+    const context = canvas.getContext('2d')
+    if (!context) return null
+
+    context.putImageData(new ImageData(new Uint8ClampedArray(rgba), width, height), 0, 0)
+
+    if (!canvas.toBlob) {
+        return await fetch(canvas.toDataURL('image/png')).then((response) => response.blob())
+    }
+
+    return await new Promise((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), 'image/png')
+    })
+}
+
+/**
+ * 桌面端读取剪贴板图片
+ * 主要用于原生菜单粘贴时，WebView 没有提供 ClipboardEvent 文件项的兜底。
+ */
+export async function readDesktopClipboardImageFile(fileName = 'clipboard.png'): Promise<File | null> {
+    if (!backend.isDesktop()) return null
+
+    try {
+        if (backend.type === 'electron') {
+            const dataUrl = await backend.call(undefined, 'sys:readClipboardImage', true)
+            if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+                return null
+            }
+            return await dataUrlToFile(dataUrl, fileName)
+        }
+
+        if (backend.type === 'tauri') {
+            const Clipboard = await import('@tauri-apps/plugin-clipboard-manager')
+            const image = await Clipboard.readImage()
+            const [rgba, size] = await Promise.all([image.rgba(), image.size()])
+
+            if (!size.width || !size.height || rgba.byteLength === 0) {
+                return null
+            }
+
+            const blob = await rgbaToPngBlob(rgba, size.width, size.height)
+            if (!blob) return null
+
+            return new File([blob], fileName, { type: 'image/png' })
+        }
+    } catch {
+        return null
+    }
+
+    return null
+}

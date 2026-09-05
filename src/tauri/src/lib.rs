@@ -291,8 +291,9 @@ pub fn run() {
 fn create_window(app: &mut tauri::App) -> tauri::Result<tauri::WebviewWindow> {
     let win_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("/".into()))
         .title("Stapxs QQ Lite")
-        .inner_size(850.0, 530.0)
-        .transparent(true);
+        .inner_size(850.0, 530.0);
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    let win_builder = win_builder.transparent(true);
     let store =
             StoreBuilder::new(app, ".settings.dat").build()
             .map_err(|e| tauri::Error::Io(std::io::Error::new(
@@ -429,7 +430,7 @@ fn create_window(app: &mut tauri::App) -> tauri::Result<tauri::WebviewWindow> {
         }
     }
     #[cfg(debug_assertions)]
-    {
+    if std::env::var("TAURI_OPEN_DEVTOOLS").ok().as_deref() == Some("1") {
         window.open_devtools();
     }
     Ok(window)

@@ -6,6 +6,7 @@ import log4js from 'log4js'
 import axios from 'axios'
 
 import {
+    clipboard,
     ipcMain,
     systemPreferences,
     app,
@@ -101,6 +102,13 @@ export function regIpcListener() {
         } catch (error) {
             logger.error(error as Error, '获取 api 数据失败')
         }
+    })
+    ipcMain.handle('sys:readClipboardImage', () => {
+        const image = clipboard.readImage()
+        if (image.isEmpty()) {
+            return null
+        }
+        return image.toDataURL()
     })
     // 关闭窗口
     ipcMain.on('win:close', () => {

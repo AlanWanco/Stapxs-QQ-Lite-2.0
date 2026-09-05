@@ -167,7 +167,11 @@
     import { Connector } from '@renderer/function/connect'
     import { defineComponent, markRaw } from 'vue'
     import { runtimeData } from '@renderer/function/msg'
-    import { getTrueLang } from '@renderer/function/utils/systemUtil'
+    import {
+        getTrueLang,
+        hasClipboardImageData,
+        readDesktopClipboardImageFile,
+    } from '@renderer/function/utils/systemUtil'
     import {
         MsgItemElem,
         SQCodeElem,
@@ -831,22 +835,31 @@
                 return backName
             },
 
-            addImg(event: ClipboardEvent) {
-                // 判断粘贴类型
-                if (!(event.clipboardData && event.clipboardData.items)) {
-                    return
-                }
-                for (
-                    let i = 0, len = event.clipboardData.items.length;
-                    i < len;
-                    i++
-                ) {
-                    const item = event.clipboardData.items[i]
-                    if (item.kind === 'file') {
+            async addImg(event: ClipboardEvent) {
+                const clipboardData = event.clipboardData
+                const items = clipboardData?.items
+                const hasFileItem = items !== undefined &&
+                    Array.from(items).some((item) => item.kind === 'file')
+                const hasImageData = hasClipboardImageData(clipboardData)
+
+                // preventDefault 必须在第一次 await 前调用，否则默认文本粘贴会先执行。
+                if (hasFileItem || hasImageData) event.preventDefault()
+
+                let handledFile = false
+                if (items) {
+                    for (let i = 0, len = items.length; i < len; i++) {
+                        const item = items[i]
+                        if (item.kind !== 'file') continue
+
+                        handledFile = true
                         this.setImg(item.getAsFile())
-                        // 阻止默认行为
-                        event.preventDefault()
                     }
+                }
+
+                // 原生右键菜单粘贴时，WebView 可能只有代理 URL，图片本体从桌面剪贴板读取。
+                if (!handledFile && hasImageData) {
+                    const file = await readDesktopClipboardImageFile()
+                    if (file) this.setImg(file)
                 }
             },
 
