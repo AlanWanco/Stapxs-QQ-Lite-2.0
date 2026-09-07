@@ -660,7 +660,6 @@ import {
     isShowTime,
     isDeleteMsg,
     getImageUrlData,
-    buildMsgList,
 } from '@renderer/function/utils/msgUtil'
 import { Logger, LogType, PopInfo, PopType } from '@renderer/function/base'
 import { Connector } from '@renderer/function/connect'
@@ -922,11 +921,7 @@ import { Img } from '@renderer/function/model/img'
             chat(newChat: any, oldChat: any) {
                 if (newChat?.show?.id !== oldChat?.show?.id && oldChat?.show?.id !== undefined) {
                     const draft = this.createComposerSnapshot()
-                    if (draft.msg !== '' || draft.composerTokens.length > 0) {
-                        runtimeData.composerDrafts.set(oldChat.show.id, draft)
-                    } else {
-                        runtimeData.composerDrafts.delete(oldChat.show.id)
-                    }
+                    this.updateComposerDraft(oldChat.show.id, draft)
                 }
                 // 重置部分状态数据
                 const data = (this as any).$options.data(this)
@@ -1226,14 +1221,14 @@ import { Img } from '@renderer/function/model/img'
                     runtimeData.watch.historyLoadSummaryEvent = undefined
                     // 锁定加载防止反复触发
                     this.tags.nowGetHistroy = true
-					this.debugScroll('loadMoreHistory:start', {
-					    firstMsgId,
-					    firstMsgTime,
-					    useMixedHistory,
-					})
-					// 移除加载失败标志
-					runtimeData.tags.loadHistoryFail = false
-                    const historyLoadDeadline = window.setTimeout(() => {
+                    this.debugScroll('loadMoreHistory:start', {
+                        firstMsgId,
+                        firstMsgTime,
+                        useMixedHistory,
+                    })
+                    // 移除加载失败标志
+                    runtimeData.tags.loadHistoryFail = false
+                    window.setTimeout(() => {
                         if (!this.tags.nowGetHistroy) return
                         this.tags.nowGetHistroy = false
                         runtimeData.tags.historyBeforeTime = undefined
@@ -1476,12 +1471,12 @@ import { Img } from '@renderer/function/model/img'
                     return
                 }
 
-                if (!this.list.some((item: any) => String(item.message_id) === targetId)) {
-                    const insertAt = this.list.findIndex(
+                if (!runtimeData.messageList.some((item: any) => String(item.message_id) === targetId)) {
+                    const insertAt = runtimeData.messageList.findIndex(
                         (item: any) => Number(item.time ?? 0) > Number(localMsg.time ?? 0),
                     )
-                    if (insertAt < 0) this.list.push(localMsg)
-                    else this.list.splice(insertAt, 0, localMsg)
+                    if (insertAt < 0) runtimeData.messageList.push(localMsg)
+                    else runtimeData.messageList.splice(insertAt, 0, localMsg)
                 }
                 await nextTick()
                 const located = scrollToMsg(message_id, true)
@@ -1683,6 +1678,7 @@ import { Img } from '@renderer/function/model/img'
                 this.oldMsg = this.composerBeforeCompositionMsg
                 this.tags.isComposing = false
                 this.syncComposerTokensWithInput()
+                this.updateComposerDraft()
                 this.$nextTick(() => {
                     const input = event.target as HTMLInputElement | HTMLTextAreaElement | null
                     this.syncInputMirror(input)
@@ -3222,7 +3218,10 @@ import { Img } from '@renderer/function/model/img'
                 this.imgCache.delete(index)
                 this.sendCache[index] = null as any
                 const token = this.composerTokens.find((item) => item.index === index)
-                if (!token) return
+                if (!token) {
+                    this.updateComposerDraft()
+                    return
+                }
                 this.msg = this.msg.slice(0, token.start) + this.msg.slice(token.end)
                 const cutLength = token.end - token.start
                 this.composerTokens = this.composerTokens
@@ -3237,6 +3236,7 @@ import { Img } from '@renderer/function/model/img'
                         }
                         return item
                     })
+                this.updateComposerDraft()
                 this.$nextTick(() => {
                     const input = (document.getElementById('main-input') as HTMLInputElement | null) ??
                         (document.getElementById('main-input-ex') as HTMLTextAreaElement | null)
@@ -3327,6 +3327,15 @@ import { Img } from '@renderer/function/model/img'
                 return this.msg.replace(/\s+/g, ' ').trim()
             },
 
+            updateComposerDraft(chatId = this.chat?.show?.id, snapshot = this.createComposerSnapshot()) {
+                if (chatId === undefined || chatId === null || chatId === 0) return
+                if (snapshot.msg !== '' || snapshot.composerTokens.length > 0) {
+                    runtimeData.composerDrafts.set(chatId, snapshot)
+                } else {
+                    runtimeData.composerDrafts.delete(chatId)
+                }
+            },
+
             restoreComposerSnapshot(snapshot: ComposerSnapshot) {
                 this.msg = snapshot.msg
                 this.oldMsg = snapshot.msg
@@ -3335,6 +3344,7 @@ import { Img } from '@renderer/function/model/img'
                 })
                 this.composerTokens = snapshot.composerTokens.map((token) => ({ ...token }))
                 this.imgCache = new Map(snapshot.imgCache)
+                this.updateComposerDraft()
                 this.$nextTick(() => {
                     this.resizeMainInput()
                 })
@@ -4189,8 +4199,12 @@ import { Img } from '@renderer/function/model/img'
                 })
 
                 // 如果删掉了一个 ]
-                if (this.tags.isComposing) return
+                if (this.tags.isComposing) {
+                    this.updateComposerDraft()
+                    return
+                }
                 this.syncComposerTokensWithInput()
+                this.updateComposerDraft()
 
                 if (this.details[3].open) {
                     this.runSearch(input.value)
@@ -4262,6 +4276,7 @@ import { Img } from '@renderer/function/model/img'
                         })
                     }
                 }
+                this.updateComposerDraft()
             },
 
             /**

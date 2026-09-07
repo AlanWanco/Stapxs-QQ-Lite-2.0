@@ -835,6 +835,16 @@
         background: transparent !important;
     }
 
+    /* 群收纳盒在平板模式下是高层覆盖层，菜单根节点需要固定到视口并置于其上方。 */
+    #msg-menu-view-messages-menu {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        z-index: 110 !important;
+    }
+
     @media (max-width: 750px) {
         .menu {
             width: 8.75rem !important;
