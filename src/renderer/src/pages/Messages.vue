@@ -21,8 +21,7 @@
                         <span>{{ $t('消息') }}</span>
                         <div style="flex: 1" />
                         <div class="message-header-action privacy-action"
-                            @mouseenter="showPrivacyMenu"
-                            @mouseleave="hidePrivacyMenuLater">
+                            @contextmenu.prevent="showPrivacyMenu">
                             <font-awesome-icon
                                 :title="$t('截图隐私模式')"
                                 :class="runtimeData.sysConfig.opt_privacy_mode ? 'active' : ''"
@@ -271,7 +270,6 @@
                 menu: Menu.append,
                 showMenu: false,
                 privacyMenuOpen: false,
-                privacyMenuTimer: null as NodeJS.Timeout | null,
                 loginInfo: loginInfo,
                 windowWidth: window.innerWidth,
             }
@@ -294,10 +292,11 @@
         mounted() {
             library.add(faCheckDouble, faCheckToSlot, faShieldHalved, faThumbTack, faTrashCan, faGripLines, faBroom, faBoxArchive, faBoxOpen)
             window.addEventListener('resize', this.handleWindowResize)
+            window.addEventListener('click', this.handlePrivacyOutsideClick)
         },
         beforeUnmount() {
             window.removeEventListener('resize', this.handleWindowResize)
-            if (this.privacyMenuTimer) clearTimeout(this.privacyMenuTimer)
+            window.removeEventListener('click', this.handlePrivacyOutsideClick)
         },
         methods: {
             /**
@@ -496,19 +495,14 @@
             },
 
             showPrivacyMenu() {
-                if (this.privacyMenuTimer) {
-                    clearTimeout(this.privacyMenuTimer)
-                    this.privacyMenuTimer = null
-                }
                 this.privacyMenuOpen = true
             },
 
-            hidePrivacyMenuLater() {
-                if (this.privacyMenuTimer) clearTimeout(this.privacyMenuTimer)
-                this.privacyMenuTimer = setTimeout(() => {
+            handlePrivacyOutsideClick(event: MouseEvent) {
+                const target = event.target as Element | null
+                if (!target?.closest('.privacy-action')) {
                     this.privacyMenuOpen = false
-                    this.privacyMenuTimer = null
-                }, 700)
+                }
             },
 
             /**
