@@ -354,6 +354,32 @@ div:has(> .msg-img.long-img)::after {
 .msg-replay.me svg {
     color: var(--color-font-1-r);
 }
+.msg-replay.has-local-preview {
+    height: auto;
+    min-height: 0.9rem;
+}
+.msg-replay.has-local-preview .reply-preview-text,
+.msg-replay.has-local-preview .reply-preview-images {
+    margin-left: calc(1rem + 10px);
+}
+.msg-replay.has-local-preview .reply-preview-text {
+    line-height: 1.4;
+    word-break: break-all;
+    font-size: 0.9rem;
+}
+.reply-preview-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 8px;
+}
+.reply-preview-images img {
+    border-radius: 5px;
+    cursor: pointer;
+    max-height: 10rem;
+    max-width: 100%;
+    object-fit: contain;
+}
 
 .msg-xml {
     padding: 5px 15px;

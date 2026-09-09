@@ -253,10 +253,28 @@
                             </div>
                         </template>
                         <div v-else-if="item.type == 'reply'"
-                            :class="isMe ? type == 'merge' ? 'msg-replay' : 'msg-replay me' : 'msg-replay'"
+                            :class="[
+                                isMe ? type == 'merge' ? 'msg-replay' : 'msg-replay me' : 'msg-replay',
+                                replyPreviewData[item.id] ? 'has-local-preview' : '',
+                            ]"
                             @click="scrollToMsg(item.id)">
                             <font-awesome-icon :icon="['fas', 'reply']" />
-                            <a :class="getRepMsg(item.id) ? '' : 'msg-unknown'"
+                            <template v-if="replyPreviewData[item.id]">
+                                <div class="reply-preview-text">
+                                    <span class="reply-name">{{ replyPreviewData[item.id].name }}</span>:
+                                    <span>{{ replyPreviewData[item.id].text }}</span><span v-if="replyPreviewData[item.id].truncated">…</span>
+                                </div>
+                                <div v-if="replyPreviewData[item.id].images.length > 0" class="reply-preview-images">
+                                    <img v-for="(image, imageIndex) in replyPreviewData[item.id].images"
+                                        :key="'reply-preview-image-' + imageIndex"
+                                        :src="image"
+                                        :alt="$t('图片')"
+                                        :title="$t('预览图片')"
+                                        @click.stop="openReplyImages(replyPreviewData[item.id].images, imageIndex)">
+                                </div>
+                            </template>
+                            <a v-else
+                                :class="getRepMsg(item.id) ? '' : 'msg-unknown'"
                                 style="cursor: pointer"
                                 v-html="getRepMsg(item.id) ?? $t('（查看回复消息）')" />
                         </div>
@@ -495,6 +513,12 @@ function getUserById(id: number): IUser | undefined {
                 rawTextIndex: {} as { [key: string]: string },
                 textIndex: {} as { [key: string]: string },
                 replyPreview: {} as Record<string, string>,
+                replyPreviewData: {} as Record<string, {
+                    name: string
+                    text: string
+                    truncated: boolean
+                    images: string[]
+                }>,
                 resolvedImages: {} as Record<string, string>,
                 imageCacheStatus: {} as Record<string, {
                     state: 'hit' | 'miss' | 'no-self' | 'empty-url'
@@ -1326,6 +1350,30 @@ function getUserById(id: number): IUser | undefined {
                 return null
             },
 
+            async loadReplyPreviewImages(message: any) {
+                const selfId = runtimeData.loginInfo?.uin
+                const canReadImageCache = runtimeData.sysConfig.disable_local_history_image_cache !== true && !!selfId
+                const imageUrls = (message.message ?? [])
+                    .filter((item: any) => item?.type === 'image' && item?.url)
+                    .map((item: any) => String(item.url))
+
+                const images = await Promise.all(imageUrls.map(async (url: string) => {
+                    if (url.startsWith('data:')) return url
+                    if (!canReadImageCache) return undefined
+                    const cached = await dbGetImage(selfId, await hashUrl(url))
+                    if (!cached) return undefined
+                    return `data:${cached.mimeType};base64,${cached.data}`
+                }))
+                return images.filter((image): image is string => image !== undefined)
+            },
+
+            openReplyImages(images: string[], index: number) {
+                const imageList = Img.fromList(images)
+                const image = images[index]
+                if (!this.viewer || !imageList || !image) return
+                ;(this.viewer as any).openBySrc(imageList, image)
+            },
+
             async loadReplyPreviews() {
                 if (!runtimeData.sysConfig.enable_local_history) return
                 const ids = new Set<string>()
@@ -1333,16 +1381,36 @@ function getUserById(id: number): IUser | undefined {
                     if (item?.type === 'reply' && item.id != null) ids.add(String(item.id))
                 }
                 for (const messageId of ids) {
-                    if (this.replyPreview[messageId]) continue
+                    if (this.replyPreviewData[messageId]) continue
                     const localMsg = await dbGetMessage(
                         runtimeData.loginInfo.uin,
                         Number(this.data.group_id ?? this.data.user_id ?? runtimeData.chatInfo.show.id),
                         messageId,
                     )
                     if (!localMsg) continue
+
+                    const imageSegments = (localMsg.message ?? [])
+                        .filter((item: any) => item?.type === 'image')
+                    const images = await this.loadReplyPreviewImages(localMsg)
+                    const textSegments = (localMsg.message ?? [])
+                        .filter((item: any) => item?.type !== 'image')
+                    let rawText = textSegments.length > 0
+                        ? getMsgRawTxt({ ...localMsg, message: textSegments }, false)
+                        : ''
+                    const missingImages = imageSegments.length - images.length
+                    if (missingImages > 0) {
+                        rawText += (rawText ? ' ' : '') + Array(missingImages).fill('[' + this.$t('图片') + ']').join(' ')
+                    }
+                    const textChars = Array.from(rawText)
                     const name = localMsg.sender?.card && localMsg.sender.card !== ''
                         ? localMsg.sender.card
                         : localMsg.sender?.nickname ?? ''
+                    this.replyPreviewData[messageId] = {
+                        name,
+                        text: textChars.slice(0, 100).join(''),
+                        truncated: textChars.length > 100,
+                        images,
+                    }
                     this.replyPreview[messageId] = `<span class="reply-name">${name}</span>: ${getMsgRawTxt(localMsg)}`
                 }
             },
