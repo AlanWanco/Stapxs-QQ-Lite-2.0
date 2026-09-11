@@ -36,7 +36,8 @@
                 <a v-if="draftPreview" class="draft-preview">
                     <span>[{{ $t('草稿') }}]</span>{{ draftPreview }}
                 </a>
-                <a v-else :class="from == 'friend' ? 'nick' : ''" v-html="from == 'friend' ? (data.longNick ?? '') : data.raw_msg" />
+                <a v-else :class="from == 'friend' ? 'nick' : ''"
+                    v-html="from == 'friend' ? sanitizePreview(data.longNick) : sanitizePreview(data.raw_msg)" />
                 <div v-if="from == 'message'" style="margin-left: 10px; display: flex">
                     <font-awesome-icon v-if="data.always_top === true" :icon="['fas', 'thumbtack']" />
                 </div>
@@ -50,6 +51,7 @@
     import { getTrueLang } from '@renderer/function/utils/systemUtil'
     import { getShowName } from '@renderer/function/utils/msgUtil'
     import { runtimeData } from '@renderer/function/msg'
+    import xss from 'xss'
 
     export default defineComponent({
         name: 'FriendBody',
@@ -67,6 +69,13 @@
                 if (!id) return ''
                 return runtimeData.composerDrafts.get(id)?.preview ?? ''
             },
-        }
+        },
+        methods: {
+            sanitizePreview(value: unknown) {
+                return xss(String(value ?? ''), {
+                    whiteList: { span: ['class'] },
+                })
+            },
+        },
     })
 </script>
