@@ -1623,9 +1623,17 @@ function hasResolvableImageSource(msg: any): boolean {
     })
 }
 
+function hasLoadedForwardContent(msg: any): boolean {
+    if (!Array.isArray(msg?.message)) return false
+    return msg.message.some((seg: any) => {
+        return seg?.type === 'forward' && Array.isArray(seg.content) && seg.content.length > 0
+    })
+}
+
 function shouldReplaceDuplicateMessage(existing: any, incoming: any): boolean {
-    if (!hasImageMessage(incoming)) return false
     if (existing?._from_local_db !== true) return false
+    if (hasLoadedForwardContent(incoming) && !hasLoadedForwardContent(existing)) return true
+    if (!hasImageMessage(incoming)) return false
     if (runtimeData.sysConfig.disable_local_history_image_cache === true) {
         return true
     }
