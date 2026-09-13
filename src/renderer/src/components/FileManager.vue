@@ -1,6 +1,6 @@
 <template>
     <div class="file-manager">
-        <BcTab class="file-manager-tabs">
+        <BcTab ref="tabsRef" class="file-manager-tabs">
             <div :name="$t('下载')">
                 <div v-if="downloadTasks.length === 0" class="empty-tip">
                     {{ $t('暂无下载任务') }}
@@ -284,11 +284,17 @@
 </script>
 
 <script setup lang="ts">
-    import { computed } from 'vue'
+    import { computed, nextTick, watch } from 'vue'
     import BcTab from 'vue3-bcui/packages/bc-tab'
 
     const downloadTasks = computed(() => downloadTasksState.value)
     const uploadTasks = computed(() => uploadTasksState.value)
+    const tabsRef = ref<{ tabSelect: (index: number) => void } | null>(null)
+
+    watch(() => uploadTasks.value.length, (length, oldLength) => {
+        if (length <= oldLength) return
+        nextTick(() => tabsRef.value?.tabSelect(1))
+    })
 
     const formatSize = (bytes: number) => {
         if (bytes === 0) return '0 B'

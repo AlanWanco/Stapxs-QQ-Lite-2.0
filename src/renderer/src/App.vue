@@ -169,8 +169,10 @@
             </div>
         </TransitionGroup>
         <Transition name="music-player-float">
-            <div v-show="tags.showFileManager" class="global-music-player ss-card">
-                <FileManager />
+            <div v-show="tags.showFileManager" class="file-manager-overlay" @click="toggleFileManager(false)">
+                <div class="global-music-player ss-card" @click.stop>
+                    <FileManager />
+                </div>
             </div>
         </Transition>
         <Transition name="modal">
@@ -1270,6 +1272,12 @@ export default defineComponent({
 
 .modal-leave-active .pop-box-body {
     animation: panelSlideDown 0.2s cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.file-manager-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 32;
 }
 
 .global-music-player {
