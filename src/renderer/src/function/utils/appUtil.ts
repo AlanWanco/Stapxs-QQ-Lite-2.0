@@ -1254,7 +1254,8 @@ export function loadJsonMap(name: string) {
                     logger.system('非常抱歉开发者，已帮阁下将映射表重定向加载为 ：' + msgPath?.name + ' （慌张）')
                 }
             }
-            runtimeData.jsonMap = msgPath
+            // 未识别的实现保留当前映射，避免联系人/消息处理访问 undefined。
+            if (msgPath) runtimeData.jsonMap = msgPath
         } catch (ex) {
             logger.system('很抱歉开发者，映射表加载失败 ……' + ex)
         }

@@ -3498,6 +3498,7 @@ import { Img } from '@renderer/function/model/img'
                 if (hasFileItem || hasImageData) event.preventDefault()
 
                 let handledFile = false
+                const imageFiles: File[] = []
                 if (items) {
                     for (let i = 0, len = items.length; i < len; i++) {
                         const item = items[i]
@@ -3508,7 +3509,7 @@ import { Img } from '@renderer/function/model/img'
 
                         handledFile = true
                         if (file.type.includes('image/')) {
-                            this.setImg(file)
+                            imageFiles.push(file)
                         } else if (!backend.isMobile()) {
                             // 非图片文件（桌面/Web）：先弹确认，防止误粘贴
                             runtimeData.fileUploadPending = file
@@ -3517,10 +3518,15 @@ import { Img } from '@renderer/function/model/img'
                     }
                 }
 
+                // 多张图片必须串行处理，否则每次插入都会读取到更新前的光标位置。
+                for (const file of imageFiles) {
+                    await this.setImg(file)
+                }
+
                 // 原生右键菜单粘贴时，WebView 可能只有代理 URL，图片本体从桌面剪贴板读取。
                 if (!handledFile && hasImageData) {
                     const file = await readDesktopClipboardImageFile()
-                    if (file) this.setImg(file)
+                    if (file) await this.setImg(file)
                 }
             },
 
@@ -3784,14 +3790,14 @@ import { Img } from '@renderer/function/model/img'
 
 
                 // sq 占位符
-                const id = this.sendCache.length
                 const data = {
                     type: 'image',
                 }
-                this.addSpecialMsg({
+                const id = this.addSpecialMsg({
                     addText: true,
                     msgObj: data,
                 })
+                if (id < 0) return
 
                 this.imgCache.set(id, await this.fileToDataURL(file))
             },

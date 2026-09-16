@@ -467,6 +467,7 @@ const msgFunctions = {
                 if (data.app_name !== undefined) {
                     const getMap = loadJsonMap(data.app_name)
                     if (getMap != null) msgPath = getMap
+                    else runtimeData.jsonMap = msgPath
                 }
                 // 继续获取后续内容
                 Connector.send('get_login_info', {}, 'getLoginInfo')
