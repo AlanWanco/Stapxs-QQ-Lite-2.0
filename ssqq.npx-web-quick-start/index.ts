@@ -54,8 +54,8 @@ if(!argv['skip-update']) {
             const packageJson = fs.readFileSync('./dist/package.json', 'utf-8')
             localVersion = JSON.parse(packageJson).version
             logger.info(`本地版本号为: ${localVersion}`)
-        } catch (err) {
-            logger.error(`读取 package.json 失败: ${err}`)
+        } catch {
+            logger.error('读取 package.json 失败')
         }
     }
 
@@ -100,7 +100,7 @@ const server = http.createServer((req, res) => {
 
     fs.readFile(filePath, (err, data) => {
         if (err) {
-            logger.error(`读取 ${filePath} 失败: ${err.message}`)
+            logger.error('读取静态资源失败')
             res.statusCode = 404
             res.setHeader('Content-Type', 'text/plain')
             res.end('404 Not Found')
@@ -113,5 +113,5 @@ const server = http.createServer((req, res) => {
 })
 
 server.listen(port, hostname, () => {
-    logger.info(`服务于 http://${hostname}:${port} 运行`)
+    logger.info('网页服务已启动')
 })

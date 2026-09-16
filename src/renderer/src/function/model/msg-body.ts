@@ -70,7 +70,15 @@ export class MsgBodyFuns {
             const div = document.createElement('div')
             div.id = 'xml-' + msgid
             div.dataset.id = id
-            div.innerHTML = item
+            div.innerHTML = xss(item, {
+                whiteList: {
+                    a: ['class', 'href', 'target', 'data-url'],
+                    div: ['class', 'data-size', 'data-linespace', 'data-resid', 'data-url', 'data-name'],
+                    img: ['class', 'src', 'alt'],
+                    p: ['class', 'data-size'],
+                    source: ['data-name'],
+                },
+            })
             for (let i = 0; i < div.children[0].children.length; i++) {
                 switch (div.children[0].children[i].nodeName) {
                     case 'P': {
@@ -93,7 +101,11 @@ export class MsgBodyFuns {
             msgHeader = msgHeader.replace('m_resid=', 'data-resid=')
             msgHeader = msgHeader.replace('url=', 'data-url=')
             const header = document.createElement('div')
-            header.innerHTML = msgHeader
+            header.innerHTML = xss(msgHeader, {
+                whiteList: {
+                    div: ['data-resid', 'data-url'],
+                },
+            })
             // 处理特殊的出处
             let sourceBody = undefined as HTMLElement | undefined
             for (let i = 0; i < div.children.length; i++) {
@@ -277,18 +289,22 @@ export class MsgBodyFuns {
         if (!sender) return
 
         // 如果存在 url 项，优先打开 url
-        if (
-            sender.dataset.url !== undefined &&
-            sender.dataset.url !== 'undefined' &&
-            sender.dataset.url !== ''
-        ) {
-            const openType =
-                sender.dataset.urlOpenType || sender.dataset.urlopentype
-            if (openType == '_self') {
-                window.open(sender.dataset.url, '_self')
-            } else {
+        const targetUrl = sender.dataset.url
+        if (targetUrl !== undefined && targetUrl !== 'undefined' && targetUrl !== '') {
+            let parsedUrl: URL
+            try {
+                parsedUrl = new URL(targetUrl, window.location.href)
+            } catch {
+                return
+            }
+            const isHttpUrl = parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:'
+            const isGeoUrl = parsedUrl.protocol === 'geo:'
+            const openType = sender.dataset.urlOpenType || sender.dataset.urlopentype
+            if (openType == '_self' && (isHttpUrl || isGeoUrl)) {
+                window.open(targetUrl, '_self')
+            } else if (isHttpUrl) {
                 // 默认都以 _blank 打开
-                openLink(sender.dataset.url)
+                openLink(targetUrl)
             }
         }
     }

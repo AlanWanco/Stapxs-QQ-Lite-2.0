@@ -1,5 +1,4 @@
 import VueClipboard from 'vue-clipboard2'
-import packageInfo from '../../../package.json'
 
 import App from './App.vue'
 
@@ -21,7 +20,6 @@ import './assets/css/sys_notice.css'
 import { getPortableFileLang } from './function/utils/systemUtil'
 import { preloadPinyin } from './function/utils/pinyin'
 
-/* eslint-disable no-console */
 const zh = getPortableFileLang('zh-CN')
 
 // 载入 l10n
@@ -51,28 +49,3 @@ export const uptime = new Date().getTime()
 
 // 预加载拼音库（非阻塞，失败不影响应用启动）
 preloadPinyin()
-
-const strList = ['VERSION', 'WELCOME', 'HELLO']
-const colorList = [
-    '50534f',
-    'f9a633',
-    '8076a3',
-    '92aa8a',
-    '606e7a',
-    '7abb7e',
-    'b573f7',
-    'ff5370',
-    '99b3db',
-    '677480',
-]
-const color = colorList[Math.floor(Math.random() * colorList.length)]
-const str = strList[Math.floor(Math.random() * strList.length)]
-console.log(
-    `%c${str}%c Stapxs QQ Lite - ${packageInfo.version} ( ${import.meta.env.DEV ? 'development' : 'production'} ) `,
-    `font-weight:bold;background:#${color};color:#fff;border-radius:7px 0 0 7px;padding:7px 14px;margin:7px 0 7px 7px;`,
-    'background:#e3e8ec;color:#000;border-radius:0 7px 7px 0;display:inline-block;padding:7px 14px;margin:7px 7px 7px 0;',
-)
-if(import.meta.env.DEV) {
-    console.log('[ SSystem Bootloader Loading …… core/sardos-core ]')
-}
-console.log('[ SSystem Bootloader Loading …… core/ssqq-core ]')

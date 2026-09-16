@@ -28,6 +28,13 @@ export function getMsgData(
     msg: { [key: string]: any },
     map: string | { [key: string]: any },
 ) {
+    // OneBot 失败响应通常仍是一个完整对象，不能仅靠 data === null
+    // 判断；否则映射对象会生成 [{}]，误触发登录/列表处理。
+    if (
+        msg?.status === 'failed' ||
+        (msg?.retcode !== undefined && Number(msg.retcode) !== 0)
+    ) return undefined
+
     let back = undefined as any
     // 解析数据
     if (map != undefined) {
@@ -37,6 +44,9 @@ export function getMsgData(
                     msg,
                     replaceJPValue(typeof map == 'string' ? map : map.source),
                 )
+                if (Array.isArray(back)) {
+                    back = back.filter((item) => item && typeof item === 'object')
+                }
                 if (back && typeof map != 'string' && map.list != undefined) {
                     const backList = [] as any[]
                     back.forEach((item) => {
@@ -138,6 +148,11 @@ export function parseMsgList(
     map: string,
     valueMap: { [key: string]: any },
 ): any[] {
+    // API 返回空数组或失败响应时不要访问 list[0]。
+    if (!Array.isArray(list)) return []
+    list = list.filter((item: any) => item && typeof item === 'object')
+    if (list.length === 0) return []
+
     // 判断消息类型
     if (typeof list[0].message == 'string') {
         runtimeData.tags.msgType = BotMsgType.CQCode
@@ -149,7 +164,11 @@ export function parseMsgList(
         case BotMsgType.CQCode: {
             // 这儿会默认处理成 oicq2 的格式，所以 CQCode 消息请使用 oicq2 配置文件修改
             for (let i = 0; i < list.length; i++) {
-                list[i] = parseCQ(list[i])
+                if (typeof list[i].message === 'string') {
+                    list[i] = parseCQ(list[i])
+                } else if (!Array.isArray(list[i].message)) {
+                    list[i].message = []
+                }
             }
             break
         }
@@ -160,6 +179,10 @@ export function parseMsgList(
                 if (msgList == undefined) {
                     msgList = list[i].content
                 }
+                if (!Array.isArray(msgList)) {
+                    list[i].message = []
+                    continue
+                }
                 for (let j = 0; j < msgList.length; j++) {
                     const data = getMsgData(
                         'message_list_message',
@@ -167,11 +190,11 @@ export function parseMsgList(
                         map,
                     )
                     // 如果 data 里有 type 字段，改成 type_item
-                    if (data[0] && data[0]['type'] != undefined) {
+                    if (data?.[0] && data[0]['type'] != undefined) {
                         data[0]['type_item'] = data[0]['type']
                         delete data[0]['type']
                     }
-                    if (data != undefined && data.length == 1) {
+                    if (data?.length == 1 && data[0]) {
                         msgList[j] = Object.assign(msgList[j], data[0])
                     }
                 }
@@ -185,11 +208,20 @@ export function parseMsgList(
             if (content == undefined) {
                 content = list[i].content
             }
+            if (!Array.isArray(content)) continue
             content.forEach((item: any) => {
+                if (!item || typeof item !== 'object') return
                 Object.entries(valueMap).forEach(([type, values]) => {
-                    if (item.type == type) {
-                        Object.entries(values).forEach(([key, value]) => {
-                            item[key] = jp.query(item, value as string)[0]
+                    if (item.type == type && values && typeof values === 'object') {
+                        Object.entries(values as { [key: string]: any }).forEach(([key, value]) => {
+                            try {
+                                const mappedValue = jp.query(item, value as string)[0]
+                                // 映射路径不存在时保留已有字段，避免把 SnowLuma
+                                // 的 data.url 等有效值覆盖成 undefined。
+                                if (mappedValue !== undefined) item[key] = mappedValue
+                            } catch {
+                                // 消息段字段异常时保留已有扁平字段，继续解析其他段。
+                            }
                         })
                         // 顺便把没用的 data 删了，这边要注意 item.data 必须是个对象
                         // 因为有些消息类型的 data 就叫 data
@@ -223,8 +255,10 @@ export function parseMsgList(
 export function getMsgRawTxt(data: any, html = true): string {
     const { $t } = app.config.globalProperties
 
-    const message = data.message as [{ [key: string]: any }]
-    const fromId = data.group_id ?? data.user_id
+    const message = Array.isArray(data?.message)
+        ? data.message as [{ [key: string]: any }]
+        : []
+    const fromId = data?.group_id ?? data?.user_id
     let back = ''
     for (let i = 0; i < message.length; i++) {
         try {
@@ -234,14 +268,14 @@ export function getMsgRawTxt(data: any, html = true): string {
                     if (atName == undefined) {
                         // 群内才可以 at，如果 at 消息中没有 text 字段
                         // 尝试去群成员列表中找到对应的昵称，群成员列表只在当前打开的群才有
-                        if (
-                            runtimeData.chatInfo.show.id == fromId &&
-                            runtimeData.chatInfo.info.group_members
-                        ) {
-                            const user =
-                                runtimeData.chatInfo.info.group_members.find(
-                                    (item) => item.user_id == message[i].qq,
-                                )
+                        const groupMembers = runtimeData.chatInfo.show.id == fromId &&
+                            Array.isArray(runtimeData.chatInfo.info.group_members)
+                            ? runtimeData.chatInfo.info.group_members
+                            : []
+                        if (groupMembers.length > 0) {
+                            const user = groupMembers.find(
+                                (item) => item.user_id == message[i].qq,
+                            )
                             if (user) {
                                 atName = '@' + (user.card && user.card != '' ? user.card : user.nickname)
                             }
@@ -258,16 +292,16 @@ export function getMsgRawTxt(data: any, html = true): string {
                 }
                 // eslint-disable-next-line
                 case 'text':
-                    back += message[i].text
+                    back += String(message[i].text ?? '')
                         .replaceAll('\n', ' ')
                         .replaceAll('\r', ' ')
                     break
                 case 'forward':
                     if (Array.isArray(message[i].content) && message[i].content.length > 0) {
                         const lines = message[i].content.map((item: any) => {
-                            const senderName = item.sender?.card && item.sender.card !== ''
+                            const senderName = item?.sender?.card && item.sender.card !== ''
                                 ? item.sender.card
-                                : item.sender?.nickname ?? ''
+                                : item?.sender?.nickname ?? ''
                             const contentText = getMsgRawTxt(item, false)
                             return senderName ? `${senderName}: ${contentText}` : contentText
                         }).filter((item: string) => item.trim() !== '')
@@ -297,26 +331,27 @@ export function getMsgRawTxt(data: any, html = true): string {
                     break
                 case 'json': {
                     try {
-                        back += JSON.parse(message[i].data).prompt
+                        const raw = message[i].data
+                        const card = typeof raw === 'string' ? JSON.parse(raw) : raw
+                        const prompt = card?.prompt
+                        back += prompt ? String(prompt) : '[' + $t('卡片消息') + ']'
                     } catch (error) {
                         back += '[' + $t('卡片消息') + ']'
                     }
                     break
                 }
                 case 'xml': {
-                    let name = message[i].data.substring(
-                        message[i].data.indexOf('<source name="') + 14,
-                    )
-                    name = name.substring(0, name.indexOf('"'))
-                    back += '[' + name + ']'
+                    const xml = typeof message[i].data === 'string' ? message[i].data : ''
+                    const marker = '<source name="'
+                    const start = xml.indexOf(marker)
+                    const end = start >= 0 ? xml.indexOf('"', start + marker.length) : -1
+                    const name = start >= 0 && end >= 0 ? xml.substring(start + marker.length, end) : ''
+                    back += name ? '[' + name + ']' : '[' + $t('卡片消息') + ']'
                     break
                 }
             }
         } catch (error) {
-            logger.error(
-                error as Error,
-                '解析消息短格式错误：' + JSON.stringify(message[i]),
-            )
+            logger.error(error as Error, '解析消息短格式失败')
         }
     }
     return back
@@ -404,7 +439,7 @@ export function parseCQ(data: any) {
             }
         })
     }
-    logger.debug('解析 CQ 消息结果: ' + JSON.stringify(back))
+    logger.debug('解析 CQ 消息结果：消息段数量 ' + back.length)
     data.message = back
     return data
 }
@@ -432,15 +467,18 @@ export function sendMsgRaw(
     // 将消息构建为完整消息体先显示出去
     const msgUUID = uuid()
     if (preShow) {
-        const preShowMsg = JSON.parse(JSON.stringify(msg));
+        const preShowMsg: any[] = Array.isArray(msg)
+            ? JSON.parse(JSON.stringify(msg))
+            : [{ type: 'text', text: String(msg) }]
         preShowMsg.forEach((item: any) => {
             // 对 base64 图片做特殊处理
-            if (item.type == 'image') {
-                if (item.file.startsWith('base64://')) {
-                    const b64Str = (item.file as string).substring(9)
+            if (item?.type == 'image') {
+                const file = typeof item.file === 'string' ? item.file : ''
+                if (file.startsWith('base64://')) {
+                    const b64Str = file.substring(9)
                     item.url = 'data:image/png;base64,' + b64Str
-                } else if (!item.url || item.url == '') {
-                    item.url = item.file
+                } else if ((!item.url || item.url == '') && file !== '') {
+                    item.url = file
                 }
             }
         })
@@ -835,8 +873,8 @@ export async function getImageUrlData(imageUrl: string): Promise<{ buffer: Uint8
  * @param msg
  */
 export function isDeleteMsg(msg: any): boolean {
-    if (!['message', 'message_sent'].includes(msg.post_type)) return false
-    if (msg.sender.user_id !== runtimeData.loginInfo.uin) return false
+    if (!msg || !['message', 'message_sent'].includes(msg.post_type)) return false
+    if (msg.sender?.user_id !== runtimeData.loginInfo.uin) return false
     if (msg.raw_message !== '&#91;已删除&#93;') return false
     return true
 }

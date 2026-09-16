@@ -101,21 +101,21 @@ fn get_db_key(db_path: &std::path::Path) -> Result<String, String> {
     {
         match crate::commands::keychain::get_or_create_db_key() {
             Ok(key) => return Ok(key),
-            Err(e) => log::warn!("钥匙串读取失败，尝试本地回退密钥：{}", e),
+            Err(_) => log::warn!("钥匙串读取失败，尝试本地回退密钥"),
         }
     }
     #[cfg(target_os = "windows")]
     {
         match crate::commands::keychain::get_or_create_db_key() {
             Ok(key) => return Ok(key),
-            Err(e) => log::warn!("Windows 凭据管理器读取失败，尝试本地回退密钥：{}", e),
+            Err(_) => log::warn!("Windows 凭据管理器读取失败，尝试本地回退密钥"),
         }
     }
     #[cfg(target_os = "linux")]
     {
         match crate::commands::keychain::get_or_create_db_key() {
             Ok(key) => return Ok(key),
-            Err(e) => log::warn!("Linux Secret Service 读取失败，尝试本地回退密钥：{}", e),
+            Err(_) => log::warn!("Linux Secret Service 读取失败，尝试本地回退密钥"),
         }
     }
 
@@ -159,8 +159,8 @@ pub fn open_db(data_dir: PathBuf) -> rusqlite::Result<Connection> {
 fn open_or_recreate(db_path: std::path::PathBuf) -> rusqlite::Result<Connection> {
     match try_open_encrypted(&db_path) {
         Ok(conn) => Ok(conn),
-        Err(e) => {
-            log::warn!("无法以加密模式打开 {:?}（{}）", db_path, e);
+        Err(_e) => {
+            log::warn!("无法以加密模式打开数据库");
             std::process::exit(1);
         }
     }
@@ -812,7 +812,7 @@ pub fn db_export_backup(state: State<DbState>, self_id: String, backup_dir: Stri
         let total_messages = count_backup_rows(&backup, &self_id, "messages")?;
         let total_images = count_backup_rows(&backup, &self_id, "images")?;
 
-        info!("聊天记录已导出到备份 {:?}", backup_db_path);
+        info!("聊天记录已导出到备份");
         Ok(DbExportBackupResult {
             db_path: backup_db_path.to_string_lossy().to_string(),
             delta_messages,
@@ -858,7 +858,7 @@ pub fn db_import_backup(state: State<DbState>, self_id: String, backup_db_path: 
         let total_messages = count_backup_rows(target, &self_id, "messages")?;
         let total_images = count_backup_rows(target, &self_id, "images")?;
 
-        info!("聊天记录已从备份导入 {:?}", backup_db_path);
+        info!("聊天记录已从备份导入");
         Ok(DbImportBackupResult {
             db_path: backup_db_path.to_string_lossy().to_string(),
             imported_messages: delta_messages,
@@ -938,7 +938,7 @@ pub fn db_set_storage_path(app: AppHandle, state: State<DbState>, new_dir: Strin
         let store = StoreBuilder::new(&app, ".settings.dat").build().map_err(|e| e.to_string())?;
         store.set("local_history_path", serde_json::Value::String(new_dir.to_string_lossy().to_string()));
         store.save().map_err(|e| format!("保存配置失败：{}", e))?;
-        info!("本地历史存储目录已迁移到 {:?}", new_dir);
+        info!("本地历史存储目录已迁移");
     }
 
     Ok(new_dir.join("messages.db").to_string_lossy().to_string())

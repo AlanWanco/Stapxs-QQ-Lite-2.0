@@ -403,6 +403,78 @@
     import { loadJsonMap } from '@renderer/function/utils/appUtil'
     import { backend } from '@renderer/runtime/backend'
 
+    // 设置导出不携带凭据、联系人标识、媒体地址或本地路径。
+    const privateSetupKeys = new Set([
+        'address',
+        'save_password',
+        'global_proxy',
+        'top_info',
+        'notice_group',
+        'group_box_override',
+        'chat_background',
+        'local_history_path',
+        'local_history_backup_path',
+        'official_face_folder',
+        'local_emoji_folder',
+        'custom_css',
+        'openai_api',
+        'openai_token',
+    ])
+    const privateSetupKeyPattern = /(?:token|password|passwd|secret|cookie|authorization|credential|apikey|proxy|address|path|background|media|avatar|url)/i
+
+    function isPrivateSetupKey(key: string): boolean {
+        const normalized = key.replaceAll('_', '').replaceAll('-', '')
+        return privateSetupKeys.has(key) || privateSetupKeyPattern.test(normalized)
+    }
+
+    function getExportableSetup(config: { [key: string]: any }) {
+        const sanitize = (value: any, key = ''): any => {
+            if (key && isPrivateSetupKey(key)) return undefined
+            if (Array.isArray(value)) {
+                return value
+                    .map((item) => sanitize(item))
+                    .filter((item) => item !== undefined)
+            }
+            if (value && typeof value === 'object') {
+                return Object.fromEntries(
+                    Object.entries(value)
+                        .filter(([childKey]) => !isPrivateSetupKey(childKey))
+                        .map(([childKey, childValue]) => [childKey, sanitize(childValue, childKey)]),
+                )
+            }
+            return value
+        }
+        return sanitize(config) ?? {}
+    }
+
+    function restorePrivateSetupValues(
+        imported: { [key: string]: any },
+        current: { [key: string]: any },
+    ) {
+        const result = { ...imported }
+        Object.entries(current ?? {}).forEach(([key, value]) => {
+            if (isPrivateSetupKey(key)) {
+                result[key] = value
+            } else if (
+                value && typeof value === 'object' &&
+                result[key] && typeof result[key] === 'object' &&
+                !Array.isArray(value) && !Array.isArray(result[key])
+            ) {
+                result[key] = restorePrivateSetupValues(result[key], value)
+            }
+        })
+        return result
+    }
+
+    function escapeHtml(value: string) {
+        return value
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll('\'', '&#39;')
+    }
+
     export default defineComponent({
         name: 'ViewOptDev',
         data() {
@@ -486,10 +558,17 @@
                     })
                     }
                 }
+                // 开发面板只输出运行时摘要，避免把消息、联系人和登录信息写入控制台。
                 /* eslint-disable no-console */
-                console.log('=========================')
-                console.log(runtimeData)
-                console.log('=========================')
+                console.log('运行时摘要', {
+                    userCount: runtimeData.userList.length,
+                    messageCount: runtimeData.messageList.length,
+                    groupMemberCount: Array.isArray(runtimeData.chatInfo.info.group_members)
+                        ? runtimeData.chatInfo.info.group_members.length
+                        : 0,
+                    botName: runtimeData.botInfo?.app_name ?? '',
+                    mapName: runtimeData.jsonMap?.name ?? '',
+                })
                 /* eslint-enable no-console */
                 if(!backend.isMobile()) {
                     backend.call(undefined, 'win:openDevTools', false)
@@ -503,7 +582,7 @@
 
                 // 索要框架信息
                 const addInfo = await backend.call('Onebot', 'opt:getSystemInfo', true)
-                if(backend.isMobile() && backend.function && 'vConsole' in backend.function && backend.function.vConsole) {
+                if (addInfo && backend.isMobile() && backend.function && 'vConsole' in backend.function && backend.function.vConsole) {
                     addInfo.vconsole = ['vConsole Version', backend.function.vConsole.version ?? 'Not loaded']
                 }
 
@@ -534,15 +613,15 @@
                                     await backend.call(undefined, 'sys:runCommand', true,
                                         'pacman -Q stapxs-qq-lite-bin',
                                     )
-                                if (pacmanInfo.success) {
+                                if (pacmanInfo?.success) {
                                     info += '    Install Type      -> aur\n'
-                                } else if(backend.function && 'invoke' in backend.function) {
+                                } else if (backend.function && 'invoke' in backend.function) {
                                     // 也有可能是 stapxs-qq-lite，这是我自己打的原生包
                                     pacmanInfo = await backend.function.invoke(
                                             'sys:runCommand',
                                             'pacman -Q stapxs-qq-lite',
                                         )
-                                    if (pacmanInfo.success) {
+                                    if (pacmanInfo?.success) {
                                         info += '    Install Type      -> pacman\n'
                                     }
                                 }
@@ -595,7 +674,7 @@
                 const popInfo = {
                     svg: 'screwdriver-wrench',
                     html:
-                        '<textarea class="debug-info">' + info + '</textarea>',
+                        '<textarea class="debug-info">' + escapeHtml(info) + '</textarea>',
                     title: this.$t('调试信息'),
                     button: [
                         {
@@ -620,12 +699,13 @@
                 runtimeData.popBoxList.push(popInfo)
             },
             printSetUpInfo() {
-                const json = JSON.stringify(runtimeData.sysConfig)
+                const json = JSON.stringify(getExportableSetup(runtimeData.sysConfig))
+                const htmlJson = escapeHtml(json)
                 const popInfo = {
                     svg: 'upload',
                     html:
                         '<textarea style="width: calc(100% - 40px);min-height: 90px;background: var(--color-card-1);color: var(--color-font);border: 0;padding: 20px;border-radius: 7px;margin-top: -10px;">' +
-                        json +
+                        htmlJson +
                         '</textarea>',
                     title: this.$t('导出设置项'),
                     button: [
@@ -672,8 +752,13 @@
                                 if (input) {
                                     try {
                                         const json = JSON.parse(input.value)
-                                        runtimeData.sysConfig = json
-                                        saveAll(json)
+                                        if (!json || typeof json !== 'object' || Array.isArray(json)) throw new Error('invalid setup')
+                                        const safeSetup = restorePrivateSetupValues(
+                                            getExportableSetup(json),
+                                            runtimeData.sysConfig,
+                                        )
+                                        runtimeData.sysConfig = safeSetup
+                                        saveAll(safeSetup)
                                         location.reload()
                                     } catch (e) {
                                         new PopInfo().add(
@@ -896,7 +981,7 @@
                 const popInfo = {
                     svg: 'eye',
                     html: '<textarea style="width: calc(100% - 40px);min-height: 300px;background: var(--color-card-1);color: var(--color-font);border: 0;padding: 20px;border-radius: 7px;margin-top: -10px;font-family: monospace;font-size: 0.9rem;" readonly>' +
-                        (customCss || '') +
+                        escapeHtml(customCss || '') +
                         '</textarea>',
                     title: this.$t('查看自定义样式'),
                     button: [

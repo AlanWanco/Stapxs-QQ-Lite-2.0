@@ -24,7 +24,7 @@
             <span
                 style="margin-right: auto;margin-bottom: auto;"
                 @click="textClick"
-                v-html="parseText(data.content[0])" />
+                v-html="parseText(data.content?.[0] ?? '')" />
             <img v-if="data.img"
                 :src="data.img.src"
                 :class="{
@@ -36,11 +36,7 @@
         <span v-show="needShow && !showAll">{{ $t('点击展开') }}</span>
         <div class="info">
             <img :src="'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + data.sender">
-            <a>{{
-                runtimeData.chatInfo.info.group_members.filter((item) => {
-                    return Number(item.user_id) === Number(data.sender)
-                })[0].nickname
-            }}</a>
+            <a>{{ getSenderName() }}</a>
             <div />
             <span v-if="data.is_read">{{
                 $t('{readNum} 人已读 | {isRead}', {
@@ -94,7 +90,7 @@
         },
         methods: {
             parseText(text: string) {
-                text = text.replaceAll('\r', '\n')
+                text = String(text ?? '').replaceAll('\r', '\n')
                     .replaceAll('\n\n', '\n')
                     .replaceAll('&#10;', '\n')
                 text = xss(text, { whiteList: { a: ['href', 'target'] } })
@@ -114,7 +110,10 @@
             },
             getSenderName(): string {
                 const { $t } = app.config.globalProperties
-                const result = runtimeData.chatInfo.info.group_members.filter((item) => {
+                const groupMembers = Array.isArray(runtimeData.chatInfo.info.group_members)
+                    ? runtimeData.chatInfo.info.group_members
+                    : []
+                const result = groupMembers.filter((item) => {
                     return Number(item.user_id) === Number(this.data.sender)
                 }).at(0)?.nickname
                 return result ?? $t('已退群( {userId} )', { userId: Number(this.data.sender) })

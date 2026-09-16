@@ -68,7 +68,7 @@ export const linkView = {
         if(!url.includes('bilibili.com')) {
             // 获取最终重定向地址并处理
             const finalUrl = await getFinalRedirectUrl(url)
-            logger.info(`[linkView] 获取到 bilibili 链接：${finalUrl}`)
+            logger.info('[linkView] 获取到 bilibili 链接')
             if(finalUrl && !retry) {
                 return await linkView.bilibili(finalUrl, true)
             }
@@ -78,12 +78,12 @@ export const linkView = {
         const match = url.match(/bilibili.com\/video\/(BV[0-9a-zA-Z]+)/)
         if (match) {
             const bvid = match[1]
-            logger.info(`[linkView] 获取到 bilibili 链接：${bvid}`)
+            logger.info('[linkView] 获取到 bilibili 视频链接')
             try {
                 const response = await axios.get(previewAPI + bvid)
                 const { data } = response
                 if (data.code === 0) {
-                    logger.info(`[linkView] 预览 bilibili 链接成功：${data.data.title}`)
+                    logger.info('[linkView] 预览 bilibili 链接成功')
                     return {
                         type: 'bilibili',
                         sub_type: 'video',
@@ -97,8 +97,8 @@ export const linkView = {
                         }
                     }
                 }
-            } catch (error) {
-                logger.error('[linkView] 预览 bilibili 链接失败：', error)
+            } catch {
+                logger.error('[linkView] 预览 bilibili 链接失败')
             }
         }
         return null
@@ -112,12 +112,12 @@ export const linkView = {
         const id = params.get('id')
         if (id == null) {
             const finalUrl = await getFinalRedirectUrl(url)
-            logger.info(`[linkView] 获取到网易云音乐链接：${finalUrl}`)
+            logger.info('[linkView] 获取到网易云音乐链接')
             if(finalUrl && !retry) {
                 return await linkView.music163(finalUrl, true)
             }
         } else {
-            logger.info(`[linkView] 获取获取网易云音乐歌曲 ID：${id}`)
+            logger.info('[linkView] 获取网易云音乐歌曲')
             const baseUrl = import.meta.env.VITE_APP_163_MUSIC_API
             try {
                 const responseDetail = await axios.get(baseUrl + '/song/detail?ids=' + id, { timeout: 10000 })
@@ -146,8 +146,8 @@ export const linkView = {
                 }
                 logger.info('[linkView] 预览网易云音乐成功')
                 return finalData
-            } catch (error) {
-                logger.error('[linkView] 预览网易云音乐失败：', error)
+            } catch {
+                logger.error('[linkView] 预览网易云音乐失败')
             }
         }
         return null

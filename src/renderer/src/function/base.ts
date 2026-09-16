@@ -21,6 +21,52 @@ export enum LogType {
     SYSTEM
 }
 
+const sensitiveLogKeyPattern = /(?:token|password|passwd|secret|cookie|authorization|credential|api[_-]?key|private[_-]?key|access[_-]?key)/i
+const privateLogKeyPattern = /(?:message|chat|user|group|sender|receiver|target|operator|self|contact|file|url|path|base64|avatar|prompt|content|text|nickname|card|remark|echo|res|forward|data|address|host|endpoint|uin|id)(?:id|name|url|hash|data)?$/i
+
+function isPrivateLogKey(key: string): boolean {
+    const normalized = key.replaceAll('_', '').replaceAll('-', '')
+    return sensitiveLogKeyPattern.test(key) || privateLogKeyPattern.test(normalized)
+}
+
+function sanitizeLogString(value: unknown): string {
+    const text = typeof value === 'string' ? value : String(value ?? '')
+    return text
+        .replace(/(?:https?|wss?):\/\/[^\s"'<>]+/gi, '[URL已隐藏]')
+        .replace(/file:\/\/\/(?:Users|home|private|var|tmp)\/[^\s"'<>]+/gi, '[路径已隐藏]')
+        .replace(/\/(?:Users|home|private|var|tmp)\/[^\s"'<>]+/gi, '[路径已隐藏]')
+        .replace(/[A-Za-z]:\\[^\s"'<>]+/g, '[路径已隐藏]')
+        .replace(/(\b(?:bearer|authorization|token|password|secret|cookie|api[_-]?key)\s*[:=]\s*)[^\s,;&]+/gi, '$1[已隐藏]')
+}
+
+function sanitizeLogValue(value: any, key = '', depth = 0, seen = new WeakSet<object>()): any {
+    if (isPrivateLogKey(key)) return '[已隐藏]'
+    if (value === null || value === undefined) return value
+    if (typeof value === 'string') return sanitizeLogString(value)
+    if (typeof value !== 'object') return value
+    if (value instanceof Error) {
+        return {
+            name: value.name,
+            message: '[错误详情已隐藏]',
+        }
+    }
+    if (depth >= 3) return '[内容已省略]'
+    if (seen.has(value)) return '[循环引用]'
+    seen.add(value)
+    try {
+        if (Array.isArray(value)) {
+            return value.slice(0, 20).map((item) => sanitizeLogValue(item, '', depth + 1, seen))
+        }
+        const result: { [key: string]: any } = {}
+        Object.keys(value).slice(0, 50).forEach((childKey) => {
+            result[childKey] = sanitizeLogValue(value[childKey], childKey, depth + 1, seen)
+        })
+        return result
+    } catch {
+        return '[内容无法记录]'
+    }
+}
+
 export class Logger {
     private logTypeInfo: [string, string][]
 
@@ -43,21 +89,23 @@ export class Logger {
      */
     add(type: LogType, args: string, data = '' as any, hidden = false) {
         const logLevel = Option.get('log_level')
+        const safeArgs = sanitizeLogString(args)
+        const safeData = sanitizeLogValue(data)
         // PS：WS, UI, ERR, INFO, DEBUG
         // all 将会输出以上全部类型，debug 将会输出 DEBUG、UI，info 将会输出 INFO，err 将会输出 ERR
         if(import.meta.env.DEV && type === LogType.SYSTEM) {
-            this.print(type, args, data, hidden)
+            this.print(type, safeArgs, safeData, hidden)
         } else if (logLevel === 'all') {
-            this.print(type, args, data, hidden)
+            this.print(type, safeArgs, safeData, hidden)
         } else if (
             logLevel === 'debug' &&
             (type === LogType.DEBUG || type === LogType.UI)
         ) {
-            this.print(type, args, data, hidden)
+            this.print(type, safeArgs, safeData, hidden)
         } else if (logLevel === 'info' && type === LogType.INFO) {
-            this.print(type, args, data, hidden)
+            this.print(type, safeArgs, safeData, hidden)
         } else if (logLevel === 'err' && type === LogType.ERR) {
-            this.print(type, args, data, hidden)
+            this.print(type, safeArgs, safeData, hidden)
         }
     }
     info(args: string, hidden = false) {
@@ -65,8 +113,12 @@ export class Logger {
     }
     error(e: Error | null, args: string, hidden = false) {
         if (e) {
-            // this.add(LogType.ERR, args + '\n' + e.stack?.replaceAll('webpack-internal:///./', 'webpack-internal:///'), undefined, hidden)
-            this.add(LogType.ERR, args + '\n', e, hidden)
+            // 错误对象只保留类型，避免异常详情、响应正文和路径进入日志。
+            const errorType = e instanceof Error ? e.name : typeof e
+            this.add(LogType.ERR, args + '\n', {
+                name: errorType,
+                message: '[错误详情已隐藏]',
+            }, hidden)
         } else {
             this.add(LogType.ERR, args, undefined, hidden)
         }
@@ -128,11 +180,12 @@ export class Logger {
 
         // 如果存在 vconsole 就不打印带 css 样式的日志（它不支持）
         // 因为在 capturer 下 from 是无意义的，所以也不显示
+        const safeFrom = from ? sanitizeLogString(from) : from
         if (document.getElementById('__vconsole')) {
             const { message } = this.buildLogParams(typeStr, args, hidden, type)
             this.logOutput(message.replaceAll('%c', ' | '), [], data, false)
         } else {
-            const { message, styles } = this.buildLogParams(typeStr, args, hidden, type, from)
+            const { message, styles } = this.buildLogParams(typeStr, args, hidden, type, safeFrom)
             this.logOutput(message, styles, data)
         }
     }

@@ -32,7 +32,9 @@
                     <template
                         v-if="runtimeData.chatInfo.show.type == 'group'">
                         ({{
-                            runtimeData.chatInfo.info.group_members.length
+                            Array.isArray(runtimeData.chatInfo.info.group_members)
+                                ? runtimeData.chatInfo.info.group_members.length
+                                : 0
                         }})
                     </template>
                 </p>
@@ -134,6 +136,7 @@
                         <!-- 消息体 -->
                         <MsgBody v-else-if="(msgIndex.post_type === 'message' ||
                                      msgIndex.post_type === 'message_sent') &&
+                                     Array.isArray(msgIndex.message) &&
                                      msgIndex.message.length > 0"
                             :key="msgIndex.fake_message_id ?? msgIndex.message_id"
                             :selected="multipleSelectList.includes(msgIndex.message_id) || tags.menuDisplay.menuSelectedMsgId == msgIndex.message_id"
@@ -171,6 +174,7 @@
                         <!-- 消息体 -->
                         <MsgBody v-if=" (msgIndex.post_type === 'message' ||
                                      msgIndex.post_type === 'message_sent') &&
+                                     Array.isArray(msgIndex.message) &&
                                      msgIndex.message.length > 0"
                             :key="msgIndex.fake_message_id ?? msgIndex.message_id"
                             :selected="multipleSelectList.includes(msgIndex.message_id) || tags.menuDisplay.menuSelectedMsgId == msgIndex.message_id"
@@ -1182,11 +1186,11 @@ import { Img } from '@renderer/function/model/img'
                 void extra
             },
 
-            debugReload(tag: string, extra: Record<string, any> = {}) {
+            debugReload(tag: string, _extra: Record<string, any> = {}) {
                 if (!import.meta.env.DEV || backend.type !== 'tauri') return
                 backend.call(undefined, 'sys:debugLog', false, {
                     tag: '消息重载',
-                    message: `${tag} ${JSON.stringify({ chatId: this.chat.show.id, ...extra })}`,
+                    message: tag,
                 })
             },
 
@@ -1333,12 +1337,10 @@ import { Img } from '@renderer/function/model/img'
                 this.closeMsgMenu()
 
                 const lines = [
-                    `${this.$t('消息 ID')}：${String(msg.message_id ?? '')}`,
                     `${this.$t('消息对象来源')}：${msg?._from_local_db === true ? this.$t('本地聊天记录缓存') : 'NapCat / Server'}`,
                     `${this.$t('消息类型')}：${String(msg.message_type ?? '')}`,
                     `${this.$t('时间')}：${String(msg.time ?? '')}`,
-                    `${this.$t('序号')}：${String(msg.message_seq ?? msg.seq_id ?? msg.seq ?? '')}`,
-                    `${this.$t('发送者')}：${String(msg.sender?.user_id ?? '')}`,
+                    `${this.$t('消息段数')}：${Array.isArray(msg.message) ? msg.message.length : 0}`,
                 ]
 
                 const imageSegs = Array.isArray(msg.message)
@@ -1353,7 +1355,6 @@ import { Img } from '@renderer/function/model/img'
                         const urlHash = url ? await hashUrl(url) : ''
                         const cached = urlHash ? await dbGetImage(runtimeData.loginInfo.uin, urlHash) : null
                         lines.push(`#${index + 1} ${this.$t('图片来源判断')}：${cached ? this.$t('本地图片缓存') : 'NapCat URL'}`)
-                        lines.push(`  url: ${url || '(empty)'}`)
                         lines.push(`  cache: ${cached ? 'hit' : 'miss'}`)
                     }
                 }
@@ -1366,9 +1367,7 @@ import { Img } from '@renderer/function/model/img'
                     lines.push(`${this.$t('合并转发来源')}：${String(forwardSeg.forward_source ?? (msg?._from_local_db === true ? 'local-db' : 'NapCat'))}`)
                     lines.push(`${this.$t('合并转发错误')}：${String(forwardSeg.forward_error_code ?? 'none')}`)
                     lines.push(`${this.$t('合并转发内容条数')}：${Array.isArray(forwardSeg.content) ? forwardSeg.content.length : 0}`)
-                    if (forwardSeg.forward_error_detail) {
-                        lines.push(`${this.$t('错误详情')}：${String(forwardSeg.forward_error_detail)}`)
-                    }
+
                 }
 
                 const escapeHtml = (text: string) => text
@@ -1817,6 +1816,9 @@ import { Img } from '@renderer/function/model/img'
                 }
 
                 if (event.keyCode != 13) {
+                    const groupMembers = Array.isArray(runtimeData.chatInfo.info.group_members)
+                        ? runtimeData.chatInfo.info.group_members
+                        : []
                     if (this.tags.skipAtTriggerOnce) {
                         this.tags.skipAtTriggerOnce = false
                         return
@@ -1828,7 +1830,7 @@ import { Img } from '@renderer/function/model/img'
                         !this.tags.onAtFind &&
                         lastInput == '@' &&
                         activeAtIndex === this.msg.length - 1 &&
-                        runtimeData.chatInfo.info.group_members.length > 0 &&
+                        groupMembers.length > 0 &&
                         runtimeData.chatInfo.show.type == 'group'
                     ) {
                         logger.add(LogType.UI, '开始匹配群成员列表 ……')
@@ -1845,17 +1847,17 @@ import { Img } from '@renderer/function/model/img'
                             const atInfo = this.msg
                                 .substring(activeAtIndex + 1)
                                 .toLowerCase()
-                            this.atFindList = runtimeData.chatInfo.info.group_members
-                                    .filter((item) => { return (
-                                            (item.card != '' && item.card != null && item.card.toLowerCase().indexOf(atInfo) >=0) ||
-                                            item.nickname.toLowerCase().indexOf(atInfo) >= 0 ||
-                                            atInfo ==item.user_id.toString()
-                                        )
-                                    },
-                                )
+                            this.atFindList = groupMembers.filter((item) => {
+                                const card = String(item?.card ?? '').toLowerCase()
+                                const nickname = String(item?.nickname ?? '').toLowerCase()
+                                const userId = String(item?.user_id ?? '')
+                                return card.includes(atInfo) ||
+                                    nickname.includes(atInfo) ||
+                                    atInfo === userId
+                            })
                             // 如果啥都没匹配到，就显示所有
                             if (this.atFindList.length == 0) {
-                                this.atFindList = runtimeData.chatInfo.info.group_members
+                                this.atFindList = groupMembers
                             }
                             this.atSelectedIndex = 0
                         }
@@ -2009,7 +2011,7 @@ import { Img } from '@renderer/function/model/img'
 
 
                 if (Option.get('log_level') === 'debug') {
-                    new Logger().debug('右击消息：' + data)
+                    new Logger().debug(`右击消息（${Array.isArray(data?.message) ? data.message.length : 0} 个消息段）`)
                 }
                 // 如果开着多选模式，不打开右击菜单
                 if (this.multipleSelectList.length > 0) {
@@ -2021,7 +2023,7 @@ import { Img } from '@renderer/function/model/img'
                 let selectUserType = 'member'
                 if (
                     runtimeData.chatInfo.show.type == 'group' &&
-                    runtimeData.chatInfo.info.group_members
+                    Array.isArray(runtimeData.chatInfo.info.group_members)
                 ) {
                     runtimeData.chatInfo.info.group_members.forEach(
                         (item: any) => {
@@ -2144,8 +2146,9 @@ import { Img } from '@renderer/function/model/img'
                             }
                         }
                         const nList = ['xml', 'json']
-                        data.message.forEach((item: any) => {
-                            if (nList.indexOf(item.type as string) > 0) {
+                        const messageSegments = Array.isArray(data?.message) ? data.message : []
+                        messageSegments.forEach((item: any) => {
+                            if (nList.indexOf(item?.type as string) > 0) {
                                 // 如果包含以上消息类型，不能转发
                                 this.tags.menuDisplay.forward = false
                                 this.tags.menuDisplay.add = false
@@ -2276,8 +2279,15 @@ import { Img } from '@renderer/function/model/img'
 
             consoleLogMsg() {
                 if (!this.selectedMsg) return
-                // eslint-disable-next-line no-console
-                console.log(this.selectedMsg)
+                const message = this.selectedMsg
+                const segments = Array.isArray(message.message) ? message.message : []
+                new Logger().debug('消息诊断：' + JSON.stringify({
+                    messageType: message.message_type ?? 'unknown',
+                    segmentCount: segments.length,
+                    imageCount: segments.filter((item: any) => item?.type === 'image').length,
+                    forwardCount: segments.filter((item: any) => item?.type === 'forward').length,
+                    fromLocalDb: message._from_local_db === true,
+                }))
                 this.closeMsgMenu()
             },
 
@@ -2624,29 +2634,21 @@ import { Img } from '@renderer/function/model/img'
                 // 关闭菜单
                 this.closeMsgMenu()
 
-                // 获取图片数据
-                const { blob, buffer } = await getImageUrlData(url)
-
                 const popInfo = new PopInfo()
-                if(backend.type === 'tauri') {
-                    try {
+                try {
+                    // 获取图片数据
+                    const { blob, buffer } = await getImageUrlData(url)
+                    if (backend.type === 'tauri') {
                         const Clipboard = await import('@tauri-apps/plugin-clipboard-manager')
-
                         await Clipboard.writeImage(buffer)
-                        popInfo.add(PopType.INFO, this.$t('复制成功'))
-                    } catch(e) {
-                        popInfo.add(PopType.ERR, this.$t('复制失败'))
-                        new Logger().error(e as unknown as Error, '复制图片失败')
-                    }
-                } else {
-                    const item = new ClipboardItem({ [blob.type]: blob })
-                    try {
+                    } else {
+                        const item = new ClipboardItem({ [blob.type]: blob })
                         await copyToClipboard([item])
-                        popInfo.add(PopType.INFO, this.$t('复制成功'))
-                    } catch (e) {
-                        popInfo.add(PopType.ERR, this.$t('复制失败'))
-                        new Logger().error(e as unknown as Error, '复制图片失败')
                     }
+                    popInfo.add(PopType.INFO, this.$t('复制成功'))
+                } catch (e) {
+                    popInfo.add(PopType.ERR, this.$t('复制失败'))
+                    new Logger().error(e as unknown as Error, '复制图片失败')
                 }
             },
 
@@ -3081,7 +3083,7 @@ import { Img } from '@renderer/function/model/img'
                 if (msg !== null) {
                     const popInfo = {
                         title: this.$t('提醒'),
-                        html: `<span>${this.$t('真的要将 {user} 移出群聊吗', { user: msg.sender.nickname })}</span>`,
+                        html: `<span>${this.$t('真的要将 {user} 移出群聊吗', { user: this.escapeHtml(msg.sender?.nickname) })}</span>`,
                         button: [
                             {
                                 text: app.config.globalProperties.$t('确定'),
@@ -3254,7 +3256,10 @@ import { Img } from '@renderer/function/model/img'
             getSpecialMsgLabel(seg: MsgItemElem) {
                 switch (seg.type) {
                     case 'at': {
-                        const member = runtimeData.chatInfo.info.group_members.find((item) => {
+                        const groupMembers = Array.isArray(runtimeData.chatInfo.info.group_members)
+                            ? runtimeData.chatInfo.info.group_members
+                            : []
+                        const member = groupMembers.find((item) => {
                             return item.user_id === Number(seg.qq)
                         })
                         const name = member?.card && member.card !== '' ? member.card : member?.nickname
@@ -3279,7 +3284,7 @@ import { Img } from '@renderer/function/model/img'
                     .replaceAll('<', '&lt;')
                     .replaceAll('>', '&gt;')
                     .replaceAll('"', '&quot;')
-                    .replaceAll("'", '&#39;')
+                    .replaceAll('\'', '&#39;')
             },
 
             buildComposerRichHtml() {
@@ -3799,7 +3804,13 @@ import { Img } from '@renderer/function/model/img'
                 })
                 if (id < 0) return
 
-                this.imgCache.set(id, await this.fileToDataURL(file))
+                try {
+                    this.imgCache.set(id, await this.fileToDataURL(file))
+                } catch (error) {
+                    this.removeSpecialMsg(id)
+                    popInfo.add(PopType.ERR, this.$t('读取图片失败'))
+                    new Logger().error(error as unknown as Error, '读取图片失败')
+                }
             },
 
 
@@ -4069,14 +4080,15 @@ import { Img } from '@renderer/function/model/img'
 
             msgDblClick(data: any) {
                 // 提取消息中的文字内容
-                const hasText = data.message && data.message.some((m: any) => m.type === 'text' || m.type === 'at')
+                const messageSegments = Array.isArray(data?.message) ? data.message : []
+                const hasText = messageSegments.some((m: any) => m?.type === 'text' || m?.type === 'at')
                 if (!hasText) return
 
                 // 构建纯文本（保留换行）
                 const { $t } = app.config.globalProperties
                 let text = ''
-                for (const part of data.message) {
-                    if (part.type === 'text') {
+                for (const part of messageSegments) {
+                    if (part?.type === 'text') {
                         text += part.text
                     } else if (part.type === 'at') {
                         const card = part.text ?? ('@' + part.qq)

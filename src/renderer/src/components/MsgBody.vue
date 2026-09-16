@@ -20,15 +20,15 @@
             (selected ? ' selected' : '') +
             (runtimeData.sysConfig.opt_ind_message === true ? ' right' : '')"
         :data-raw="getMsgRawTxt(data, false)"
-        :data-sender="data.sender.user_id"
+        :data-sender="data.sender?.user_id"
         :data-time="data.time"
         @mouseleave="hiddenUserInfo"
         @dblclick.stop="$emit('dblclick', data)">
         <img v-menu.prevent.stop="event => $emit('showMenu', event, data)"
-            v-user-tooltip="() => getUserById(data.sender.user_id)"
+            v-user-tooltip="() => getUserById(data.sender?.user_id)"
             name="avatar"
-            :src="'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + data.sender.user_id"
-            :alt="data.sender.card ? data.sender.card : data.sender.nickname"
+            :src="'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + (data.sender?.user_id ?? '')"
+            :alt="data.sender?.card ? data.sender.card : data.sender?.nickname"
             @dblclick="sendPoke">
         <div v-if="data.fake_msg == true"
             :class="'sending left' + (isMe ? ' me' : '')">
@@ -42,8 +42,8 @@
                     <span v-else-if="senderInfo?.role == 'admin'" class="admin">{{ $t('管理员') }}</span>
                     <span v-if="senderInfo?.title && senderInfo?.title != ''">{{ senderInfo?.title.replace(/[\u202A-\u202E\u2066-\u2069]/g, '') }}</span>
                 </template>
-                <a v-if="data.sender.card || data.sender.nickname">
-                    {{ data.sender.card ? data.sender.card : data.sender.nickname }}
+                <a v-if="data.sender?.card || data.sender?.nickname">
+                    {{ data.sender?.card ? data.sender.card : data.sender?.nickname }}
                 </a>
                 <a v-else>
                     {{ isMe ? runtimeData.loginInfo.nickname : runtimeData.chatInfo.show.name }}
@@ -61,19 +61,19 @@
             </header>
             <div @mouseleave="hiddenUserInfo">
                 <!-- 消息体 -->
-                <template v-if="data.message.length === 0">
+                <template v-if="getMessageSegments(data).length === 0">
                     <span class="msg-text" style="opacity: 0.5">{{ $t('空消息') }}</span>
                 </template>
                 <!-- 超级表情 -->
                 <template v-else-if="isSuperFaceMsg()">
                     <div class="msg-img face lottie-face alone">
                         <LazyLottie
-                            :animation-link="Emoji.get(Number(data.message[0].id))!.superValue!"
-                            :title="Emoji.get(Number(data.message[0].id))!.description" />
+                            :animation-link="Emoji.get(Number(getMessageSegments(data)[0]?.id))?.superValue ?? ''"
+                            :title="Emoji.get(Number(getMessageSegments(data)[0]?.id))?.description ?? ''" />
                     </div>
                 </template>
                 <template v-else-if="!hasCard()">
-                    <div v-for="(item, index) in data.message"
+                    <div v-for="(item, index) in getMessageSegments(data)"
                         :key="data.message_id + '-m-' + index"
                         :class="View.isMsgInline(item.type) ? 'msg-inline' : ''">
                         <div v-if="item.type === undefined" />
@@ -87,13 +87,13 @@
                             :id="getMdHTML(item.content, 'msg-md-' + data.message_id)"
                             class="msg-md" />
                         <img v-else-if="item.type == 'image' && item.file == 'marketface'"
-                            :class=" imgStyle(data.message.length, index, true) + ' msg-mface'"
+                            :class=" imgStyle(getMessageSegments(data).length, index, true) + ' msg-mface'"
                             :src="item.url"
                             :alt="item.summary"
                             @load="imageLoaded"
                             @error="imgLoadFail($event, item)">
                         <img v-else-if="item.type == 'mface'"
-                            :class=" imgStyle(data.message.length, index, true) + ' msg-mface'"
+                            :class=" imgStyle(getMessageSegments(data).length, index, true) + ' msg-mface'"
                             :src="item.url"
                             :alt="item.summary"
                             @load="imageLoaded"
@@ -108,7 +108,7 @@
                             <img v-else
                                 :title="(!item.summary || item.summary == '') ? $t('预览图片') : item.summary"
                                 :alt="$t('图片')"
-                                :class=" imgStyle(data.message.length, index, isFace(item))"
+                                :class=" imgStyle(getMessageSegments(data).length, index, isFace(item))"
                                 :src="getImgSrc(item.url)"
                                 @load="imageLoaded"
                                 @error="imgLoadFail($event, item)"
@@ -205,31 +205,31 @@
                                 @click="openMerge()">
                                 <span>{{ $t('合并转发消息') }}</span>
                                 <div class="forward-msg">
-                                    <template v-if="item.content && item.content.length > 0">
+                                    <template v-if="isForwardContent(item.content) && item.content.length > 0">
                                         <div v-for="(i, indexItem) in item.content.slice(0, 3)"
                                             :key="'raw-forward-' + indexItem">
-                                            <span class="reply-name">{{ i.sender.nickname }}</span>:
-                                            <span v-for="(msg, msgIndex) in i.message"
+                                            <span class="reply-name">{{ i?.sender?.card || i?.sender?.nickname || i?.nickname || i?.user_id || '' }}</span>:
+                                            <span v-for="(msg, msgIndex) in (Array.isArray(i?.message) ? i.message : [])"
                                                 :key="'raw-forward-item-' + msgIndex">
-                                                <span v-if="msg.type == 'text'">
-                                                    {{ msg.text }}
+                                                <span v-if="msg?.type == 'text'">
+                                                    {{ msg?.text ?? msg?.data?.text ?? '' }}
                                                 </span>
-                                                <span v-else-if="msg.type == 'image'">
+                                                <span v-else-if="msg?.type == 'image'">
                                                     [{{ $t('图片') }}]
                                                 </span>
-                                                <span v-else-if="msg.type == 'face' || msg.type == 'bface'">
+                                                <span v-else-if="msg?.type == 'face' || msg?.type == 'bface'">
                                                     [{{ $t('表情') }}]
                                                 </span>
-                                                <span v-else-if="msg.type == 'file'">
-                                                    [{{ $t('文件') }}]{{ msg.data.file }}
+                                                <span v-else-if="msg?.type == 'file'">
+                                                    [{{ $t('文件') }}]{{ msg?.data?.file ?? msg?.file ?? msg?.file_name ?? '' }}
                                                 </span>
-                                                <span v-else-if="msg.type == 'video'">
+                                                <span v-else-if="msg?.type == 'video'">
                                                     [{{ $t('视频') }}]
                                                 </span>
-                                                <span v-else-if="msg.type == 'forward'">
+                                                <span v-else-if="msg?.type == 'forward'">
                                                     [{{ $t('聊天记录') }}]
                                                 </span>
-                                                <span v-else-if="msg.type == 'reply'">
+                                                <span v-else-if="msg?.type == 'reply'">
                                                     <!--原版QQ此处不做处理-->
                                                 </span>
                                                 <span v-else>
@@ -243,7 +243,7 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <span v-if="item.content !== undefined">
+                                    <span v-if="isForwardContent(item.content)">
                                         {{ $t('查看 {count} 条转发消息', { count: item.content.length }) }}
                                     </span>
                                     <span v-else>
@@ -276,7 +276,7 @@
                             <a v-else
                                 :class="getRepMsg(item.id) ? '' : 'msg-unknown'"
                                 style="cursor: pointer"
-                                v-html="getRepMsg(item.id) ?? $t('（查看回复消息）')" />
+                                v-html="sanitizeReplyPreview(getRepMsg(item.id) ?? $t('（查看回复消息）'))" />
                         </div>
                         <div v-else-if="item.type == 'poke'" v-once :class="showPock()">
                             <font-awesome-icon class="poke-hand" style="margin-right: 5px;" :icon="['fas', 'fa-hand-point-up']" />
@@ -286,7 +286,7 @@
                     </div>
                 </template>
                 <template v-else>
-                    <template v-for="(item, index) in data.message"
+                    <template v-for="(item, index) in getMessageSegments(data)"
                         :key="data.message_id + '-m-' + index">
                         <CardMessage v-if="item.type == 'xml' || item.type == 'json'"
                             :id="data.message_id"
@@ -406,6 +406,7 @@
 import Option from '@renderer/function/option'
 import CardMessage from './msg-component/CardMessage.vue'
 import markdownit from 'markdown-it'
+import xss from 'xss'
 
 import { MsgBodyFuns as ViewFuns } from '@renderer/function/model/msg-body'
 import { defineComponent, useTemplateRef } from 'vue'
@@ -419,8 +420,6 @@ import {
     openLink,
     sendStatEvent,
 	vMenu,
-	vMove,
-	VMoveOptions,
 } from '@renderer/function/utils/appUtil'
 import { vUserTooltip } from '@renderer/function/tooltip'
 import {
@@ -443,7 +442,6 @@ const {
     data,
     selected,
     type,
-    searchKeyword,
 } = defineProps<{
     data: any
     selected?: boolean
@@ -474,14 +472,22 @@ function getAtMember(id: number): IUser | number {
     const re = getUserById(id) ?? id
     return re
 }
+function getMessageSegments(message: any): any[] {
+    return Array.isArray(message?.message)
+        ? message.message.filter((segment: any) => segment && typeof segment === 'object')
+        : []
+}
 function getUserById(id: number): IUser | undefined {
     if (runtimeData.chatInfo.show.type === 'group') {
-        if (!runtimeData.chatInfo.info.group_members) return id
-        const user = runtimeData.chatInfo.info.group_members.find((item: IUser) => item.user_id == id)
+        const groupMembers = Array.isArray(runtimeData.chatInfo.info.group_members)
+            ? runtimeData.chatInfo.info.group_members
+            : []
+        const user = groupMembers.find((item: IUser) => item.user_id == id)
         if (user) return user
         else return id
     }else {
-        const user = runtimeData.userList.find((item: IUser) => item.user_id === id)
+        const users = Array.isArray(runtimeData.userList) ? runtimeData.userList : []
+        const user = users.find((item: IUser) => item.user_id === id)
         if (user) return user
         else return id
     }
@@ -535,26 +541,25 @@ function getUserById(id: number): IUser | undefined {
         },
         mounted() {
             // 初始化 isMe 参数
+            const senderId = this.data?.sender?.user_id ?? this.data?.user_id
             this.isMe =
                 Number(runtimeData.loginInfo.uin) ===
-                Number(this.data.sender.user_id)
+                Number(senderId)
             // 补充发送者信息
+            const getGroupMembers = () => Array.isArray(runtimeData.chatInfo.info.group_members)
+                ? runtimeData.chatInfo.info.group_members
+                : []
             this.$watch(
-                () => runtimeData.chatInfo.info.group_members.length,
+                () => getGroupMembers().length,
                 () => {
-                    this.senderInfo =
-                        runtimeData.chatInfo.info.group_members.filter(
-                            (item: any) => {
-                                return item.user_id == this.data.sender.user_id
-                            },
-                        )[0]
+                    this.senderInfo = getGroupMembers().find(
+                        (item: any) => item.user_id == senderId,
+                    )
                 },
             )
-            this.senderInfo = runtimeData.chatInfo.info.group_members.filter(
-                (item: any) => {
-                    return item.user_id == this.data.sender.user_id
-                },
-            )[0]
+            this.senderInfo = getGroupMembers().find(
+                (item: any) => item.user_id == senderId,
+            )
             if (runtimeData.sysConfig.enable_local_history && runtimeData.sysConfig.disable_local_history_image_cache !== true) {
                 this.loadCachedImages()
             } else {
@@ -579,8 +584,9 @@ function getUserById(id: number): IUser | undefined {
         },
         methods: {
             refreshTextIndex() {
-                for (let i = 0; i < this.data.message.length; i++) {
-                    const item = this.data.message[i]
+                const messageSegments = getMessageSegments(this.data)
+                for (let i = 0; i < messageSegments.length; i++) {
+                    const item = messageSegments[i]
                     if(item.type == 'text') {
                         const raw = this.rawTextIndex[i]
                         if (raw != undefined) {
@@ -626,10 +632,13 @@ function getUserById(id: number): IUser | undefined {
                 if (item.text != undefined) {
                     return item.text
                 } else {
-                    for (let i = 0; i < runtimeData.chatInfo.info.group_members.length; i++) {
-                        const user = runtimeData.chatInfo.info.group_members[i]
+                    const groupMembers = Array.isArray(runtimeData.chatInfo.info.group_members)
+                        ? runtimeData.chatInfo.info.group_members
+                        : []
+                    for (let i = 0; i < groupMembers.length; i++) {
+                        const user = groupMembers[i]
                         if (user.user_id == Number(item.qq)) {
-                            return ('@' + (user.card != '' && user.card != null? user.card: user.nickname))
+                            return ('@' + (user.card != '' && user.card != null ? user.card : user.nickname))
                         }
                     }
                     return '@' + item.qq
@@ -684,8 +693,8 @@ function getUserById(id: number): IUser | undefined {
                     return
                 }
                 try {
-                    for (const seg of this.data.message) {
-                        if (seg.type !== 'image' || !seg.url) continue
+                    for (const seg of getMessageSegments(this.data)) {
+                        if (seg?.type !== 'image' || !seg.url) continue
                         await this.loadCachedImage(seg.url)
                     }
                 } finally {
@@ -724,10 +733,9 @@ function getUserById(id: number): IUser | undefined {
                     backend.call(undefined, 'sys:debugLog', false, {
                         tag: 'LocalHistory',
                         message: `renderImage:cacheMiss ${JSON.stringify({
-                            messageId: String(this.data?.message_id ?? ''),
                             fromLocalDb: this.data?._from_local_db === true,
-                            url,
-                            urlHash,
+                            urlLength: url.length,
+                            hasUrlHash: urlHash.length > 0,
                         })}`,
                     })
                 }
@@ -782,6 +790,10 @@ function getUserById(id: number): IUser | undefined {
                 return this.$t('本地图片缓存未命中，当前不会再回退到旧的 NapCat URL')
             },
 
+            isForwardContent(content: any): content is any[] {
+                return Array.isArray(content)
+            },
+
             getForwardFailText(item: any) {
                 const code = item?.forward_error_code ?? 'forward-load-failed'
                 const source = this.formatSourceLabel(item?.forward_source)
@@ -789,8 +801,10 @@ function getUserById(id: number): IUser | undefined {
             },
 
             recordAudioSrc(item: any) {
-                const url = item.record_url ?? this.getRecordMessageAudioSrc(item)
-                if (!url) return ''
+                const url = typeof item?.record_url === 'string'
+                    ? item.record_url
+                    : this.getRecordMessageAudioSrc(item)
+                if (!url || typeof url !== 'string') return ''
                 return backend.proxyUrl(url)
             },
 
@@ -835,10 +849,10 @@ function getUserById(id: number): IUser | undefined {
                         item.record_failed = true
                         item.record_error = reason + '; fallback ' + nextFormat + ': ' + result.error
                     }
-                }).catch((error) => {
+                }).catch(() => {
                     item.record_url = ''
                     item.record_failed = true
-                    item.record_error = reason + '; fallback ' + nextFormat + ': ' + (error instanceof Error ? error.message : String(error))
+                    item.record_error = reason + '; fallback ' + nextFormat + ': audio load failed'
                 }).finally(() => {
                     item.record_retry_loading = false
                 })
@@ -871,12 +885,14 @@ function getUserById(id: number): IUser | undefined {
                 const d = item?.data ?? {}
                 const file = item?.file ?? d?.file
                 const path = item?.path ?? d?.path
-                return preferPath ? (path || file) : (file || path)
+                const value = preferPath ? (path || file) : (file || path)
+                return typeof value === 'string' ? value : ''
             },
 
             getRecordMessageAudioSrc(item: any) {
-                if (item.base64 || item?.data?.base64) {
-                    return `data:audio/mpeg;base64,${item.base64 ?? item?.data?.base64}`
+                const base64 = item?.base64 ?? item?.data?.base64
+                if (typeof base64 === 'string' && base64) {
+                    return `data:audio/mpeg;base64,${base64}`
                 }
                 const file = this.getRecordFile(item)
                 if (typeof file === 'string' && file.startsWith('base64://')) {
@@ -887,46 +903,48 @@ function getUserById(id: number): IUser | undefined {
             },
 
             isPlayableRecordUrl(url: string | undefined) {
-                if (!url) return false
-                if (url.startsWith('data:audio/')) return true
+                if (typeof url !== 'string' || !url) return false
+                if (url.startsWith('data:audio/') || url.startsWith('http://') || url.startsWith('https://')) return true
                 const cleanUrl = url.split('?')[0].toLowerCase()
                 if (cleanUrl.startsWith('/') || cleanUrl.startsWith('file://')) return false
                 return ['.mp3', '.wav', '.ogg', '.opus', '.m4a'].some((ext) => cleanUrl.endsWith(ext))
             },
 
             loadRecordUrl(item: any) {
-                if (item.record_loading) return this.$t('语音加载中')
-                if (item.record_failed) return this.$t('语音加载失败')
+                if (item?.record_loading) return this.$t('语音加载中')
+                if (item?.record_failed) return this.$t('语音加载失败')
 
                 const file = this.getRecordFile(item)
                 if (!file || !runtimeData.jsonMap.record_file) {
                     item.record_error = !file ? 'missing record file/path' : 'missing record_file api map'
-                    console.log('[Voice] missing record, 完整 item =', JSON.stringify(item))
+                    new Logger().debug('[Voice] missing record ' + this.formatRecordDebug(item))
                     return item.url ? this.$t('语音格式暂不支持') : this.$t('语音暂不可播放')
                 }
 
                 item.record_loading = true
-                console.log('[Voice] 开始转换语音', JSON.stringify({ file, path: this.getRecordFile(item, true), url: item.url, raw: item }))
+                new Logger().debug('[Voice] 开始转换语音 ' + this.formatRecordDebug(item))
                 this.loadRecordByFormat(file, 'mp3').then((mp3Result) => {
                     if (mp3Result.url) return mp3Result
                     return this.loadRecordByFormat(file, 'wav').then((wavResult) => {
                         if (wavResult.url) return wavResult
                         return {
                             url: '',
-                            error: 'file=' + file + '; mp3: ' + mp3Result.error + '; wav: ' + wavResult.error,
+                            format: 'wav',
+                            error: 'audio conversion failed: mp3/wav unavailable',
                         }
                     })
                 }).then((result) => {
                     if (result.url) {
                         item.record_url = result.url
+                        item.record_format = result.format
                         item.record_error = ''
                     } else {
                         item.record_failed = true
                         item.record_error = result.error
                     }
-                }).catch((error) => {
+                }).catch(() => {
                     item.record_failed = true
-                    item.record_error = error instanceof Error ? error.message : String(error)
+                    item.record_error = 'audio load failed'
                 }).finally(() => {
                     item.record_loading = false
                 })
@@ -935,39 +953,46 @@ function getUserById(id: number): IUser | undefined {
             },
 
             async loadRecordByFormat(file: string, outFormat: 'mp3' | 'wav') {
-                console.log('[Voice] 请求 record_file', JSON.stringify({ file, outFormat }))
+                new Logger().debug('[Voice] 请求 record_file ' + JSON.stringify({ hasFile: Boolean(file), outFormat }))
                 const data = await Connector.callApi('record_file', {
                     file,
                     out_format: outFormat,
                 })
-                console.log('[Voice] record_file 响应', JSON.stringify(data)?.substring(0, 400))
+                new Logger().debug('[Voice] record_file 响应 ' + this.formatRecordDebug(data))
                 const record = Array.isArray(data) ? data[0] : data
                 const url = this.getRecordResponseUrl(record, outFormat)
-                console.log('[Voice] 解析出的 url', JSON.stringify(url)?.substring(0, 200))
+                new Logger().debug('[Voice] 解析出的 url ' + JSON.stringify({
+                    hasUrl: Boolean(url),
+                    protocol: url ? url.split(':', 1)[0] : '',
+                    length: url.length,
+                }))
                 if (!url) {
                     return {
                         url: '',
-                        error: 'no url/file in response ' + this.formatRecordDebug(data),
+                        format: outFormat,
+                        error: 'no playable media source',
                     }
                 }
                 if (url.startsWith('http') || url.startsWith('data:audio/')) {
-                    return { url, error: '' }
+                    return { url, format: outFormat, error: '' }
                 }
                 if (url.startsWith('/') || url.startsWith('file://')) {
                     // 本地路径：Tauri 下转 asset 协议 URL 才能播放
                     const assetUrl = await this.convertLocalPath(url)
-                    console.log('[Voice] 本地路径转 asset', JSON.stringify({ url, assetUrl }))
+                    new Logger().debug('[Voice] 本地路径转 asset ' + JSON.stringify({ converted: assetUrl !== url }))
                     if (assetUrl !== url) {
-                        return { url: assetUrl, error: '' }
+                        return { url: assetUrl, format: outFormat, error: '' }
                     }
                     return {
                         url: '',
-                        error: 'bot returned local file path, not accessible by browser: ' + url,
+                        format: outFormat,
+                        error: 'local media source is not accessible',
                     }
                 }
                 return {
                     url: '',
-                    error: 'unplayable url/file: ' + url,
+                    format: outFormat,
+                    error: 'unplayable media source',
                 }
             },
 
@@ -1018,12 +1043,21 @@ function getUserById(id: number): IUser | undefined {
             },
 
             formatRecordDebug(data: any) {
-                try {
-                    const text = JSON.stringify(data)
-                    return text.length > 160 ? text.slice(0, 160) + '...' : text
-                } catch (_) {
-                    return String(data)
-                }
+                if (!data || typeof data !== 'object') return JSON.stringify({ type: typeof data })
+                const record = Array.isArray(data) ? data[0] : data
+                const nested = record?.data && typeof record.data === 'object' ? record.data : {}
+                const value = (key: string) => record?.[key] ?? nested[key]
+                return JSON.stringify({
+                    type: Array.isArray(data) ? 'array' : 'object',
+                    count: Array.isArray(data) ? data.length : undefined,
+                    hasFile: Boolean(value('file')),
+                    hasPath: Boolean(value('path')),
+                    hasUrl: Boolean(value('url')),
+                    hasBase64: Boolean(value('base64') || value('audio') || value('content')),
+                    keys: Object.keys(record ?? {})
+                        .filter((key) => !/(token|password|cookie|secret|message|content|url|path|file|data|id)/i.test(key))
+                        .slice(0, 20),
+                })
             },
 
             /**
@@ -1101,7 +1135,7 @@ function getUserById(id: number): IUser | undefined {
                 const code = document.createElement('code')
                 const url = String(item?.url ?? '')
                 const status = this.imageCacheStatus[url]
-                code.innerText = `${this.$t('消息来源')}：${this.getMsgSourceLabel()} | ${this.$t('图片来源')}：${this.getImageSourceLabel(item)} | ${this.$t('缓存诊断')}：${this.getImageCacheErrorText(item)}${status?.urlHash ? ` | urlHash: ${status.urlHash}` : ''}${url ? ` | url: ${url}` : ''}`
+                code.innerText = `${this.$t('消息来源')}：${this.getMsgSourceLabel()} | ${this.$t('图片来源')}：${this.getImageSourceLabel(item)} | ${this.$t('缓存诊断')}：${this.getImageCacheErrorText(item)}`
                 code.style.marginTop = '8px'
                 code.style.fontSize = '0.68rem'
                 code.style.whiteSpace = 'pre-wrap'
@@ -1112,12 +1146,10 @@ function getUserById(id: number): IUser | undefined {
                     backend.call(undefined, 'sys:debugLog', false, {
                         tag: 'LocalHistory',
                         message: `renderImage:loadFailed ${JSON.stringify({
-                            messageId: String(this.data?.message_id ?? ''),
                             fromLocalDb: this.data?._from_local_db === true,
-                            url,
-                            urlHash: status?.urlHash ?? '',
+                            urlLength: url.length,
+                            hasUrlHash: Boolean(status?.urlHash),
                             cacheState: status?.state ?? 'unknown',
-                            currentSrc: sender.currentSrc || sender.src,
                         })}`,
                     })
                 }
@@ -1154,7 +1186,8 @@ function getUserById(id: number): IUser | undefined {
              * @param text 纯文本消息
              */
             async parseText(index: number) {
-                let text = this.data.message[index].text
+                const segment = getMessageSegments(this.data)[index]
+                let text = String(segment?.text ?? '')
 
                 const logger = new Logger()
                 text = ViewFuns.parseText(text)
@@ -1227,7 +1260,10 @@ function getUserById(id: number): IUser | undefined {
                             this.pageViewInfo = undefined
                         }
 
-                        logger.add(LogType.DEBUG, 'Link View: ', data)
+                        logger.add(LogType.DEBUG, 'Link View：', {
+                            hasData: data !== undefined && data !== null,
+                            dataType: data === null ? 'null' : typeof data,
+                        })
                         if(data) {
                             this.loadLinkPreview(protocol + domain, data)
                         }
@@ -1279,7 +1315,7 @@ function getUserById(id: number): IUser | undefined {
 
             loadLinkPreview(domain: string, res: any) {
                 const logger = new Logger()
-                logger.debug('获取链接预览成功: ' + res['og:title'])
+                logger.debug('获取链接预览成功')
                 if(res != undefined) {
                     if (res.type == undefined) {
                         if(Object.keys(res).length > 0) {
@@ -1335,14 +1371,23 @@ function getUserById(id: number): IUser | undefined {
              * 尝试在消息列表中寻找这条被回复的消息，获取消息内容
              * @param message_id
              */
+            sanitizeReplyPreview(value: unknown) {
+                return xss(String(value ?? ''), {
+                    whiteList: {
+                        span: ['class'],
+                    },
+                })
+            },
+
             getRepMsg(message_id: string) {
                 if (this.replyPreview[message_id]) return this.replyPreview[message_id]
                 const list = this.runtimeData.messageList.filter((item) => {
                     return item.message_id == message_id
                 })
                 if (list.length === 1) {
-                    if (list[0].message.length > 0) {
-                        const name = list[0].sender.card && list[0].sender.card !== '' ? list[0].sender.card : list[0].sender.nickname
+                    const messageSegments = getMessageSegments(list[0])
+                    if (messageSegments.length > 0) {
+                        const name = list[0].sender?.card && list[0].sender.card !== '' ? list[0].sender.card : list[0].sender?.nickname ?? ''
                         return `<span class="reply-name">${name}</span>: ${getMsgRawTxt(list[0])}`
                     }
                     else return this.$t('（获取回复消息失败）')
@@ -1353,7 +1398,7 @@ function getUserById(id: number): IUser | undefined {
             async loadReplyPreviewImages(message: any) {
                 const selfId = runtimeData.loginInfo?.uin
                 const canReadImageCache = runtimeData.sysConfig.disable_local_history_image_cache !== true && !!selfId
-                const imageUrls = (message.message ?? [])
+                const imageUrls = getMessageSegments(message)
                     .filter((item: any) => item?.type === 'image' && item?.url)
                     .map((item: any) => String(item.url))
 
@@ -1377,7 +1422,7 @@ function getUserById(id: number): IUser | undefined {
             async loadReplyPreviews() {
                 if (!runtimeData.sysConfig.enable_local_history) return
                 const ids = new Set<string>()
-                for (const item of this.data.message ?? []) {
+                for (const item of getMessageSegments(this.data)) {
                     if (item?.type === 'reply' && item.id != null) ids.add(String(item.id))
                 }
                 for (const messageId of ids) {
@@ -1389,10 +1434,11 @@ function getUserById(id: number): IUser | undefined {
                     )
                     if (!localMsg) continue
 
-                    const imageSegments = (localMsg.message ?? [])
+                    const localSegments = getMessageSegments(localMsg)
+                    const imageSegments = localSegments
                         .filter((item: any) => item?.type === 'image')
                     const images = await this.loadReplyPreviewImages(localMsg)
-                    const textSegments = (localMsg.message ?? [])
+                    const textSegments = localSegments
                         .filter((item: any) => item?.type !== 'image')
                     let rawText = textSegments.length > 0
                         ? getMsgRawTxt({ ...localMsg, message: textSegments }, false)
@@ -1513,7 +1559,7 @@ function getUserById(id: number): IUser | undefined {
 
             hasCard() {
                 let hasCard = false
-                this.data.message.forEach((item: any) => {
+                getMessageSegments(this.data).forEach((item: any) => {
                     if (item.type === 'json' || item.type === 'xml') {
                         hasCard = true
                     }
@@ -1523,7 +1569,7 @@ function getUserById(id: number): IUser | undefined {
 
             hasMarkdown() {
                 let hasMarkdown = false
-                this.data.message.forEach((item: any) => {
+                getMessageSegments(this.data).forEach((item: any) => {
                     if (item.type === 'markdown') {
                         hasMarkdown = true
                     }
@@ -1533,7 +1579,8 @@ function getUserById(id: number): IUser | undefined {
 
             sendPoke() {
                 // 调用上级组件的 poke 方法
-                this.$emit('sendPoke', this.data.sender.user_id)
+                const senderId = this.data?.sender?.user_id ?? this.data?.user_id
+                if (senderId != null) this.$emit('sendPoke', senderId)
             },
 
             async showPock() {
@@ -1563,8 +1610,9 @@ function getUserById(id: number): IUser | undefined {
 
             isSuperFaceMsg() {
                 if (runtimeData.sysConfig.use_super_face === false) return false
-                if (this.data.message.length !== 1) return false
-                const seg = this.data.message.at(0)
+                const messageSegments = getMessageSegments(this.data)
+                if (messageSegments.length !== 1) return false
+                const seg = messageSegments.at(0)
                 if (seg.type !== 'face') return
                 return Emoji.allSuperList.has(Number(seg.id))
             },
@@ -1717,9 +1765,11 @@ function getUserById(id: number): IUser | undefined {
                 }
             },
             openMerge(){
-                const seg = this.data.message[0]
-                if (!seg.content) {
-                    const failText = `${this.$t('合并转发解析失败')} [${seg.forward_error_code ?? 'forward-load-failed'}]\n${this.$t('消息来源')}：${this.formatSourceLabel(seg.forward_source)}${seg.forward_error_detail ? `\n${this.$t('错误详情')}：${seg.forward_error_detail}` : ''}`
+                const seg = Array.isArray(this.data?.message)
+                    ? this.data.message.find((item: any) => item?.type === 'forward')
+                    : undefined
+                if (!seg || !Array.isArray(seg.content) || seg.content.length === 0) {
+                    const failText = `${this.$t('合并转发解析失败')} [${String(seg?.forward_error_code ?? 'forward-load-failed')}]\n${this.$t('消息来源')}：${this.formatSourceLabel(seg?.forward_source)}`
                     new PopInfo().add(PopType.ERR, failText)
                     return
                 }
@@ -1746,8 +1796,9 @@ function getUserById(id: number): IUser | undefined {
                 }[]
                 let index = 0
                 data.messageList.forEach((item) => {
+                    if (!Array.isArray(item?.message)) return
                     item.message.forEach((msg) => {
-                        if (msg.type == 'image') {
+                        if (msg?.type == 'image' && msg.url) {
                             imgList.push({
                                 index: index,
                                 message_id: item.message_id,

@@ -52,7 +52,7 @@
         </div>
         <div v-else-if="data.sub_type === 'poke'"
             class="note-notify note-base"
-            v-html="data.str + '<div class=\'space\'</div>'" />
+            v-html="getPokeHtml(data.str)" />
         <div v-else-if="data.sub_type === 'time' && data.time != undefined"
             class="note-time note-base">
             <a>{{ Intl.DateTimeFormat(
@@ -73,6 +73,7 @@
     } from '@renderer/function/utils/systemUtil'
     import { pokeAnime } from '@renderer/function/utils/msgUtil'
     import { backend } from '@renderer/runtime/backend'
+    import xss from 'xss'
     import Emoji from '@renderer/function/model/emoji'
     import EmojiFace from './EmojiFace.vue'
 
@@ -110,19 +111,15 @@
                         this.info.name = this.$t('你')
                     } else {
                         // 寻找群成员信息
-                        if (runtimeData.chatInfo.info.group_members !== undefined) {
-                            const back =
-                                runtimeData.chatInfo.info.group_members.filter(
-                                    (item) => {
-                                        return item.user_id === Number(id)
-                                    },
-                                )
-                            if (back.length === 1) {
-                                this.info.name =
-                                    back[0].card === '' || back[0].card == null? back[0].nickname: back[0].card
-                            } else {
-                                this.info.name = id
-                            }
+                        const groupMembers = Array.isArray(runtimeData.chatInfo.info.group_members)
+                            ? runtimeData.chatInfo.info.group_members
+                            : []
+                        const back = groupMembers.filter(
+                            (item) => item.user_id === Number(id),
+                        )
+                        if (back.length === 1) {
+                            this.info.name =
+                                back[0].card === '' || back[0].card == null ? back[0].nickname : back[0].card
                         } else {
                             this.info.name = id
                         }
@@ -151,7 +148,10 @@
                 return runtimeData.loginInfo.uin === id
             },
             getName(id: number) {
-                const back = runtimeData.chatInfo.info.group_members.filter(
+                const groupMembers = Array.isArray(runtimeData.chatInfo.info.group_members)
+                    ? runtimeData.chatInfo.info.group_members
+                    : []
+                const back = groupMembers.filter(
                     (item) => {
                         return item.user_id === id
                     },
@@ -160,6 +160,15 @@
                     return back[0].card === '' || back[0].card == null? back[0].nickname: back[0].card
                 }
                 return id
+            },
+            getPokeHtml(value: unknown) {
+                const content = xss(String(value ?? ''), {
+                    whiteList: {
+                        span: ['class'],
+                        img: ['src', 'alt'],
+                    },
+                })
+                return content + '<div class="space"></div>'
             },
             fTime(time: number) {
                 // 将秒数转换为可阅读的时间，最大单位天

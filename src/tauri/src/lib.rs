@@ -68,18 +68,6 @@ pub fn run() {
 
             log4rs::init_config(config).unwrap();
 
-            println!("");
-            println!(" _____ _____ _____ _____ __ __ ");
-            println!("|   __|_   _|  _  |  _  |  |  |");
-            println!("|__   | | | |     |   __|-   -|");
-            println!("|_____| |_| |__|__|__|  |__|__| CopyRight © Stapx Steve");
-            println!("=======================================================");
-            println!("日志等级:{}", log_level);
-
-            if PROXY_PORT.get().is_some() {
-                info!("代理服务器已启动，端口：{}", PROXY_PORT.get().unwrap());
-            }
-
             let default_dir = app.path().app_data_dir()
                 .expect("无法获取 app data 目录");
             let data_dir = store
@@ -114,7 +102,7 @@ pub fn run() {
                     Box::new(move |response| {
                         let app_handle_clone = app_handle.clone();
                         rt.spawn(async move {
-                            info!("response {:?}", response);
+                            info!("收到通知操作事件");
                             let action = response.action;
                             let user_info = response.user_info.get("NotificationPayload")
                                 .and_then(|v| Some(v.as_str()))
@@ -158,7 +146,8 @@ pub fn run() {
                     }),
                     categories,
                 ) {
-                log::error!("初始化通知回调失败，继续启动应用：{err:?}");
+                let _ = err;
+                log::error!("初始化通知回调失败，继续启动应用");
             }
             #[cfg(not(any(target_os = "macos", target_os = "windows")))]
             {
@@ -166,8 +155,8 @@ pub fn run() {
                 // as they probably don't work anymore and are just stuck
                 //
                 // https://github.com/deltachat/deltachat-desktop/issues/2438#issuecomment-1090735045
-                if let Err(err) = manager.remove_all_delivered_notifications() {
-                    log::error!("remove_all_delivered_notifications: {err:?}");
+                if manager.remove_all_delivered_notifications().is_err() {
+                    log::error!("清理残留通知失败");
                 }
             }
             app.manage(manager);
@@ -176,7 +165,7 @@ pub fn run() {
 
             // 创建主窗体 ============
             info!("欢迎使用 Stapxs QQ Lite, 当前版本: {}", env!("CARGO_PKG_VERSION"));
-            info!("启动平台架构：{}", std::env::consts::OS);
+            info!("启动平台架构");
             info!("正在创建窗体 ……");
             let window = create_window(app)?;
             info!("窗体创建成功");
@@ -364,7 +353,7 @@ fn create_window(app: &mut tauri::App) -> tauri::Result<tauri::WebviewWindow> {
         let manager = GlassViewManager::new();
         match manager.add_glass_view(ns_view_ptr as *mut std::ffi::c_void, options) {
             Ok(view_id) => {
-                info!("Glass 视图创建成功，ID: {}", view_id);
+                info!("Glass 视图创建成功");
 
                 // 设置材质变体
                 let variant_name = "notification-center";
@@ -396,20 +385,20 @@ fn create_window(app: &mut tauri::App) -> tauri::Result<tauri::WebviewWindow> {
                     _ => GlassMaterialVariant::Dock,
                 };
 
-                if let Err(e) = manager.set_variant(view_id, material) {
-                    error!("设置 Glass 材质变体失败: {:?}", e);
+                if manager.set_variant(view_id, material).is_err() {
+                    error!("设置 Glass 材质变体失败");
                 } else {
-                    info!("Glass 材质变体设置为: {}", variant_name);
+                    info!("Glass 材质变体设置成功");
                 }
 
                 // 将 manager 泄漏以保持 Glass 效果活跃
                 std::mem::forget(manager);
             }
-            Err(e) => {
-                error!("添加 glass 视图失败: {:?}", e);
+            Err(_) => {
+                error!("添加 glass 视图失败");
                 return Err(tauri::Error::Io(std::io::Error::new(
                     std::io::ErrorKind::Other,
-                    format!("添加 glass 视图失败: {:?}", e),
+                    "添加 glass 视图失败",
                 )));
             }
         }

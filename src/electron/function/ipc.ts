@@ -89,8 +89,8 @@ export function regIpcListener() {
             if(contentType && contentType.includes('text/html')) {
                 return res.data
             }
-        } catch (error) {
-            logger.error(error as Error, '获取 html 内容失败')
+        } catch {
+            logger.error('获取 html 内容失败')
         }
         return null
     })
@@ -99,8 +99,8 @@ export function regIpcListener() {
         try {
             const response = await axios.get(link, { timeout: 10000 })
             return response.data
-        } catch (error) {
-            logger.error(error as Error, '获取 api 数据失败')
+        } catch {
+            logger.error('获取 api 数据失败')
         }
     })
     ipcMain.handle('sys:readClipboardImage', () => {
@@ -190,7 +190,7 @@ export function regIpcListener() {
     // 下载文件
     ipcMain.on('sys:download', (_, args) => {
         logger.level = logLevel
-        logger.info('下载文件：' + args.downloadPath)
+        logger.info('开始下载文件')
 
         const downloadPath = args.downloadPath
         const fileName = args.fileName
@@ -226,7 +226,7 @@ export function regIpcListener() {
     // 发送通知
     ipcMain.on('sys:sendNotice', async (_, data) => {
         logger.level = logLevel
-        logger.info('创建通知：' + data.tag + ' - ' + data.body)
+        logger.info('创建通知')
         // MacOS: 刷新 TouchBar
         if(touchBarInstance && data.base_type === 'msg') {
             touchBarInstance.newMessage(data)
@@ -308,7 +308,7 @@ export function regIpcListener() {
     ipcMain.on('sys:closeNotice', (_, tag) => {
         if(noticeList[tag]) {
             logger.level = logLevel
-            logger.info('关闭通知：' + tag)
+            logger.info('关闭通知')
             noticeList[tag].close()
             delete noticeList[tag]
             // macOS: 刷新 TouchBar
@@ -331,7 +331,7 @@ export function regIpcListener() {
         Object.keys(noticeList).forEach((key) => {
             if(key.startsWith(id)) {
                 logger.level = logLevel
-                logger.info('关闭所有通知：' + id)
+                logger.info('关闭所有通知')
                 noticeList[key].close()
                 delete noticeList[key]
                 // macOS: 刷新 TouchBar
@@ -628,9 +628,9 @@ export function regIpcListener() {
 
             logger.info(`成功加载 ${emojis.length} 个本地表情`)
             return emojis
-        } catch (error) {
-            logger.error('读取文件夹失败:', error)
-            throw error
+        } catch {
+            logger.error('读取文件夹失败')
+            throw new Error('读取文件夹失败')
         }
     })
 
@@ -638,11 +638,11 @@ export function regIpcListener() {
     ipcMain.handle('sys:saveImage', async (_, args: { url: string; folder: string; fileName: string }) => {
         const fs = await import('fs')
         try {
-            logger.debug('sys:saveImage starting. Args:', args)
+            logger.debug('开始保存图片')
 
             // 确保目录存在
             if (!fs.existsSync(args.folder)) {
-                logger.debug('sys:saveImage folder does not exist, creating:', args.folder)
+                logger.debug('创建图片保存目录')
                 fs.mkdirSync(args.folder, { recursive: true })
             }
 
@@ -650,14 +650,13 @@ export function regIpcListener() {
             const buffer = Buffer.from(response.data, 'binary')
             const filePath = path.join(args.folder, args.fileName)
             
-            logger.debug('sys:saveImage writing to:', filePath)
             fs.writeFileSync(filePath, buffer)
-            
-            logger.debug('sys:saveImage success')
+
+            logger.debug('图片保存成功')
             return { success: true, message: '保存成功' }
-        } catch (e: any) {
-            logger.error('保存图片失败:', e)
-            return { success: false, message: e.message || '未知错误' }
+        } catch {
+            logger.error('保存图片失败')
+            return { success: false, message: '保存图片失败' }
         }
     })
 
@@ -671,9 +670,9 @@ export function regIpcListener() {
 
             // 转换为 base64
             return fileData.toString('base64')
-        } catch (error) {
-            logger.error('读取文件失败:', error)
-            throw error
+        } catch {
+            logger.error('读取文件失败')
+            throw new Error('读取文件失败')
         }
     })
 
@@ -711,8 +710,8 @@ export function regIpcListener() {
                         host: proxyUrl.hostname,
                         port: parseInt(proxyUrl.port)
                     }
-                } catch (e) {
-                    logger.error('代理地址解析失败:', e)
+                } catch {
+                    logger.error('代理地址解析失败')
                 }
             }
 
@@ -732,10 +731,10 @@ export function regIpcListener() {
             fs.unlinkSync(tempFile)
             
             return destPath
-        } catch (error) {
+        } catch {
             if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile)
-            logger.error('下载或解压失败:', error)
-            throw error
+            logger.error('下载或解压失败')
+            throw new Error('下载或解压失败')
         }
     })
 }

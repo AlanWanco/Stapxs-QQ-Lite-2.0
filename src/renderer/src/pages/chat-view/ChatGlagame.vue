@@ -37,7 +37,7 @@ import Chat from '../Chat.vue'
 import app from '@renderer/main'
 import { runtimeData } from '@renderer/function/msg'
 import { get, save, optDefault } from '@renderer/function/option'
-import { Logger, PopInfo, PopType } from '@renderer/function/base'
+import { PopInfo, PopType } from '@renderer/function/base'
 import { getViewTime } from '@renderer/function/utils/systemUtil'
 import { getMsgRawTxt } from '@renderer/function/utils/msgUtil'
 import xss from 'xss'
@@ -55,16 +55,15 @@ export default defineComponent({
     methods: {
         onRobotClick() {
             const { $t } = app.config.globalProperties
-            const logger = new Logger()
             const systemContent = get('glagame_prompt') ?? optDefault.glagame_prompt
             const maxMessages = Number(get('glagame_max_messages')) || optDefault.glagame_max_messages
             // 只取最多 maxMessages 条聊天记录
-            const chatData = toRaw(runtimeData.messageList).filter(item => item.raw_message && item.sender.user_id !== runtimeData.loginInfo.uin).slice(-maxMessages)
+            const chatData = toRaw(runtimeData.messageList)
+                .filter(item => item?.raw_message && item.sender?.user_id !== runtimeData.loginInfo.uin)
+                .slice(-maxMessages)
             const chatStr = chatData.map(item => {
-                return `【${getViewTime(item.time)}】${item.sender.nickname}: ${getMsgRawTxt(item, false)}`
+                return `【${getViewTime(item.time)}】${item.sender?.nickname ?? ''}: ${getMsgRawTxt(item, false)}`
             }).join('\n')
-            logger.debug('聊天记录：' + chatStr)
-
             const curApi = get('openai_api') ?? ''
             const curToken = get('openai_token') ?? ''
             const curModel = get('openai_model') ?? 'gpt-4o'
@@ -93,9 +92,9 @@ export default defineComponent({
                     this.onLoading = false
                     this.dataList = data.choices?.[0]?.message?.content?.trim().split('\n') || []
                 })
-                .catch(error => {
+                .catch(() => {
                     this.onLoading = false
-                    new PopInfo().add(PopType.ERR, $t('请求失败：') + error.message);
+                    new PopInfo().add(PopType.ERR, $t('请求失败'))
                 });
         },
         openAPIConfig() {

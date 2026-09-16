@@ -35,18 +35,8 @@ async function createWindow() {
     }
     logger.level = logLevel
 
-    /* eslint-disable no-console */
-    console.log('')
-    console.log(' _____ _____ _____ _____ __ __  \n' +
-        '|   __|_   _|  _  |  _  |  |  | \n' +
-        '|__   | | | |     |   __|-   -| \n' +
-        '|_____| |_| |__|__|__|  |__|__| CopyRight © Stapx Steve')
-    console.log('=======================================================')
-    console.log('日志等级:', logLevel)
-    /* eslint-enable no-console */
     logger.info('欢迎使用 Stapxs QQ Lite, 当前版本: ' + packageInfo.version)
-
-    logger.info('启动平台架构：' + process.platform)
+    logger.info('启动平台架构')
     logger.info('正在创建窗体 ……')
     Menu.setApplicationMenu(null)
     // 创建窗口
@@ -131,9 +121,9 @@ async function createWindow() {
                     win.setWindowButtonVisibility(true)
                     liquidGlass.unstable_setVariant(viewId!, 9)
                     win.webContents.send('sys:liquidGlassReady', {})
-                    logger.info('liquidGlass 装载成功:', viewId)
-                } catch (err) {
-                    logger.error('liquidGlass 装载失败:', err);
+                    logger.info('liquidGlass 装载成功')
+                } catch {
+                    logger.error('liquidGlass 装载失败')
                 }
             }
         })
@@ -225,8 +215,8 @@ app.on('ready', async () => {
             return new Response(fileContent, {
                 headers: { 'Content-Type': getMimeType(filePath) },
             });
-        } catch (err) {
-            logger.error(`Failed to load file: ${filePath}`, err)
+        } catch {
+            logger.error('加载应用资源失败')
             return new Response('File not found', { status: 404 });
         }
     })

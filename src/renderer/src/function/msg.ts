@@ -80,34 +80,58 @@ const logger = new Logger()
 let firstHeartbeatTime = -1
 let heartbeatTime = -1
 
+function isFailedResponse(msg: any): boolean {
+    if (!msg || typeof msg !== 'object') return true
+    if (msg.status === 'failed') return true
+    return msg.retcode !== undefined && Number(msg.retcode) !== 0
+}
+
 export function dispatch(raw: string | { [k: string]: any }, echo?: string) {
-    let msg: any;
+    let msg: any
 
     // 1) 如有需要先 parse
     if (typeof raw === 'string') {
         try {
-            msg = JSON.parse(raw);
+            msg = JSON.parse(raw)
         } catch {
             if (!raw.includes('"meta_event_type":"heartbeat"')) {
-                logger.add(LogType.WS, 'GET：' + raw);
+                logger.add(LogType.WS, 'GET：消息不是有效 JSON')
             }
-            return;
+            return
         }
     } else {
-        msg = raw;
+        msg = raw
     }
+    if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return
 
-    // 2) 決定 name/key
-    const name = echo ? echo.split('_')[0] : msg.post_type === 'notice' ? msg.sub_type ?? msg.notice_type : msg.post_type;
+    // 2) 决定 name/key。OneBot 的 notice_type 才是事件主类型，只有
+    // notify 需要再使用 sub_type（例如 poke）；否则 group_msg_emoji_like
+    // 会被错误路由成 add/remove。
+    const echoName = typeof echo === 'string' && echo !== ''
+        ? echo.split('_')[0]
+        : undefined
+    let name = echoName ?? (
+        msg.post_type === 'notice'
+            ? msg.notice_type === 'notify' ? msg.sub_type ?? msg.notice_type : msg.notice_type
+            : msg.post_type
+    )
 
-    // 3) 安全調用 handler
+    // 3) 安全调用 handler
     try {
-        const fn = handlers[name];
-        if (!fn) throw new Error(`No handler for "${name}"`);
-        const metaArgs = echo ? echo.split('_') : undefined;
-        fn(msg, metaArgs);
+        let fn = typeof name === 'string' ? handlers[name] : undefined
+        // 兼容旧版 OneBot：group_decrease/group_increase 等事件的具体动作
+        // 可能只注册在 sub_type（kick/approve）上；只有主类型没有 handler
+        // 时才回退，避免 group_msg_emoji_like 被误路由成 add/remove。
+        if (!fn && !echoName && msg.post_type === 'notice' && typeof msg.sub_type === 'string') {
+            name = msg.sub_type
+            fn = handlers[name]
+        }
+        if (!fn) throw new Error(`No handler for "${name ?? 'undefined'}"`)
+        const metaArgs = echoName ? echo!.split('_') : undefined
+        fn(msg, metaArgs)
     } catch (e) {
-        logger.error(e as Error, `跳转事件处理错误 - ${name}:\n${JSON.stringify(msg)}`);
+        // 不把事件原文写入错误日志，避免联系人、Cookie 等字段被带出。
+        logger.error(e as Error, `事件处理失败 - ${name ?? 'undefined'}`)
     }
 }
 
@@ -175,16 +199,7 @@ const noticeFunctions = {
                 break
             }
             case 'decrease': {
-                // 输出日志（显示为红色字体）
-                // eslint-disable-next-line no-console
-                console.log(
-                    '%c消失了一个好友：' +
-                    msg.nickname +
-                    '（' +
-                    msg.user_id +
-                    '）',
-                    'color:red;',
-                )
+                logger.debug('好友列表发生减少')
                 break
             }
         }
@@ -203,21 +218,22 @@ const noticeFunctions = {
     group_msg_emoji_like: (_: string, msg: { [key: string]: any }) => {
         const msgId = msg.message_id
         const isAdd = msg.is_add
-        const emojiList = msg.likes
+        const emojiList = Array.isArray(msg.likes) ? msg.likes : []
         // 推送事件里发回应的人，NapCat 用 operator_id，部分框架用 user_id
         const operatorId = msg.operator_id ?? msg.user_id
         const isMe = operatorId !== undefined && Number(operatorId) === Number(runtimeData.loginInfo.uin)
         // 寻找消息
         runtimeData.messageList.forEach((item, index) => {
-            if (item.message_id === msgId) {
-                if (!runtimeData.messageList[index].emoji_like) {
+            if (String(item.message_id) === String(msgId)) {
+                if (!Array.isArray(runtimeData.messageList[index].emoji_like)) {
                     runtimeData.messageList[index].emoji_like = []
                 }
-                
+
                 emojiList.forEach((like: any) => {
-                    const id = Number(like.emoji_id)
-                    const count = like.count
-                    
+                    const id = Number(like?.emoji_id)
+                    const count = Number(like?.count)
+                    if (!Number.isFinite(id) || !Number.isFinite(count) || count <= 0) return
+
                     let hasAdd = false
                     runtimeData.messageList[index].emoji_like.forEach((existLike: any) => {
                         if (existLike.emoji_id == id) {
@@ -258,7 +274,7 @@ const noticeFunctions = {
         })
 
         // 仅在当前群聊显示，且只处理新增操作
-        if (msg.group_id === runtimeData.chatInfo.show.id && isAdd) {
+        if (String(msg.group_id ?? '') === String(runtimeData.chatInfo.show.id ?? '') && isAdd) {
             runtimeData.messageList.push(msg)
         }
     },
@@ -275,7 +291,8 @@ const noticeFunctions = {
         // 如果是自己，更新禁言时间
         if (
             userId == runtimeData.loginInfo.uin &&
-            groupId == runtimeData.chatInfo.show.id
+            groupId == runtimeData.chatInfo.show.id &&
+            runtimeData.chatInfo.info.me_info
         ) {
             if (status)
                 runtimeData.chatInfo.info.me_info.shut_up_timestamp =
@@ -320,12 +337,15 @@ const noticeFunctions = {
 
         const groupId = msg.group_id
         const userIds = [msg.user_id, msg.target_id]
-        const info = msg.raw_info
+        const info = Array.isArray(msg.raw_info) ? msg.raw_info : []
 
         // 如果的当前打开的会话
         if (groupId == runtimeData.chatInfo.show.id) {
             let str = ''
             const userInfo = [] as { txt: string; isMe: boolean }[]
+            const groupMembers = Array.isArray(runtimeData.chatInfo.info.group_members)
+                ? runtimeData.chatInfo.info.group_members
+                : []
             // 用户列表
             userIds.forEach((id) => {
                 if (id == runtimeData.loginInfo.uin) {
@@ -335,7 +355,7 @@ const noticeFunctions = {
                     })
                 } else {
                     // 到群成员列表中去找这个人
-                    const user = runtimeData.chatInfo.info.group_members.find(
+                    const user = groupMembers.find(
                         (item) => {
                             return item.user_id == id
                         },
@@ -352,20 +372,20 @@ const noticeFunctions = {
             info.forEach((item: any) => {
                 switch (item.type) {
                     case 'img':
-                        str += `<img src="${backend.proxyUrl(item.src)}"/>`
+                        if (typeof item.src === 'string') str += `<img src="${backend.proxyUrl(item.src)}"/>`
                         break
                     case 'nor':
-                        str += item.txt
+                        str += String(item.txt ?? '')
                         break
                     case 'qq': {
-                        str += userInfo[getQQTimes].txt
+                        str += userInfo[getQQTimes]?.txt ?? ''
                         getQQTimes++
                     }
                 }
             })
             // 插入系统消息
             msg.str = str
-            msg.pokeMe = userInfo[1].isMe
+            msg.pokeMe = userInfo[1]?.isMe === true
             runtimeData.messageList.push(msg)
         }
     },
@@ -385,7 +405,10 @@ const noticeFunctions = {
                 'getGroupMemberList',
             )
             // 获取到用户信息
-            const user = runtimeData.chatInfo.info.group_members.find(
+            const groupMembers = Array.isArray(runtimeData.chatInfo.info.group_members)
+                ? runtimeData.chatInfo.info.group_members
+                : []
+            const user = groupMembers.find(
                 (item) => {
                     return item.user_id == userId
                 },
@@ -446,7 +469,7 @@ const msgFunctions = {
      * 保存 Bot 信息
      */
     getVersionInfo: (_: string, msg: { [key: string]: any }) => {
-        const data = getMsgData('version_info', msg, msgPath.version_info)[0]
+        const data = getMsgData('version_info', msg, msgPath.version_info)?.[0]
 
         if (data) {
             // 如果 runtime 存在（即不是第一次连接），且 app_name 不同，重置 runtime
@@ -479,10 +502,8 @@ const msgFunctions = {
      * 保存账号信息
      */
     getLoginInfo: (_: string, msg: { [key: string]: any }) => {
-        const msgBody = getMsgData('login_info', msg, msgPath.login_info)
-        if (msgBody) {
-            const data = msgBody[0]
-
+        const data = getMsgData('login_info', msg, msgPath.login_info)?.[0]
+        if (data?.uin != undefined) {
             // 如果 runtime 存在（即不是第一次连接），且 uin 不同，重置 runtime
             resetRimtime(runtimeData.loginInfo.uin != data.uin && !login.status)
 
@@ -521,7 +542,8 @@ const msgFunctions = {
      * @deprecated 功能在后期更新中未被重构检查，可能存在问题
      */
     getMoreLoginInfo: (_: string, msg: { [key: string]: any }) => {
-        runtimeData.loginInfo.info = msg.data.data.result.buddy.info_list[0]
+        const info = msg?.data?.data?.result?.buddy?.info_list?.[0]
+        if (info) runtimeData.loginInfo.info = info
     },
 
     /**
@@ -548,11 +570,11 @@ const msgFunctions = {
             sort_id: number
             users: number[]
         }[]
-        if (list != undefined) {
-            saveClassInfo(list)
-        }
+        if (!Array.isArray(list) || list.length === 0) return
+        saveClassInfo(list)
         // 刷新用户列表的分类信息
         list.forEach((item) => {
+            if (!Array.isArray(item?.users)) return
             item.users.forEach((id) => {
                 runtimeData.userList.forEach((user) => {
                     if (user.user_id == id && user.class_id == undefined) {
@@ -587,15 +609,17 @@ const msgFunctions = {
      * 保存群成员列表
      */
     getGroupMemberList: (_: string, msg: { [key: string]: any }) => {
-        const data = msg.data as GroupMemberInfoElem[]
-        data.forEach((item: any) => {
+        const data = msg?.data
+        if (!Array.isArray(data)) return
+        const members = data.filter((item: any) => item && typeof item === 'object')
+        members.forEach((item: any) => {
             let name: string
             if (item.card != undefined && item.card != '') {
                 name = item.card
             } else if (item.nickname != undefined && item.nickname != '') {
                 name = item.nickname
             } else {
-                name = item.user_id.toString()
+                name = String(item.user_id ?? '')
             }
 
             // 获取拼音首字母
@@ -607,7 +631,7 @@ const msgFunctions = {
                 .toUpperCase() ?? ' '
         })
         // 筛选列表
-        const adminList = data.filter((item: GroupMemberInfoElem) => {
+        const adminList = members.filter((item: GroupMemberInfoElem) => {
             return item.role === 'admin'
         })
         adminList.sort((a, b) => {
@@ -616,10 +640,10 @@ const msgFunctions = {
             }
             return 0
         })
-        const createrList = data.filter((item: GroupMemberInfoElem) => {
+        const createrList = members.filter((item: GroupMemberInfoElem) => {
             return item.role === 'owner'
         })
-        const memberList = data.filter((item: GroupMemberInfoElem) => {
+        const memberList = members.filter((item: GroupMemberInfoElem) => {
             return item.role !== 'admin' && item.role !== 'owner'
         })
         memberList.sort((a, b) => {
@@ -638,7 +662,7 @@ const msgFunctions = {
      * 保存聊天记录
      */
     getChatHistoryFist: (_: string, msg: { [key: string]: any }) => {
-        if (msg.data === null) {
+        if (isFailedResponse(msg) || msg.data == null) {
             new PopInfo().add(
                 PopType.ERR,
                 app.config.globalProperties.$t('获取历史记录失败'),
@@ -646,10 +670,13 @@ const msgFunctions = {
             runtimeData.tags.loadHistoryFail = true
             return
         }
-        saveMsg(msg, 'top')
+        void saveMsg(msg, 'top').catch((error) => {
+            runtimeData.tags.loadHistoryFail = true
+            logger.error(error as Error, '历史消息解析失败')
+        })
     },
     getChatHistory: (_: string, msg: { [key: string]: any }) => {
-        if (msg.data === null) {
+        if (isFailedResponse(msg) || msg.data == null) {
             new PopInfo().add(
                 PopType.ERR,
                 app.config.globalProperties.$t('获取历史记录失败'),
@@ -657,7 +684,10 @@ const msgFunctions = {
             runtimeData.tags.loadHistoryFail = true
             return
         }
-        saveMsg(msg, 'top')
+        void saveMsg(msg, 'top').catch((error) => {
+            runtimeData.tags.loadHistoryFail = true
+            logger.error(error as Error, '历史消息解析失败')
+        })
     },
 
     getChatHistoryOnMsg: (
@@ -670,20 +700,24 @@ const msgFunctions = {
             try {
                 // 对消息进行一次格式化处理
                 let list = getMsgData('message_list', msg, msgPath.message_list)
-                if (list != undefined) {
+                if (Array.isArray(list) && list.length > 0) {
                     list = parseMsgList(
                         list,
                         msgPath.message_list.type,
                         msgPath.message_value,
                     )
-                    const raw = getMsgRawTxt(list[0])
-                    const { time } = list[0]
+                    const first = list[0]
+                    if (!first) return
+                    const raw = getMsgRawTxt(first)
+                    const { time } = first
                     // 更新消息列表
                     const onmsg = runtimeData.baseOnMsgList.get(Number(id))
                     if (onmsg) {
                         if (onmsg.group_id) {
-                            const name = list[0].sender.card && list[0].sender.card !== '' ? list[0].sender.card : list[0].sender.nickname
-                            onmsg.raw_msg = `<span class="reply-name">${name}</span>: ${raw}`
+                            const name = first.sender?.card && first.sender.card !== ''
+                                ? first.sender.card
+                                : first.sender?.nickname ?? ''
+                            onmsg.raw_msg = name ? `<span class="reply-name">${name}</span>: ${raw}` : raw
                         } else {
                             onmsg.raw_msg = raw
                         }
@@ -705,7 +739,11 @@ const msgFunctions = {
         msg: { [key: string]: any },
         echoList: string[],
     ) => {
-        if (msg.message_id == undefined) {
+        if (isFailedResponse(msg)) {
+            logger.error(null, `发送消息 API 返回失败：${String(msg?.retcode ?? 'unknown')}`)
+            return
+        }
+        if (msg.message_id == undefined && msg.data?.message_id != undefined) {
             msg.message_id = msg.data.message_id
         }
         if (echoList[1] == 'forward') {
@@ -715,6 +753,10 @@ const msgFunctions = {
                 app.config.globalProperties.$t('消息已转发'),
             )
         } else if (echoList[1] == 'uuid') {
+            if (msg.message_id == undefined) {
+                logger.error(null, '发送消息响应缺少 message_id')
+                return
+            }
             const messageId = echoList[2]
             // 去 messagelist 里找到这条消息
             runtimeData.messageList.forEach((item) => {
@@ -752,7 +794,7 @@ const msgFunctions = {
         echoList: string[],
     ) => {
         const getCount = Number(echoList[1])
-        const data = msg.data
+        const data = Array.isArray(msg?.data) ? msg.data : []
         if (msgPath.roaming_stamp.reverse) {
             data.reverse()
         }
@@ -775,7 +817,8 @@ const msgFunctions = {
      * @deprecated 功能在后期更新中未被重构检查，可能存在问题
      */
     getMoreGroupInfo: (_: string, msg: { [key: string]: any }) => {
-        runtimeData.chatInfo.info.group_info = msg.data.data
+        const info = msg?.data?.data
+        if (info) runtimeData.chatInfo.info.group_info = info
     },
 
     /**
@@ -785,11 +828,10 @@ const msgFunctions = {
     getMoreUserInfo: (_: string, msg: { [key: string]: any }) => {
         // runtimeData.chatInfo.info.user_info =
         //     msg.data.data.result.buddy.info_list[0]
-        const data = getMsgData('friend_info', msg, msgPath.friend_info)[0]
-        data.regTime = new Date(data.reg_time).getTime()
-        if (data) {
-            runtimeData.chatInfo.info.user_info = data
-        }
+        const data = getMsgData('friend_info', msg, msgPath.friend_info)?.[0]
+        if (!data) return
+        if (data.reg_time != undefined) data.regTime = new Date(data.reg_time).getTime()
+        runtimeData.chatInfo.info.user_info = data
     },
 
     /**
@@ -797,14 +839,15 @@ const msgFunctions = {
      */
     getGroupNotices: (_: string, msg: { [key: string]: any }) => {
         const list = getMsgData('group_notices', msg, msgPath.group_notices)
-        if (!list) return
+        if (!Array.isArray(list)) return
 
         // 组装img信息
         let lastImg: Img | undefined
         for (const notice of list) {
-            if (!notice.img_id || notice.img_id.length == 0) continue
+            const imgId = String(notice?.img_id ?? '')
+            if (imgId.length === 0) continue
             const img = markRaw(new Img(
-                `https://p.qlogo.cn/gdynamic/${notice.img_id}/0/`
+                `https://p.qlogo.cn/gdynamic/${imgId}/0/`
             ))
             if (lastImg) img.insertPrev(lastImg)
             notice.img = img
@@ -817,7 +860,8 @@ const msgFunctions = {
      * 获取群文件列表
      */
     getGroupFiles: (_: string, msg: { [key: string]: any }) => {
-        const list = getMsgData('group_files', msg, msgPath.group_files) as (GroupFileElem & GroupFileFolderElem)[]
+        const list = getMsgData('group_files', msg, msgPath.group_files) as (GroupFileElem & GroupFileFolderElem)[] | undefined
+        if (!Array.isArray(list)) return
         // 排序；文件夹在前，文件在后
         const folderList = list.filter((item) => {
             return item.folder_id
@@ -847,7 +891,8 @@ const msgFunctions = {
         if (msgPath.group_folder_files.source) {
             map = msgPath.group_folder
         }
-        const list = getMsgData('group_files', msg, map) as (GroupFileElem & GroupFileFolderElem)[]
+        const list = getMsgData('group_files', msg, map) as (GroupFileElem & GroupFileFolderElem)[] | undefined
+        if (!Array.isArray(list)) return
         // 排序；文件夹在前，文件在后
         const folderList = list.filter((item) => {
             return item.folder_id
@@ -876,7 +921,8 @@ const msgFunctions = {
      * 下载文件（聊天中）
      */
     downloadFile: (_: string, msg: { [key: string]: any }, echoList: string[]) => {
-        const data = getMsgData('file_download', msg, msgPath.file_download)[0]
+        const data = getMsgData('file_download', msg, msgPath.file_download)?.[0]
+        if (!data?.file_url) return
         const url = data.file_url
 
         const msgId = echoList[1]
@@ -888,7 +934,7 @@ const msgFunctions = {
         })
         // 寻找 file 类型消息（一般是第一个）
         let bodyIndex = -1
-        if (msgItem) {
+        if (msgItem && Array.isArray(msgItem.message)) {
             msgItem.message.forEach((item, index) => {
                 if (item.type == 'file') {
                     bodyIndex = index
@@ -919,13 +965,15 @@ const msgFunctions = {
      * 下载文件（群文件）
      */
     downloadGroupFile: (_: string, msg: { [key: string]: any }, echoList: string[]) => {
-        const data = getMsgData('file_download', msg, msgPath.file_download)[0]
+        const data = getMsgData('file_download', msg, msgPath.file_download)?.[0]
+        if (!data?.file_url) return
         const url = data.file_url
 
         const fileId = echoList[1]
         const fileName = decodeURIComponent(atob(echoList[2]))
 
-        const fileList = runtimeData.chatInfo.info.group_files as (GroupFileElem & GroupFileFolderElem)[]
+        const fileList = runtimeData.chatInfo.info.group_files as (GroupFileElem & GroupFileFolderElem)[] | undefined
+        if (!Array.isArray(fileList)) return
 
         let listItem = undefined as GroupFileElem | undefined
         // 寻找文件列表位置
@@ -976,7 +1024,8 @@ const msgFunctions = {
         msg: { [key: string]: any },
         echoList: string[],
     ) => {
-        const data = getMsgData('file_download', msg, msgPath.file_download)[0]
+        const data = getMsgData('file_download', msg, msgPath.file_download)?.[0]
+        if (!data) return
         let url = data.file_url
         const msgId = echoList[1]
         const ext = echoList[2]
@@ -1032,10 +1081,11 @@ const msgFunctions = {
         msg: { [key: string]: any },
         echoList: string[],
     ) => {
-        const msgInfo = getMsgData('message_info', msg.data, msgPath.message_info)
-        if (msgInfo) {
-            const info = msgInfo[0]
-            if (echoList[1] !== info.message_id.toString()) {
+        const responseData = msg?.data && typeof msg.data === 'object' ? msg.data : {}
+        const msgInfo = getMsgData('message_info', responseData, msgPath.message_info)
+        const info = msgInfo?.[0]
+        if (info?.message_id != undefined) {
+            if (echoList[1] !== String(info.message_id)) {
                 // 返回的不是这条消息，重新请求
                 setTimeout(() => {
                     Connector.send(
@@ -1083,10 +1133,11 @@ const msgFunctions = {
      * 设置消息已读
      */
     readMemberMessage: (_: string, msg: { [key: string]: any }) => {
-        const data = msg.data[0]
-        const msgName = runtimeData.jsonMap.set_message_read.private_name
-        let private_name = runtimeData.jsonMap.set_message_read.private_name
-        if (!private_name) private_name = msgName
+        const data = Array.isArray(msg?.data) ? msg.data[0] : msg?.data
+        const readMap = runtimeData.jsonMap.set_message_read
+        const msgName = readMap?.name ?? readMap?.private_name
+        const private_name = readMap?.private_name ?? msgName
+        if (!data || !msgName || !private_name) return
         if (data.group_id != undefined) {
             Connector.send(
                 msgName,
@@ -1213,12 +1264,19 @@ const msgFunctions = {
         msg: { [key: string]: any },
         echoList: string[],
     ) => {
-        // 拆分 cookie
+        const cookieString = msg?.data?.cookies
+        // get_cookies 失败时 SnowLuma 会返回 data: null；不要让登录初始化
+        // 因为缺少可选的 Web API Cookie 而中断。
+        if (typeof cookieString !== 'string') return
+
+        // 拆分 cookie，值本身可能包含 '='。
         const cookieObject = {} as { [key: string]: string }
-        msg.data.cookies.split('; ').forEach((item: string) => {
-            const key = item.split('=')[0]
-            const value = item.split('=')[1]
-            cookieObject[key] = value
+        cookieString.split(';').forEach((item: string) => {
+            const separator = item.indexOf('=')
+            if (separator <= 0) return
+            const key = item.substring(0, separator).trim()
+            const value = item.substring(separator + 1).trim()
+            if (key) cookieObject[key] = value
         })
         // 计算 bkn
         const skey = cookieObject['skey'] || ''
@@ -1228,7 +1286,7 @@ const msgFunctions = {
             hash += (hash << 5) + skey.charCodeAt(i)
         }
         // 保存 cookie 和 bkn
-        const domain = echoList[1]
+        const domain = echoList?.[1] ?? 'qun.qq.com'
         if (!runtimeData.loginInfo.webapi) runtimeData.loginInfo.webapi = {}
         if (!runtimeData.loginInfo.webapi[domain])
             runtimeData.loginInfo.webapi[domain] = {}
@@ -1298,7 +1356,7 @@ function saveUser(msg: { [key: string]: any }, type: string) {
                 break
         }
     }
-    if (list != undefined) {
+    if (Array.isArray(list)) {
         const groupNames = {} as { [key: number]: string }
         list.forEach((item, index) => {
             if (item.group_name == null || item.group_name == undefined) {
@@ -1417,6 +1475,7 @@ function saveUser(msg: { [key: string]: any }, type: string) {
 function saveClassInfo(
     list: { class_id: number; class_name: string; sort_id?: number }[],
 ) {
+    if (!Array.isArray(list) || list.length === 0) return
     if (list[0].sort_id != undefined) {
         // 如果有 sort_id，按 sort_id 排序，从小到大
         list.sort((a, b) => {
@@ -1435,107 +1494,123 @@ function saveClassInfo(
 
 async function saveMsg(msg: any, append = undefined as undefined | string) {
     let list = await normalizeMessagesFromPayload(msg)
-    if (list != undefined) {
-        const unfilteredList = [...list]
-        const historyBeforeTime = Number(runtimeData.tags.historyBeforeTime)
-        const hasHistoryBeforeTime = Number.isFinite(historyBeforeTime)
-        // 检查消息是否是当前聊天的消息
-        const firstMsg = list[0]
-        const infoList = getMsgData(
-            'message_info',
-            firstMsg,
-            msgPath.message_info,
-        )
-        if (infoList != undefined) {
-            const info = infoList[0]
-            const id = info.group_id ?? info.private_id
-            if (id != undefined && id != runtimeData.chatInfo.show.id) {
-                return
-            }
-        }
-        // 将消息中 message 字段为空数组的消息过滤掉
-        list = list.filter((item: any) => {
-            return item.message.length > 0
-        })
-
-        if (hasHistoryBeforeTime && append === 'top') {
-            list = list.filter((item: any) => {
-                const t = Number(item?.time)
-                return Number.isFinite(t) && t <= historyBeforeTime
-            })
-        }
-
-        if (hasHistoryBeforeTime && append === 'top' && list.length < 1) {
-            list = unfilteredList
-        }
-
+    if (!Array.isArray(list) || list.length === 0) {
         if (append === 'top') {
             runtimeData.watch.historyLoadSummaryEvent = {
                 token: (runtimeData.tags as any).historyLoadToken ?? '',
                 chatId: runtimeData.chatInfo.show.id,
-                serverMessages: list.length,
-                serverImages: countImagesInMessages(list),
+                serverMessages: 0,
+                serverImages: 0,
             }
+            runtimeData.tags.canLoadHistory = false
+            runtimeData.tags.historyBeforeTime = undefined
         }
-        saveMessagesWithSideEffects(runtimeData.loginInfo.uin, list)
-        // 如果分页不是增量的，就不使用追加
+        return
+    }
+
+    const unfilteredList = [...list]
+    const historyBeforeTime = Number(runtimeData.tags.historyBeforeTime)
+    const hasHistoryBeforeTime = Number.isFinite(historyBeforeTime)
+    // 检查消息是否是当前聊天的消息
+    const firstMsg = list[0]
+    const infoList = getMsgData(
+        'message_info',
+        firstMsg,
+        msgPath.message_info,
+    )
+    if (infoList?.[0]) {
+        const info = infoList[0]
+        const id = info.group_id ?? info.private_id
+        if (id != undefined && id != runtimeData.chatInfo.show.id) {
+            return
+        }
+    }
+    // 将消息中 message 字段为空数组或缺失的消息过滤掉
+    list = list.filter((item: any) => {
+        return Array.isArray(item?.message) && item.message.length > 0
+    })
+
+    if (hasHistoryBeforeTime && append === 'top') {
+        list = list.filter((item: any) => {
+            const t = Number(item?.time)
+            return Number.isFinite(t) && t <= historyBeforeTime
+        })
+    }
+
+    if (hasHistoryBeforeTime && append === 'top' && list.length < 1) {
+        list = unfilteredList
+    }
+
+    if (append === 'top') {
+        runtimeData.watch.historyLoadSummaryEvent = {
+            token: (runtimeData.tags as any).historyLoadToken ?? '',
+            chatId: runtimeData.chatInfo.show.id,
+            serverMessages: list.length,
+            serverImages: countImagesInMessages(list),
+        }
+    }
+    void saveMessagesWithSideEffects(runtimeData.loginInfo.uin, list).catch((error) => {
+        logger.error(error as Error, '本地历史保存失败')
+    })
+    // 如果分页不是增量的，就不使用追加
+    if (
+        append == 'top' &&
+        runtimeData.jsonMap.message_list?.pagerType == 'full'
+    ) {
+        append = undefined
+    }
+    // 追加处理
+    if (append != undefined) {
+        // 没有更旧的消息能加载了，禁用允许加载标志
+        if (list.length < 1) {
+            runtimeData.tags.canLoadHistory = false
+            runtimeData.tags.historyBeforeTime = undefined
+            return
+        }
+        replaceMessageListInPlace(
+            mergeMessagesByIdAndTime(runtimeData.messageList, list),
+        )
+    } else {
         if (
-            append == 'top' &&
-            runtimeData.jsonMap.message_list?.pagerType == 'full'
+            runtimeData.sysConfig.enable_local_history &&
+            runtimeData.sysConfig.mixed_load_messages !== false
         ) {
-            append = undefined
-        }
-        // 追加处理
-        if (append != undefined) {
-            // 没有更旧的消息能加载了，禁用允许加载标志
-            if (list.length < 1) {
-                runtimeData.tags.canLoadHistory = false
-                runtimeData.tags.historyBeforeTime = undefined
-                return
-            }
             replaceMessageListInPlace(
                 mergeMessagesByIdAndTime(runtimeData.messageList, list),
             )
         } else {
-            if (
-                runtimeData.sysConfig.enable_local_history &&
-                runtimeData.sysConfig.mixed_load_messages !== false
-            ) {
-                replaceMessageListInPlace(
-                    mergeMessagesByIdAndTime(runtimeData.messageList, list),
-                )
-            } else {
-                replaceMessageListInPlace(list)
-            }
+            replaceMessageListInPlace(list)
         }
-        // 消息后处理
-        // PS: 部分消息类型可能需要获取附加内容，在此处进行处理
-        runtimeData.messageList.forEach((item) => {
-            sendMsgAppendInfo(item)
+    }
+    // 消息后处理
+    // PS: 部分消息类型可能需要获取附加内容，在此处进行处理
+    runtimeData.messageList.forEach((item) => {
+        sendMsgAppendInfo(item)
+    })
+    // 将消息列表的最后一条 raw_message 保存到用户列表中
+    const lastMsg =
+        runtimeData.messageList[runtimeData.messageList.length - 1]
+    if (lastMsg) {
+        const user = runtimeData.userList.find((item) => {
+            return (
+                item.group_id == runtimeData.chatInfo.show.id ||
+                item.user_id == runtimeData.chatInfo.show.id
+            )
         })
-        // 将消息列表的最后一条 raw_message 保存到用户列表中
-        const lastMsg =
-            runtimeData.messageList[runtimeData.messageList.length - 1]
-        if (lastMsg) {
-            const user = runtimeData.userList.find((item) => {
-                return (
-                    item.group_id == runtimeData.chatInfo.show.id ||
-                    item.user_id == runtimeData.chatInfo.show.id
-                )
-            })
-            if (user) {
-                if (runtimeData.chatInfo.show.type == 'group') {
-                    user.raw_msg =
-                        `<span class="reply-name">${lastMsg.sender.nickname}</span>: ` + getMsgRawTxt(lastMsg)
-                } else {
-                    user.raw_msg = getMsgRawTxt(lastMsg)
-                }
-                user.time = getViewTime(Number(lastMsg.time))
+        if (user) {
+            if (runtimeData.chatInfo.show.type == 'group') {
+                const senderName = lastMsg.sender?.card || lastMsg.sender?.nickname || ''
+                user.raw_msg = senderName
+                    ? `<span class="reply-name">${senderName}</span>: ` + getMsgRawTxt(lastMsg)
+                    : getMsgRawTxt(lastMsg)
+            } else {
+                user.raw_msg = getMsgRawTxt(lastMsg)
             }
+            user.time = getViewTime(Number(lastMsg.time))
         }
-        if (hasHistoryBeforeTime) {
-            runtimeData.tags.historyBeforeTime = undefined
-        }
+    }
+    if (hasHistoryBeforeTime) {
+        runtimeData.tags.historyBeforeTime = undefined
     }
 }
 
@@ -1544,15 +1619,31 @@ async function normalizeMessagesFromPayload(payload: any): Promise<any[] | undef
     return getMessageList(rawList)
 }
 
+function summarizeRecordSegment(segment: any): Record<string, boolean> {
+    const nested = segment?.data && typeof segment.data === 'object' ? segment.data : {}
+    const value = (key: string) => segment?.[key] ?? nested[key]
+    return {
+        hasFile: Boolean(value('file')),
+        hasPath: Boolean(value('path')),
+        hasUrl: Boolean(value('url')),
+        hasBase64: Boolean(value('base64') || value('audio') || value('content')),
+    }
+}
+
 function normalizeNewIncomingMessage(data: any): any[] {
     // parseMsgList 会原地修改消息段（并删除 seg.data）。
     // newMsg() 后面还要再用原始 payload 调 saveMsg() 解析一遍，
     // 所以这里必须先 clone，避免第一次 parse 把 record 的 file/path/url 删掉。
-    const cloned = typeof structuredClone === 'function'
-        ? structuredClone(data)
-        : JSON.parse(JSON.stringify(data))
+    let cloned: any
+    try {
+        cloned = typeof structuredClone === 'function'
+            ? structuredClone(data)
+            : JSON.parse(JSON.stringify(data))
+    } catch {
+        return []
+    }
     let list = getMsgData('message_list', buildMsgList([cloned]), msgPath.message_list)
-    if (list == undefined) return []
+    if (!Array.isArray(list)) return []
     list = parseMsgList(list, msgPath.message_list.type, msgPath.message_value)
     return list
 }
@@ -1623,6 +1714,8 @@ function hasResolvableImageSource(msg: any): boolean {
         return url.length > 0 || file.length > 0
     })
 }
+
+const MAX_FORWARD_DEPTH = 8
 
 function hasLoadedForwardContent(msg: any): boolean {
     if (!Array.isArray(msg?.message)) return false
@@ -1695,8 +1788,8 @@ function replaceMessageListInPlace(next: any[]) {
     runtimeData.messageList.splice(0, runtimeData.messageList.length, ...next)
 }
 
-export async function getMessageList(list: any[] | undefined) {
-    if (!list) return undefined
+export async function getMessageList(list: any[] | undefined, forwardDepth = 0) {
+    if (!Array.isArray(list) || list.length === 0) return []
 
     list = parseMsgList(
         list,
@@ -1713,51 +1806,89 @@ export async function getMessageList(list: any[] | undefined) {
             item.post_type = 'message'
         }
     })
-    return Promise.all(list.map(msgPreprocess))
+    return Promise.all(list.map((item) => msgPreprocess(item, forwardDepth)))
 }
 
 /**
  * 消息预处理
  * @param msg 要处理的消息
  */
-async function msgPreprocess(msg: any): Promise<any> {
+async function msgPreprocess(msg: any, forwardDepth = 0): Promise<any> {
+    if (!msg || typeof msg !== 'object') return msg
+    if (!Array.isArray(msg.message)) {
+        msg.message = Array.isArray(msg.content) ? msg.content : []
+    }
+    const sender = msg.sender && typeof msg.sender === 'object' && !Array.isArray(msg.sender)
+        ? msg.sender
+        : {}
+    msg.sender = sender
+    if (sender.user_id == null) sender.user_id = msg.user_id ?? 0
+    if (sender.card == null) sender.card = ''
+    if (sender.nickname == null) sender.nickname = sender.card || String(sender.user_id ?? '')
+
     //#region == json 合并转发 ============================
-    if (msg.message.at(0)?.type === 'json') {
+    if (msg.message[0]?.type === 'json') {
         try {
-            const data = JSON.parse(msg.message.at(0).data)
-            if (data['app'] === 'com.tencent.multimsg') {
-                msg.message = [{
-                    type: 'forward',
-                    id: data['meta']['detail']['resid'],
-                }]
+            const rawData = msg.message[0].data
+            const nestedData = rawData && typeof rawData === 'object' && 'data' in rawData
+                ? rawData.data
+                : rawData
+            const data = typeof nestedData === 'string' ? JSON.parse(nestedData) : nestedData
+            if (data?.['app'] === 'com.tencent.multimsg') {
+                const resid = data?.['meta']?.['detail']?.['resid']
+                if (resid) {
+                    msg.message = [{
+                        type: 'forward',
+                        id: resid,
+                    }]
+                }
             }
-        } catch (e) {/**/ }
+        } catch {/**/ }
     }
     //#endregion
 
     //#region == 合并转发解析 ==============================
-    if (msg.message.at(0)?.type === 'forward') {
-        const forwardSeg = msg.message.at(0)
+    // 转发段不一定是消息的第一个 segment；逐段处理也能覆盖嵌套转发。
+    const forwardSegments = msg.message.filter((segment: any) => segment?.type === 'forward')
+    for (const forwardSeg of forwardSegments) {
+        const forwardData = forwardSeg.data && typeof forwardSeg.data === 'object'
+            ? forwardSeg.data
+            : {}
         const forwardId = forwardSeg.id
-        forwardSeg.forward_source = msg?._from_local_db ? 'local-db' : 'NapCat'
+            ?? forwardSeg.res_id
+            ?? forwardSeg.forward_id
+            ?? forwardData.id
+            ?? forwardData.res_id
+            ?? forwardData.forward_id
+        if (forwardId && !forwardSeg.id) forwardSeg.id = forwardId
+        forwardSeg.forward_source = msg?._from_local_db
+            ? 'local-db'
+            : String(runtimeData.botInfo.app_name ?? 'OneBot')
         if (forwardId) {
             try {
-                if (forwardSeg.content && forwardSeg.content.length > 0) {
-                    // 如果 content 里已经有内容了就直接用 content 里的内容
-                    const data = await getMessageList(forwardSeg.content)
-                    if (data) forwardSeg.content = data
-                } else {
-                    // 否则调用接口获取
-                    const originData = await Connector.callApi('forward_msg', { id: forwardId })
-                    const data = await getMessageList(originData)
-                    if (data) forwardSeg.content = data
+                if (forwardDepth >= MAX_FORWARD_DEPTH) {
+                    throw new Error('合并转发嵌套层级过深')
                 }
+                let data: any[]
+                if (Array.isArray(forwardSeg.content) && forwardSeg.content.length > 0) {
+                    // 如果 content 里已经有内容了就直接用 content 里的内容
+                    data = await getMessageList(forwardSeg.content, forwardDepth + 1)
+                } else {
+                    // 否则调用接口获取。callApi 返回 null/undefined 时不能当作空转发，
+                    // 否则会把 API 失败误标记为成功。
+                    const originData = await Connector.callApi('forward_msg', { id: forwardId })
+                    if (!Array.isArray(originData)) throw new Error('合并转发 API 未返回消息数组')
+                    data = await getMessageList(originData, forwardDepth + 1)
+                }
+                if (!Array.isArray(data) || data.length === 0) {
+                    throw new Error('合并转发 API 未返回消息节点')
+                }
+                forwardSeg.content = data
                 forwardSeg.forward_error_code = undefined
                 forwardSeg.forward_error_detail = undefined
             } catch (e) {
-                const detail = e instanceof Error ? e.message : String(e)
                 forwardSeg.forward_error_code = 'forward-load-failed'
-                forwardSeg.forward_error_detail = detail
+                forwardSeg.forward_error_detail = 'forward content unavailable'
                 logger.error(e as unknown as Error, '合并转发解析失败')
             }
         } else {
@@ -1773,6 +1904,7 @@ async function msgPreprocess(msg: any): Promise<any> {
     const filter: any[] = []
     for (let id = 0; id < msg.message.length; id++) {
         const seg = msg.message[id]
+        if (!seg || typeof seg !== 'object') continue
         filter.push(seg)
         if (seg.type === 'mface') id++
     }
@@ -1783,7 +1915,8 @@ async function msgPreprocess(msg: any): Promise<any> {
 
 function revokeMsg(_: string, msg: any) {
     // 清除通知
-    const chatId = msg.notice_type.includes('group') ? msg.group_id : msg.user_id
+    const noticeType = typeof msg?.notice_type === 'string' ? msg.notice_type : ''
+    const chatId = noticeType.includes('group') ? msg.group_id : msg.user_id
     new Notify().closeAll(chatId)
 
     // 寻找消息
@@ -1806,7 +1939,7 @@ function revokeMsg(_: string, msg: any) {
     // 移除消息
     runtimeData.messageList.splice(msgIndex, 1)
 
-    if (msgGet.sender.user_id === runtimeData.loginInfo.uin)
+    if (msgGet.sender?.user_id === runtimeData.loginInfo.uin)
         msg.originMsg = msgGet
 
     // 显示撤回提示
@@ -1828,14 +1961,14 @@ function newMsg(_: string, data: any) {
         if (Array.isArray(rawSegs)) {
             rawSegs.forEach((seg: any) => {
                 if (seg?.type === 'record') {
-                    console.log('[VoiceDebug] 实时 record 段 =', JSON.stringify(seg))
+                    logger.debug('[VoiceDebug] 实时 record 段：' + JSON.stringify(summarizeRecordSegment(seg)))
                 }
             })
         }
-    } catch (e) { /* ignore */ }
+    } catch { /* ignore */ }
 
     const infoList = getMsgData('message_info', data, msgPath.message_info)
-    if (infoList != undefined) {
+    if (Array.isArray(infoList) && infoList[0]) {
         // 消息基础信息 ============================================
         const info = infoList[0]
         const id = info.group_id ?? info.private_id
@@ -1886,7 +2019,9 @@ function newMsg(_: string, data: any) {
 
         const normalizedIncoming = normalizeNewIncomingMessage(data)
         if (normalizedIncoming.length > 0) {
-            saveMessagesWithSideEffects(runtimeData.loginInfo.uin, normalizedIncoming)
+            void saveMessagesWithSideEffects(runtimeData.loginInfo.uin, normalizedIncoming).catch((error) => {
+                logger.error(error as Error, '本地历史保存失败')
+            })
         }
 
         // 显示消息 ============================================
@@ -1894,7 +2029,9 @@ function newMsg(_: string, data: any) {
             // 如果有正在输入的提示，清除它
             runtimeData.chatInfo.show.appendInfo = undefined
             // 保存消息
-            saveMsg(buildMsgList([data]), 'bottom')
+            void saveMsg(buildMsgList([data]), 'bottom').catch((error) => {
+                logger.error(error as Error, '实时消息解析失败')
+            })
             // 抽个签
             const num = randomNum(0, 10000)
             if (num >= 400 && num <= 500) {
@@ -1933,7 +2070,7 @@ function newMsg(_: string, data: any) {
                 buildMsgList([data]),
                 msgPath.message_list,
             )
-            if (parsed != undefined) {
+            if (Array.isArray(parsed) && parsed.length > 0) {
                 parsed = parseMsgList(
                     parsed,
                     msgPath.message_list.type,
@@ -1942,6 +2079,10 @@ function newMsg(_: string, data: any) {
                 data = parsed[0]
             }
         }
+
+        // 异常/空事件不应继续进入通知、会话预览等逻辑。
+        if (!data || typeof data !== 'object' || !Array.isArray(data.message) || data.message.length === 0) return
+        if (!data.sender || typeof data.sender !== 'object') data.sender = {}
 
         // [Voice] 实时推送的 record 段可能缺 file（NapCat 只给 file_size）。
         // 用历史接口拉最近几条完整消息，按 message_id 补全 record 的 file/url。
@@ -1979,13 +2120,13 @@ function newMsg(_: string, data: any) {
                                     s.base64 = fullRec.base64 ?? s.base64
                                 }
                             })
-                            console.log('[Voice] 已补全 record file =', JSON.stringify(fullRec.file))
+                            logger.debug('[Voice] 已补全 record 字段')
                         } else {
-                            console.log('[Voice] 历史补全失败，响应 =', JSON.stringify(list)?.substring(0, 300))
+                            logger.debug(`[Voice] 历史补全失败：消息数 ${Array.isArray(list) ? list.length : 0}`)
                         }
                     })
-                    .catch((e) => {
-                        console.log('[Voice] 历史补全异常 =', e?.message ?? String(e))
+                    .catch(() => {
+                        logger.debug('[Voice] 历史补全异常')
                     })
             }
         }
@@ -2071,7 +2212,12 @@ function newMsg(_: string, data: any) {
                 // 准备消息内容
                 let raw = getMsgRawTxt(data, false)
                 raw = raw === '' ? data.raw_message : raw
-                logger.add(LogType.INFO, '新消息通知：' + raw, undefined, true)
+                logger.add(
+                    LogType.INFO,
+                    `新消息通知（${data.message_type ?? 'unknown'}，${Array.isArray(data.message) ? data.message.length : 0} 个消息段）`,
+                    undefined,
+                    true,
+                )
                 if (data.group_name === undefined) {
                     // 检查消息内是否有群名，去列表里寻找
                     runtimeData.userList.forEach((item) => {
@@ -2105,7 +2251,7 @@ function newMsg(_: string, data: any) {
                 }
             }
             // 如果发送者不在消息列表里，将它添加到消息列表里
-            if (get) {
+            if (get.length > 0) {
                 // 如果消息子类是 group，那么是临时消息，需要进行特殊处理
                 if (data.sub_type === 'group') {
                     // 手动创建一个用户信息，因为临时消息的用户不在用户列表里
@@ -2161,7 +2307,7 @@ function newMsg(_: string, data: any) {
             }
         }
         // 刷新消息
-        if (get) {
+        if (get.length > 0) {
             const item = runtimeData.baseOnMsgList.get(Number(id))
             if (item) {
                 item.message_id = data.message_id
@@ -2207,12 +2353,13 @@ function updateSysInfo(
 // ==============================================================
 
 function formatMessageData(data: any, isGroup: boolean) {
-    const name = data.sender.card && data.sender.card !== '' ? data.sender.card : data.sender.nickname
+    const sender = data?.sender ?? {}
+    const name = sender.card && sender.card !== '' ? sender.card : sender.nickname ?? ''
 
     return {
-        message_id: data.message_id,
-        raw_msg: isGroup ? `<span class="reply-name">${name}</span>: ${getMsgRawTxt(data)}` : getMsgRawTxt(data),
-        time: getViewTime(Number(data.time)),
+        message_id: data?.message_id,
+        raw_msg: isGroup && name ? `<span class="reply-name">${name}</span>: ${getMsgRawTxt(data)}` : getMsgRawTxt(data),
+        time: getViewTime(Number(data?.time)),
         raw_msg_base: getMsgRawTxt(data, false)
     }
 }

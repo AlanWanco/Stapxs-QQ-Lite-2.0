@@ -3,8 +3,6 @@ export type PinYinData = {
     short: string[]
 }
 
-/* eslint-disable no-console */
-
 // 拼音库加载状态
 let pinyinLoaded = false
 let pinyinLoading = false
@@ -59,10 +57,8 @@ async function loadPinyinLibrary(): Promise<boolean> {
             document.head.appendChild(script)
         })
 
-        console.log('拼音库加载成功')
         return true
-    } catch (error) {
-        console.warn('拼音库加载失败，拼音搜索功能将不可用:', error)
+    } catch {
         return false
     } finally {
         pinyinLoading = false
@@ -99,8 +95,7 @@ export function getPinyin(name: string): PinYinData {
                 style: 'first_letter',
             }).map((item: string[]) => item.join('').toLowerCase()),
         }
-    } catch (error) {
-        console.warn('拼音转换失败:', error)
+    } catch {
         return {
             main: [],
             short: []

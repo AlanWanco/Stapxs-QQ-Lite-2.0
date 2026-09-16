@@ -29,7 +29,7 @@ class ScanNetwork {
                         const subnetParts = address.split('.').map(Number);
                         const netmaskParts = netmask.split('.').map(Number);
 
-                        this.logger.info(`IP: ${address}, Netmask: ${netmask}`)
+                        this.logger.debug('已获取本机网络范围')
 
                         for (let i = 1; i <= 254; i++) {
                             const possibleIP = subnetParts.map((part, index) => {
@@ -84,15 +84,14 @@ class ScanNetwork {
                     ips.map((ip) => this.isPortOpen(ip, port).then((isOpen) => ({ ip, port, isOpen })))
                 )
             )
-            this.logger.info('以下 IP 的端口开放：')
-            results.filter(({ isOpen }) => isOpen)
-                .forEach(({ ip, port }) => {
-                    this.logger.info(`${ip}:${port}`)
-                    this.win.webContents.send('sys:serviceFound', {
-                        address: ip,
-                        port: port
-                    })
+            const openServices = results.filter(({ isOpen }) => isOpen)
+            this.logger.info(`网络服务发现完成，共 ${openServices.length} 项`)
+            openServices.forEach(({ ip, port }) => {
+                this.win.webContents.send('sys:serviceFound', {
+                    address: ip,
+                    port: port
                 })
+            })
         } else {
             this.logger.error('IP 数量过多，放弃扫描')
         }

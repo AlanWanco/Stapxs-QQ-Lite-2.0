@@ -21,7 +21,7 @@ export function checkUpdate(nowVersion: string) {
             if (semver.lt(nowVersion, version)) {
                 // 本地版本小于线上版本, 需要更新
                 logger.info('发现新版本, 正在更新...')
-                logger.info(`运行路径: ${process.cwd()}`)
+                logger.info('准备更新网页资源')
                 // 下载新版本
                 const assetList = json.assets
                 assetList.forEach(asset => {
@@ -32,13 +32,13 @@ export function checkUpdate(nowVersion: string) {
                         if(fs.existsSync('./dist')) {
                             fs.rm('./dist', { recursive: true }, err => {
                                 if (err) {
-                                    logger.error(`删除 dist 文件夹失败: ${err}`)
+                                    logger.error('删除网页资源失败')
                                 }
                             }
                             )
                         }
                         const downloadUrl = asset.browser_download_url
-                        logger.info(`下载地址: ${downloadUrl}`)
+                        logger.info('开始下载网页资源')
                         // 下载文件并解压
                         request(downloadUrl).pipe(unzipper.Extract({ path: './' }))
                         .on('close', () => {
@@ -48,7 +48,7 @@ export function checkUpdate(nowVersion: string) {
                                 version: version
                             }), err => {
                                 if (err) {
-                                    logger.error(`保存版本缓存失败: ${err}`)
+                                    logger.error('保存版本缓存失败')
                                 }
                             })
                         })
@@ -58,7 +58,7 @@ export function checkUpdate(nowVersion: string) {
                 logger.info('当前已是最新版本')
             }
         })
-        .catch(err => {
-            logger.error(`检查更新失败: ${err}`)
+        .catch(() => {
+            logger.error('检查更新失败')
         })
 }

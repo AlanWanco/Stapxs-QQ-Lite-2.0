@@ -50,7 +50,7 @@ export class Connector {
         url = displayUrl.toString()
 
         if (!this.websocket) {
-            this.logger.info('正在连接到：', url)
+            this.logger.info('正在连接到 OneBot 服务')
             this.websocket = new WebSocket(connectionUrl)
         } else {
             // 如果前端发起了连接请求，说明前端在未连接状态；断开已有连接，重新连接
@@ -61,7 +61,7 @@ export class Connector {
 
         this.websocket.onopen = () => {
             this.reconnectTimes = 0
-            this.logger.info('已成功连接到', url)
+            this.logger.info('已成功连接到 OneBot 服务')
             this.win.webContents.send('onebot:onopen', {
                 address: url,
                 token: token,
@@ -73,7 +73,7 @@ export class Connector {
         this.websocket.onclose = (e) => {
             this.websocket = undefined
 
-            this.logger.info('连接已关闭，代码：', e.code)
+            this.logger.info('OneBot 连接已关闭')
             if (e.code != 1006 && e.code != 1015) {
                 // 除了需要重连的情况，其他情况都直接常规处理
                 this.win.webContents.send('onebot:onclose', {
@@ -106,9 +106,9 @@ export class Connector {
                 }, 1500)
             }
         }
-        this.websocket.onerror = (e) => {
+        this.websocket.onerror = () => {
             this.websocket = undefined
-            this.logger.error('连接错误：', e)
+            this.logger.error('OneBot 连接错误')
         }
     }
 }

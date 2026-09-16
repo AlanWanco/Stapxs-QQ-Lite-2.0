@@ -492,8 +492,12 @@ async function download() {
  * 复制图片
  */
 async function copy() {
-    const blob = await getBlob()
-    await copyBlob(blob)
+    try {
+        const blob = await getBlob()
+        await copyBlob(blob)
+    } catch {
+        new PopInfo().add(PopType.ERR, $t('复制失败'))
+    }
 }
 /**
  * 设置旋转角度
@@ -604,9 +608,13 @@ function editFinish() {
  * 复制编辑结果
  */
 async function editCopy() {
-    // 复制到剪切板
-    const blob = await getBlob()
-    await copyBlob(blob)
+    try {
+        // 复制到剪切板
+        const blob = await getBlob()
+        await copyBlob(blob)
+    } catch {
+        new PopInfo().add(PopType.ERR, $t('复制失败'))
+    }
 }
 //#endregion
 
@@ -1221,10 +1229,14 @@ async function copyBlob(blob?: Blob) {
         new PopInfo().add(PopType.ERR, $t('复制失败'))
         return
     }
-    await copyToClipboard([
-        new window.ClipboardItem({ 'image/png': blob })
-    ])
-    new PopInfo().add(PopType.INFO, $t('复制成功'))
+    try {
+        await copyToClipboard([
+            new window.ClipboardItem({ 'image/png': blob })
+        ])
+        new PopInfo().add(PopType.INFO, $t('复制成功'))
+    } catch {
+        new PopInfo().add(PopType.ERR, $t('复制失败'))
+    }
 }
 
 async function getBlob(): Promise<Blob|undefined> {
@@ -1234,6 +1246,7 @@ async function getBlob(): Promise<Blob|undefined> {
             tmpUrl = canvas.value!.toDataURL('image/png')
         else
             tmpUrl = currentImg.value?.src
+        if (!tmpUrl || !currentImgInfo.value) return resolve(undefined)
         const tmpImg = new Image()
         const newCanvas = document.createElement('canvas')
         const newCtx = newCanvas.getContext('2d')
@@ -1251,15 +1264,20 @@ async function getBlob(): Promise<Blob|undefined> {
             tmpImg.crossOrigin = 'anonymous'
         tmpImg.src = tmpUrl
         tmpImg.onload = () => {
-            newCtx.translate(newCanvas.width / 2, newCanvas.height / 2)
-            newCtx.rotate(modify.rotate * Math.PI / 180)
-            newCtx.drawImage(tmpImg, -tmpImg.width / 2, -tmpImg.height / 2)
+            try {
+                newCtx.translate(newCanvas.width / 2, newCanvas.height / 2)
+                newCtx.rotate(modify.rotate * Math.PI / 180)
+                newCtx.drawImage(tmpImg, -tmpImg.width / 2, -tmpImg.height / 2)
 
-            newCanvas.toBlob((blob) => {
-                if (!blob) return resolve(undefined)
-                resolve(blob)
-            })
+                newCanvas.toBlob((blob) => {
+                    if (!blob) return resolve(undefined)
+                    resolve(blob)
+                })
+            } catch {
+                resolve(undefined)
+            }
         }
+        tmpImg.onerror = () => resolve(undefined)
     })
 }
 

@@ -26,7 +26,7 @@ pub async fn onebot_connect(
         }
     }
 
-    info!("正在连接到: {}", address);
+    info!("正在连接 OneBot");
     let url = format!("{}?access_token={}", address, token);
     let address = address.to_string();
     let token = token.to_string();
@@ -38,7 +38,7 @@ pub async fn onebot_connect(
     let ws_client = WebSocketClient::create(
         &url,
         move || {
-            info!("连接成功: {}", &address);
+            info!("OneBot 连接成功");
             let mut payload = HashMap::new();
             payload.insert("address", address.clone());
             payload.insert("token", token.clone());
@@ -47,26 +47,26 @@ pub async fn onebot_connect(
         move |msg| {
             let _ = app_handle_msg.emit("onebot:onmessage", msg);
         },
-        move |code: CloseCode, reason| {
-            info!("连接已关闭：{} {:?}", code, reason);
+        move |code: CloseCode, _reason| {
+            info!("OneBot 连接已关闭");
             {
                 let mut client = WS_CLIENT.lock().unwrap();
                 *client = None;
             }
             let mut payload = HashMap::new();
             payload.insert("code", code.to_string());
-            payload.insert("message", reason.to_string());
+            payload.insert("message", "OneBot 连接已关闭".to_string());
             let _ = app_handle_close.emit("onebot:onclose", payload);
         },
     )
     .await
-    .map_err(|e| {
-        error!("连接失败: {}", e);
+    .map_err(|_| {
+        error!("OneBot 连接失败");
         let mut payload = HashMap::new();
         payload.insert("code", 1000.to_string());
-        payload.insert("message", e.to_string());
+        payload.insert("message", "OneBot 连接失败".to_string());
         let _ = app_handle.emit("onebot:onclose", payload);
-        e.to_string()
+        "OneBot 连接失败".to_string()
     })?;
 
     let mut client = WS_CLIENT.lock().unwrap();
@@ -78,9 +78,9 @@ pub async fn onebot_connect(
 pub fn onebot_send(data: &str) -> Result<(), String> {
     let client = WS_CLIENT.lock().unwrap();
     if let Some(ws_client) = &*client {
-        ws_client.send(data).map_err(|e| e.to_string())
+        ws_client.send(data).map_err(|_| "OneBot 发送失败".to_string())
     } else {
-        Err("WebSocketClient not initialized".to_string())
+        Err("OneBot 未连接".to_string())
     }
 }
 
@@ -88,7 +88,7 @@ pub fn onebot_send(data: &str) -> Result<(), String> {
 pub fn onebot_close(app_handle: AppHandle) -> Result<(), String> {
     let mut client = WS_CLIENT.lock().unwrap();
     if let Some(ws_client) = &*client {
-        ws_client.close().map_err(|e| e.to_string())?;
+        ws_client.close().map_err(|_| "OneBot 关闭连接失败".to_string())?;
         *client = None;
 
         info!("连接主动关闭");
@@ -98,6 +98,6 @@ pub fn onebot_close(app_handle: AppHandle) -> Result<(), String> {
         let _ = app_handle.emit("onebot:onclose", payload);
         Ok(())
     } else {
-        Err("WebSocketClient not initialized".to_string())
+        Err("OneBot 未连接".to_string())
     }
 }

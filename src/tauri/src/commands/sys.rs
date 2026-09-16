@@ -15,8 +15,8 @@ pub async fn sys_front_loaded(
     _app: AppHandle,
     notifications: State<'_, Arc<dyn NotificationManager>>) -> Result<String, String> {
     match notifications.first_time_ask_for_notification_permission().await {
-        Err(err) => {
-            log::error!("请求通知权限失败: {}", err);
+        Err(_) => {
+            log::error!("请求通知权限失败");
         }
         Ok(false) => {
             log::info!("通知权限被拒绝");
@@ -42,7 +42,9 @@ pub fn sys_get_platform() -> String {
 
 #[command]
 pub fn sys_debug_log(tag: String, message: String) -> Result<(), String> {
-    info!("[{}] {}", tag, message);
+    // 调试详情只保留静态描述，避免前端误传消息、联系人、Cookie 或媒体地址。
+    let _ = (tag, message);
+    info!("收到调试事件");
     Ok(())
 }
 
@@ -95,13 +97,13 @@ pub async fn sys_get_final_redirect_url(data: String) -> Result<String, String> 
         }))
         .timeout(Duration::from_secs(10))
         .build()
-        .map_err(|e| format!("Client build error: {}", e))?;
+        .map_err(|_| "创建网络客户端失败".to_string())?;
 
     let res = client
         .get(&data)
         .send()
         .await
-        .map_err(|e| format!("Request error: {}", e))?;
+        .map_err(|_| "请求重定向地址失败".to_string())?;
 
     let final_url = res.url().to_string();
     Ok(final_url)
@@ -110,7 +112,8 @@ pub async fn sys_get_final_redirect_url(data: String) -> Result<String, String> 
 #[command]
 pub async fn sys_get_html(data: String) -> Result<String, String> {
     let client = reqwest::Client::new();
-    let res = client.get(&data).send().await.map_err(|e| e.to_string())?;
+    let res = client.get(&data).send().await
+        .map_err(|_| "请求网页失败".to_string())?;
 
     let content_type = res
         .headers()
@@ -119,7 +122,7 @@ pub async fn sys_get_html(data: String) -> Result<String, String> {
         .unwrap_or("");
 
     if content_type.contains("text/html") {
-        res.text().await.map_err(|e| e.to_string())
+        res.text().await.map_err(|_| "读取网页内容失败".to_string())
     } else {
         Ok(String::new())
     }
@@ -128,7 +131,8 @@ pub async fn sys_get_html(data: String) -> Result<String, String> {
 #[command]
 pub async fn sys_get_api(data: String) -> Result<Value, String> {
     let client = reqwest::Client::new();
-    let res = client.get(&data).send().await.map_err(|e| e.to_string())?;
+    let res = client.get(&data).send().await
+        .map_err(|_| "请求接口失败".to_string())?;
 
     let content_type = res
         .headers()
@@ -137,16 +141,16 @@ pub async fn sys_get_api(data: String) -> Result<Value, String> {
         .unwrap_or("");
 
     if content_type.contains("application/json") {
-        res.json::<Value>().await.map_err(|e| e.to_string())
+        res.json::<Value>().await.map_err(|_| "解析接口响应失败".to_string())
     } else {
-        Err("Response is not JSON".to_string())
+        Err("接口响应不是 JSON".to_string())
     }
 }
 
 #[command]
 #[allow(non_snake_case)]
 pub async fn sys_download(app_handle: AppHandle, downloadPath: String, fileName: String) -> Result<(), String> {
-    info!("下载文件：{:?}", downloadPath);
+    info!("开始下载文件");
 
     let folder = rfd::FileDialog::new()
         .pick_folder();
@@ -161,7 +165,7 @@ pub async fn sys_download(app_handle: AppHandle, downloadPath: String, fileName:
     };
 
     let filepath = folder_path.join(fileName);
-    debug!("下载文件路径: {:?}", filepath);
+    debug!("准备写入下载文件");
     // 检查文件是否存在
     if filepath.exists() {
         let result = rfd::MessageDialog::new()
@@ -179,7 +183,8 @@ pub async fn sys_download(app_handle: AppHandle, downloadPath: String, fileName:
 
     let result = async {
         let client = Client::new();
-        let response = client.get(downloadPath).send().await.map_err(|e| format!("请求失败: {}", e))?;
+        let response = client.get(downloadPath).send().await
+            .map_err(|_| "请求失败".to_string())?;
 
         let total_size = response
             .content_length()
@@ -208,14 +213,14 @@ pub async fn sys_download(app_handle: AppHandle, downloadPath: String, fileName:
 
         Ok::<_, Box<dyn std::error::Error>>(())
     }.await;
-    if let Err(e) = result {
-        error!("下载失败: {}", e);
-        app_handle.emit("sys:downloadError", e.to_string()).unwrap();
-        return Err(e.to_string());
+    if result.is_err() {
+        error!("下载失败");
+        app_handle.emit("sys:downloadError", "下载失败").unwrap();
+        return Err("下载失败".to_string());
     }
 
     println!("\r");
-    info!("下载完成: {:?}", filepath);
+    info!("下载完成");
 
     return Ok(())
 }
@@ -226,23 +231,26 @@ pub async fn sys_send_notice(
     manager: State<'_, Arc<dyn NotificationManager>>,
     data: HashMap<String, Value>
 ) -> Result<(), String> {
-    debug!("发送通知: {:?}", data.get("body"));
+    debug!("发送通知");
     let mut notification = user_notify::NotificationBuilder::new();
-    let base_type = data.get("base_type").unwrap().as_str().unwrap();
+    let base_type = data.get("base_type").and_then(Value::as_str).unwrap_or("");
+    let title = data.get("title").and_then(Value::as_str).unwrap_or("");
+    let body = data.get("body").and_then(Value::as_str).unwrap_or("");
+    let tag = data.get("tag").and_then(Value::as_str).unwrap_or("");
+    let notification_type = data.get("type").and_then(Value::as_str).unwrap_or("");
 
     if base_type == "msg" {
         notification = notification
-            .title(data.get("title").unwrap().as_str().unwrap())
-            .body(data.get("body").unwrap().as_str().unwrap())
-            .set_thread_id(data.get("tag").unwrap().as_str().unwrap())
+            .title(title)
+            .body(body)
+            .set_thread_id(tag)
             .set_xdg_category(user_notify::XdgNotificationCategory::ImReceived)
             .set_category_id("cn.stapxs.qqweb.reply");
         // 设置 payload
         let mut user_info = HashMap::new();
         user_info.insert(
             "NotificationPayload".to_owned(),
-            data.get("tag").unwrap().as_str().unwrap().to_owned() +
-                "/" + data.get("type").unwrap().as_str().unwrap()
+            tag.to_owned() + "/" + notification_type
         );
         notification = notification.set_user_info(user_info);
         // 获取图片，优先 image，没有为 icon；都是 url
@@ -258,30 +266,36 @@ pub async fn sys_send_notice(
             if final_image.starts_with("http://") || final_image.starts_with("https://") {
                 // 下载图片缓存
                 let client = Client::new();
-                let response = client.get(final_image).send().await.map_err(|e| format!("请求失败: {}", e))?;
+                let response = client.get(final_image).send().await
+                    .map_err(|_| "请求通知图片失败".to_string())?;
                 if response.status().is_success() {
-                    let bytes = response.bytes().await.map_err(|e| format!("读取响应失败: {}", e))?;
-                    let temp_file_path = app.path().app_cache_dir().unwrap().join("notification_image.png");
-                    let mut file = File::create(&temp_file_path).map_err(|e| format!("创建临时文件失败: {}", e))?;
-                    file.write_all(&bytes).map_err(|e| format!("写入临时文件失败: {}", e))?;
-                    info!("下载图片成功: {:?}", temp_file_path);
+                    let bytes = response.bytes().await
+                        .map_err(|_| "读取通知图片失败".to_string())?;
+                    let temp_file_path = app.path().app_cache_dir()
+                        .map_err(|_| "获取通知缓存目录失败".to_string())?
+                        .join("notification_image.png");
+                    let mut file = File::create(&temp_file_path)
+                        .map_err(|_| "创建通知图片缓存失败".to_string())?;
+                    file.write_all(&bytes)
+                        .map_err(|_| "写入通知图片缓存失败".to_string())?;
+                    info!("通知图片下载成功");
                     notification = notification.set_image(temp_file_path);
                 } else {
-                    return Err(format!("下载图片失败: {}", response.status()));
+                    return Err("下载通知图片失败".to_string());
                 }
             }
         }
     } else {
         notification = notification
-            .title(data.get("title").unwrap().as_str().unwrap())
-            .body(data.get("body").unwrap().as_str().unwrap())
-            .set_thread_id(data.get("tag").unwrap().as_str().unwrap())
+            .title(title)
+            .body(body)
+            .set_thread_id(tag)
             .set_xdg_category(user_notify::XdgNotificationCategory::ImReceived);
     }
 
-    manager.send_notification(notification).await.map_err(|e| {
-        error!("发送通知失败: {:?}", e);
-        e.to_string()
+    manager.send_notification(notification).await.map_err(|_| {
+        error!("发送通知失败");
+        "发送通知失败".to_string()
     })?;
 
     Ok(())
@@ -292,10 +306,10 @@ pub async fn sys_close_notice(
     manager: State<'_, Arc<dyn NotificationManager>>,
     data: String
 ) -> Result<String, String> {
-    debug!("关闭通知: {}", data);
-    let notifications = manager.get_active_notifications().await.map_err(|e| {
-        error!("获取通知列表失败: {:?}", e);
-        e.to_string()
+    debug!("关闭通知");
+    let notifications = manager.get_active_notifications().await.map_err(|_| {
+        error!("获取通知列表失败");
+        "获取通知列表失败".to_string()
     })?;
     let notifications_to_clear: Vec<_> = notifications
         .iter()
@@ -315,7 +329,7 @@ pub async fn sys_close_notice(
             .iter()
             .map(|id| id.as_str())
             .collect(),
-    ).map_err(|e| e.to_string())?;
+    ).map_err(|_| "关闭通知失败".to_string())?;
 
     return Ok("success".to_string());
 }
@@ -323,9 +337,9 @@ pub async fn sys_close_notice(
 #[command]
 pub fn sys_clear_notice(manager: State<'_, Arc<dyn NotificationManager>>) -> String {
     debug!("关闭所有通知");
-    if let Err(err) = manager.remove_all_delivered_notifications() {
-        error!("清除所有通知失败: {}", err);
-        return err.to_string();
+    if manager.remove_all_delivered_notifications().is_err() {
+        error!("清除通知失败");
+        return "清除通知失败".to_string();
     } else {
         return "success".to_string();
     }
@@ -336,10 +350,10 @@ pub async fn sys_close_all_notice(
     manager: State<'_, Arc<dyn NotificationManager>>,
     data: String
 ) -> Result<String, String> {
-    debug!("关闭 {} 的所有通知", data);
-    let notifications = manager.get_active_notifications().await.map_err(|e| {
-        error!("获取通知列表失败: {:?}", e);
-        e.to_string()
+    debug!("关闭指定通知");
+    let notifications = manager.get_active_notifications().await.map_err(|_| {
+        error!("获取通知列表失败");
+        "获取通知列表失败".to_string()
     })?;
     let notifications_to_clear: Vec<_> = notifications
         .iter()
@@ -359,7 +373,7 @@ pub async fn sys_close_all_notice(
             .iter()
             .map(|id| id.as_str())
             .collect(),
-    ).map_err(|e| e.to_string())?;
+    ).map_err(|_| "关闭通知失败".to_string())?;
 
     return Ok("success".to_string());
 }
@@ -374,9 +388,9 @@ pub fn sys_run_command(data: String) -> HashMap<String, Value> {
             ret.insert("success".to_string(), true.into());
             ret.insert("message".to_string(), stdout.into());
         },
-        Err(e) => {
+        Err(_) => {
             ret.insert("success".to_string(), false.into());
-            ret.insert("message".to_string(), e.to_string().into());
+            ret.insert("message".to_string(), "命令执行失败".into());
         }
     }
 
@@ -397,9 +411,9 @@ pub fn sys_open_in_browser(app_handle: tauri::AppHandle, data: String) {
 pub fn sys_create_menu(app: tauri::AppHandle, data: HashMap<String, String>) -> Result<(), String> {
     #[cfg(target_os = "macos")] {
         let about = MenuItemBuilder::new(data.get("about").unwrap())
-            .id("about").build(&app).map_err(|e| e.to_string())?;
+            .id("about").build(&app).map_err(|_| "系统菜单操作失败".to_string())?;
         let check_update = MenuItemBuilder::new(data.get("update").unwrap())
-            .id("checkUpdate").build(&app).map_err(|e| e.to_string())?;
+            .id("checkUpdate").build(&app).map_err(|_| "系统菜单操作失败".to_string())?;
 
         let app_submenu = SubmenuBuilder::new(&app, data.get("title").unwrap())
             .item(&about)
@@ -413,7 +427,7 @@ pub fn sys_create_menu(app: tauri::AppHandle, data: HashMap<String, String>) -> 
             .separator()
             .quit_with_text(data.get("quit").unwrap())
             .id("app")
-            .build().map_err(|e| e.to_string())?;
+            .build().map_err(|_| "系统菜单操作失败".to_string())?;
 
         let edit_submenu = SubmenuBuilder::new(&app, data.get("edit").unwrap())
             .undo_with_text(data.get("undo").unwrap())
@@ -425,17 +439,17 @@ pub fn sys_create_menu(app: tauri::AppHandle, data: HashMap<String, String>) -> 
             .separator()
             .select_all_with_text(data.get("selectAll").unwrap())
             .id("edit")
-            .build().map_err(|e| e.to_string())?;
+            .build().map_err(|_| "系统菜单操作失败".to_string())?;
 
             let user_name = MenuItemBuilder::new(data.get("login").unwrap())
-                .id("userName").build(&app).map_err(|e| e.to_string())?;
+                .id("userName").build(&app).map_err(|_| "系统菜单操作失败".to_string())?;
             let logout = MenuItemBuilder::new(data.get("logout").unwrap())
-                .id("logout").build(&app).map_err(|e| e.to_string())?;
-            logout.set_enabled(false).map_err(|e| e.to_string())?;
+                .id("logout").build(&app).map_err(|_| "系统菜单操作失败".to_string())?;
+            logout.set_enabled(false).map_err(|_| "系统菜单操作失败".to_string())?;
             let user_list = MenuItemBuilder::new(data.get("userList").unwrap())
-                .id("userList").build(&app).map_err(|e| e.to_string())?;
+                .id("userList").build(&app).map_err(|_| "系统菜单操作失败".to_string())?;
             let flush_user = MenuItemBuilder::new(data.get("flushUser").unwrap())
-                .id("flushUser").build(&app).map_err(|e| e.to_string())?;
+                .id("flushUser").build(&app).map_err(|_| "系统菜单操作失败".to_string())?;
 
             let account_submenu = SubmenuBuilder::new(&app, data.get("account").unwrap())
                 .item(&user_name)
@@ -444,14 +458,14 @@ pub fn sys_create_menu(app: tauri::AppHandle, data: HashMap<String, String>) -> 
                 .item(&user_list)
                 .item(&flush_user)
                 .id("account")
-                .build().map_err(|e| e.to_string())?;
+                .build().map_err(|_| "系统菜单操作失败".to_string())?;
 
             let doc = MenuItemBuilder::new(data.get("doc").unwrap())
-                .id("doc").build(&app).map_err(|e| e.to_string())?;
+                .id("doc").build(&app).map_err(|_| "系统菜单操作失败".to_string())?;
             let feedback = MenuItemBuilder::new(data.get("feedback").unwrap())
-                .id("feedback").build(&app).map_err(|e| e.to_string())?;
+                .id("feedback").build(&app).map_err(|_| "系统菜单操作失败".to_string())?;
             let license = MenuItemBuilder::new(data.get("license").unwrap())
-                .id("license").build(&app).map_err(|e| e.to_string())?;
+                .id("license").build(&app).map_err(|_| "系统菜单操作失败".to_string())?;
 
             let help_submenu = SubmenuBuilder::new(&app, data.get("help").unwrap())
                 .item(&doc)
@@ -459,7 +473,7 @@ pub fn sys_create_menu(app: tauri::AppHandle, data: HashMap<String, String>) -> 
                 .separator()
                 .item(&license)
                 .id("help")
-                .build().map_err(|e| e.to_string())?;
+                .build().map_err(|_| "系统菜单操作失败".to_string())?;
 
         let menu = MenuBuilder::new(&app)
             .items(&[
@@ -468,9 +482,9 @@ pub fn sys_create_menu(app: tauri::AppHandle, data: HashMap<String, String>) -> 
                 &account_submenu,
                 &help_submenu,
             ])
-            .build().map_err(|e| e.to_string())?;
+            .build().map_err(|_| "系统菜单操作失败".to_string())?;
 
-        app.set_menu(menu).map_err(|e| e.to_string())?;
+        app.set_menu(menu).map_err(|_| "系统菜单操作失败".to_string())?;
         app.on_menu_event(move |app, menu| {
             let repo_name = data.get("repo").unwrap();
             match menu.id().0.as_str() {
@@ -505,7 +519,7 @@ pub fn sys_create_menu(app: tauri::AppHandle, data: HashMap<String, String>) -> 
 #[command]
 pub fn sys_update_menu(app: tauri::AppHandle, parent: String, id: String, action: String, value: String) -> Result<(), String> {
     #[cfg(target_os = "macos")] {
-        debug!("菜单更新: id={}.{}, action={}, value={}", parent, id, action, value);
+        debug!("更新菜单项");
         // let menu = app.get_webview_window("main").unwrap().menu().unwrap();
         let menu = app.menu().unwrap();
         let submenu = menu.get(&parent);
@@ -516,22 +530,22 @@ pub fn sys_update_menu(app: tauri::AppHandle, parent: String, id: String, action
                 let item = item.unwrap();
                 match action.as_str() {
                     "label" => {
-                        item.as_menuitem().unwrap().set_text(value.as_str()).map_err(|e| e.to_string())?;
+                        item.as_menuitem().unwrap().set_text(value.as_str()).map_err(|_| "系统菜单操作失败".to_string())?;
                     }
                     "visible" => {
                         if value == "true" {
-                            item.as_menuitem().unwrap().set_enabled(true).map_err(|e| e.to_string())?;
+                            item.as_menuitem().unwrap().set_enabled(true).map_err(|_| "系统菜单操作失败".to_string())?;
                         } else {
-                            item.as_menuitem().unwrap().set_enabled(false).map_err(|e| e.to_string())?;
+                            item.as_menuitem().unwrap().set_enabled(false).map_err(|_| "系统菜单操作失败".to_string())?;
                         }
                     }
                     _ => {}
                 }
             } else {
-                debug!("菜单项不存在: {}", id);
+                debug!("菜单项不存在");
             }
         } else {
-            debug!("菜单不存在: {}", parent);
+            debug!("菜单不存在");
         }
     }
     Ok(())
@@ -636,7 +650,7 @@ pub async fn sys_select_folder() -> Result<Option<String>, String> {
     match folder {
         Some(handle) => {
             let path = handle.path().to_string_lossy().to_string();
-            info!("选择的文件夹路径: {}", path);
+            info!("已选择文件夹");
             Ok(Some(path))
         },
         None => {
@@ -659,7 +673,7 @@ pub async fn sys_select_file() -> Result<Option<String>, String> {
     match file {
         Some(handle) => {
             let path = handle.path().to_string_lossy().to_string();
-            info!("选择的文件路径: {}", path);
+            info!("已选择文件");
             Ok(Some(path))
         },
         None => {
@@ -671,7 +685,8 @@ pub async fn sys_select_file() -> Result<Option<String>, String> {
 
 #[command]
 pub fn sys_get_app_data_dir(state: State<'_, crate::commands::db::DbState>) -> Result<String, String> {
-    let inner = state.0.lock().map_err(|e| e.to_string())?;
+    let inner = state.0.lock()
+        .map_err(|_| "读取应用数据目录失败".to_string())?;
     Ok(inner.data_dir.join("messages.db").to_string_lossy().to_string())
 }
 
@@ -691,11 +706,11 @@ pub async fn sys_get_local_emojis(data: String) -> Result<Vec<HashMap<String, St
     let folder_path = Path::new(&data);
     // 验证路径是否存在且为目录
     if !folder_path.exists() {
-        return Err(format!("文件夹不存在: {}", data));
+        return Err("文件夹不存在".to_string());
     }
 
     if !folder_path.is_dir() {
-        return Err(format!("路径不是一个文件夹: {}", data));
+        return Err("路径不是一个文件夹".to_string());
     }
 
     // 支持的图片格式
@@ -748,9 +763,9 @@ pub async fn sys_get_local_emojis(data: String) -> Result<Vec<HashMap<String, St
             info!("成功加载 {} 个本地表情", emojis.len());
             Ok(emojis)
         },
-        Err(e) => {
-            error!("读取文件夹失败: {}", e);
-            Err(format!("读取文件夹失败: {}", e))
+        Err(_) => {
+            error!("读取文件夹失败");
+            Err("读取文件夹失败".to_string())
         }
     }
 }
@@ -761,26 +776,30 @@ pub async fn sys_get_local_emojis(data: String) -> Result<Vec<HashMap<String, St
 pub async fn sys_save_image(url: String, folder: String, fileName: String) -> Result<Value, String> {
     use std::path::PathBuf;
     
-    debug!("保存图片到本地: {} -> {}/{}", url, folder, fileName);
+    debug!("保存图片到本地");
     
     let folder_path = PathBuf::from(&folder);
     // 确保目录存在
     if !folder_path.exists() {
-        fs::create_dir_all(&folder_path).map_err(|e| format!("创建文件夹失败: {}", e))?;
+        fs::create_dir_all(&folder_path).map_err(|_| "创建文件夹失败".to_string())?;
     }
     
     let file_path = folder_path.join(fileName);
     
     let client = Client::new();
-    let response = client.get(url).send().await.map_err(|e| format!("下载失败: {}", e))?;
+    let response = client.get(url).send().await
+        .map_err(|_| "下载失败".to_string())?;
     
     if !response.status().is_success() {
-        return Err(format!("下载失败，状态码: {}", response.status()));
+        return Err("下载失败".to_string());
     }
     
-    let bytes = response.bytes().await.map_err(|e| format!("读取内容失败: {}", e))?;
-    let mut file = File::create(&file_path).map_err(|e| format!("创建文件失败: {}", e))?;
-    file.write_all(&bytes).map_err(|e| format!("写入文件失败: {}", e))?;
+    let bytes = response.bytes().await
+        .map_err(|_| "读取内容失败".to_string())?;
+    let mut file = File::create(&file_path)
+        .map_err(|_| "创建文件失败".to_string())?;
+    file.write_all(&bytes)
+        .map_err(|_| "写入文件失败".to_string())?;
     
     let mut ret = HashMap::new();
     ret.insert("success", true);
@@ -789,10 +808,12 @@ pub async fn sys_save_image(url: String, folder: String, fileName: String) -> Re
 
 #[command]
 pub fn sys_get_default_face_path(app: AppHandle) -> Result<String, String> {
-    let path = app.path().app_data_dir().map_err(|e| e.to_string())?
+    let path = app.path().app_data_dir()
+        .map_err(|_| "获取应用数据目录失败".to_string())?
         .join("qface");
     if !path.exists() {
-        fs::create_dir_all(&path).map_err(|e| e.to_string())?;
+        fs::create_dir_all(&path)
+            .map_err(|_| "创建表情目录失败".to_string())?;
     }
     Ok(path.to_string_lossy().to_string())
 }
@@ -810,47 +831,63 @@ pub async fn sys_download_and_extract_zip(
     let dest_path = if let Some(d) = dest {
         PathBuf::from(d)
     } else {
-        app.path().app_data_dir().map_err(|e| e.to_string())?.join("qface")
+        app.path().app_data_dir()
+            .map_err(|_| "获取应用数据目录失败".to_string())?
+            .join("qface")
     };
 
-    info!("开始下载并解压: {} 到 {:?}", url, dest_path);
+    info!("开始下载并解压资源");
     let mut client_builder = Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
     
     if let Some(proxy_url) = proxy {
         if !proxy_url.is_empty() {
-             client_builder = client_builder.proxy(reqwest::Proxy::all(proxy_url).map_err(|e| e.to_string())?);
+             client_builder = client_builder.proxy(reqwest::Proxy::all(proxy_url)
+                 .map_err(|_| "代理配置无效".to_string())?);
         }
     }
-    let client = client_builder.build().map_err(|e| e.to_string())?;
+    let client = client_builder.build()
+        .map_err(|_| "创建网络客户端失败".to_string())?;
 
-    let response = client.get(url).send().await.map_err(|e| e.to_string())?;
-    let bytes = response.bytes().await.map_err(|e| e.to_string())?;
+    let response = client.get(url).send().await
+        .map_err(|_| "下载表情资源失败".to_string())?;
+    if !response.status().is_success() {
+        return Err("下载表情资源失败".to_string());
+    }
+    let bytes = response.bytes().await
+        .map_err(|_| "读取表情资源失败".to_string())?;
 
     let reader = Cursor::new(bytes);
-    let mut archive = ZipArchive::new(reader).map_err(|e| e.to_string())?;
+    let mut archive = ZipArchive::new(reader)
+        .map_err(|_| "解析表情资源失败".to_string())?;
 
     if !dest_path.exists() {
-        fs::create_dir_all(&dest_path).map_err(|e| e.to_string())?;
+        fs::create_dir_all(&dest_path)
+            .map_err(|_| "创建表情目录失败".to_string())?;
     }
 
     for i in 0..archive.len() {
-        let mut file = archive.by_index(i).map_err(|e| e.to_string())?;
+        let mut file = archive.by_index(i)
+            .map_err(|_| "读取表情资源失败".to_string())?;
         let outpath = match file.enclosed_name() {
             Some(path) => dest_path.join(path),
             None => continue,
         };
 
         if file.name().ends_with('/') {
-            fs::create_dir_all(&outpath).map_err(|e| e.to_string())?;
+            fs::create_dir_all(&outpath)
+                .map_err(|_| "创建表情目录失败".to_string())?;
         } else {
             if let Some(p) = outpath.parent() {
                 if !p.exists() {
-                    fs::create_dir_all(&p).map_err(|e| e.to_string())?;
+                    fs::create_dir_all(&p)
+                        .map_err(|_| "创建表情目录失败".to_string())?;
                 }
             }
-            let mut outfile = fs::File::create(&outpath).map_err(|e| e.to_string())?;
-            std::io::copy(&mut file, &mut outfile).map_err(|e| e.to_string())?;
+            let mut outfile = fs::File::create(&outpath)
+                .map_err(|_| "写入表情文件失败".to_string())?;
+            std::io::copy(&mut file, &mut outfile)
+                .map_err(|_| "写入表情文件失败".to_string())?;
         }
     }
 
@@ -864,7 +901,7 @@ pub async fn sys_read_file_as_base64(data: String) -> Result<String, String> {
 
     // 读取文件内容
     let file_data = fs::read(&data)
-        .map_err(|e| format!("读取文件失败: {}", e))?;
+        .map_err(|_| "读取文件失败".to_string())?;
 
     // 转换为 base64
     let base64_string = general_purpose::STANDARD.encode(&file_data);

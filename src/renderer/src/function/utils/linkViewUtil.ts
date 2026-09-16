@@ -26,10 +26,10 @@ export const linkView = {
         const match = url.match(/bilibili.com\/video\/(BV[0-9a-zA-Z]+)/)
         if (match) {
             const bvid = match[1]
-            logger.info(`[linkView] 获取到 bilibili 链接：${bvid}`)
+            logger.info('[linkView] 已识别 bilibili 视频链接')
             const data = await getApi(previewAPI + bvid)
             if (data && data.code === 0) {
-                logger.info(`[linkView] 预览 bilibili 链接成功：${data.data.title}`)
+                logger.info('[linkView] 预览 bilibili 链接成功')
                 const stat = data.data.stat
                 Object.keys(stat).forEach((key) => {
                     stat[key] = combinedQuantity(stat[key])
@@ -59,7 +59,7 @@ export const linkView = {
         const params = new URLSearchParams(urlObj.search)
         const id = params.get('id')
         if(id != null) {
-            logger.info(`[linkView] 获取获取网易云音乐歌曲 ID：${id}`)
+            logger.info('[linkView] 已识别网易云音乐歌曲')
             const baseUrl = import.meta.env.VITE_APP_163_MUSIC_API
             try {
                 const responseDetail = await getApi(baseUrl + '/song/detail?ids=' + id)

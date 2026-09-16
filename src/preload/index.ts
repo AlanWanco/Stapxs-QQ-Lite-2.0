@@ -19,9 +19,9 @@ if (process.contextIsolated) {
     try {
         contextBridge.exposeInMainWorld('electron', extendedElectronAPI)
         contextBridge.exposeInMainWorld('api', api)
-    } catch (error) {
+    } catch {
         // eslint-disable-next-line no-console
-        console.error(error)
+        console.error('Electron preload 初始化失败')
     }
 } else {
     // @ts-ignore (define in dts)

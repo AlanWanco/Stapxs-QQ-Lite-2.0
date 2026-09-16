@@ -40,9 +40,9 @@
 
 <script lang="ts">
     import app from '@renderer/main'
-    import Option from '@renderer/function/option'
 
     import { defineComponent } from 'vue'
+    import xss from 'xss'
     import { MsgBodyFuns as ViewFuns } from '@renderer/function/model/msg-body'
 
     export default defineComponent({
@@ -74,7 +74,14 @@
                     
                     const div = document.createElement('div')
                     div.id = 'json-' + id
-                    div.innerHTML = html
+                    div.innerHTML = xss(html, {
+                        whiteList: {
+                            br: [],
+                            div: [],
+                            img: ['src', 'alt'],
+                            span: [],
+                        },
+                    })
                     // 存储链接信息供 cardClick 使用
                     if (info.url) {
                         div.dataset.url = info.url
@@ -84,9 +91,10 @@
                     }
 
                     // 附加信息
-                    if (Object.keys(data.append).length > 0) {
-                        for (const key in data.append) {
-                            div.dataset[key] = data.append[key]
+                    if (data.append && typeof data.append === 'object') {
+                        for (const key of Object.keys(data.append)) {
+                            if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(key)) continue
+                            div.dataset[key] = String(data.append[key] ?? '')
                         }
                     }
                     return div.outerHTML

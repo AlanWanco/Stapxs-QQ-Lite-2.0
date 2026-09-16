@@ -2,6 +2,7 @@ import app from '@renderer/main'
 import FileDownloader from 'js-file-downloader'
 import option from '@renderer/function/option'
 import semver from 'semver'
+import xss from 'xss'
 import appInfo from '../../../../../package.json'
 import Umami from '@stapxs/umami-logger-typescript'
 
@@ -46,6 +47,52 @@ import { Notify } from '../notify'
 const popInfo = new PopInfo()
 const logger = new Logger()
 
+function escapeHtmlAttribute(value: unknown) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll('\'', '&#39;')
+}
+
+function normalizeHttpUrl(value: unknown) {
+    const url = String(value ?? '').trim()
+    if (!url) return null
+    try {
+        const parsed = new URL(url, window.location.href)
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null
+        return parsed.href
+    } catch {
+        return null
+    }
+}
+
+function sanitizeNoticeHtml(value: unknown) {
+    return xss(String(value ?? ''), {
+        whiteList: {
+            a: ['href', 'target', 'title'],
+            b: [],
+            br: [],
+            code: [],
+            div: ['class'],
+            em: [],
+            h1: [],
+            h2: [],
+            h3: [],
+            img: ['src', 'alt', 'title', 'width', 'height', 'loading'],
+            li: [],
+            ol: [],
+            p: [],
+            pre: [],
+            span: ['class'],
+            strong: [],
+            u: [],
+            ul: [],
+        },
+    })
+}
+
 /**
  * 滚动到目标消息（不自动加载）
  * @param seqName DOM 名（chat-xx）
@@ -84,11 +131,16 @@ export function scrollToMsg(seqName: string, showAnimation: boolean, showHighlig
  * @param external 是否外部打开
  */
 export function openLink(url: string, external = false) {
+    const safeUrl = normalizeHttpUrl(url)
+    if (!safeUrl) {
+        new PopInfo().add(PopType.ERR, app.config.globalProperties.$t('链接无效'), true)
+        return
+    }
     if (!external && !runtimeData.sysConfig.close_browser) {
         runtimeData.popBoxList = []
-        url = backend.proxyUrl(url)
+        const proxiedUrl = backend.proxyUrl(safeUrl)
         const popInfo = {
-            html: `<iframe src="${url}" class="view-iframe"></iframe>`,
+            html: `<iframe src="${escapeHtmlAttribute(proxiedUrl)}" class="view-iframe"></iframe>`,
             full: true,
             button: [
                 {
@@ -103,12 +155,12 @@ export function openLink(url: string, external = false) {
                         if (backend.isDesktop()) {
                             const shell = window.electron?.shell
                             if (shell) {
-                                shell.openExternal(url)
+                                shell.openExternal(safeUrl)
                             } else {
-                                backend.call('', 'sys:openInBrowser', false, backend.unProxyUrl(url))
+                                backend.call('', 'sys:openInBrowser', false, backend.unProxyUrl(safeUrl))
                             }
                         } else {
-                            window.open(backend.unProxyUrl(url))
+                            window.open(backend.unProxyUrl(safeUrl))
                         }
                         runtimeData.popBoxList.shift()
                     },
@@ -127,12 +179,12 @@ export function openLink(url: string, external = false) {
         if (backend.isDesktop()) {
             const shell = window.electron?.shell
             if (shell) {
-                shell.openExternal(url)
+                shell.openExternal(safeUrl)
             } else {
-                backend.call('', 'sys:openInBrowser', false, backend.unProxyUrl(url))
+                backend.call('', 'sys:openInBrowser', false, backend.unProxyUrl(safeUrl))
             }
         } else {
-            window.open(url)
+            window.open(safeUrl)
         }
     }
 }
@@ -474,7 +526,8 @@ export function createIpc() {
             runtimeData.popBoxList.push(popInfo)
         })
     backend.addListener(undefined, 'sys:handleUri', (event, data) => {
-        logger.info(JSON.stringify(data ?? event.payload))
+        const payload = data ?? event.payload
+        logger.info(`收到 URI 处理事件（${typeof payload}）`)
     })
     backend.addListener(undefined, 'app:changeTab', (event, name) => {
         window.focus()
@@ -693,68 +746,43 @@ import { VueCompData } from '../elements/vueComp'
 export async function loadAppendStyle() {
     const platform = backend.platform
     logger.info('正在装载补充样式……')
-    
-    // [Debug] 记录样式加载开始
-    console.log(`[Debug Style] Starting loadAppendStyle. Platform: ${platform}, Type: ${backend.type}, Arch: ${backend.arch}`)
-    
-    if(platform != undefined) {
-        const cssPath = `@renderer/assets/css/append/append_${platform}.css`
-        console.log(`[Debug Style] Attempting to load platform CSS: ${cssPath}`)
-        
+
+    if (platform != undefined) {
         import(`@renderer/assets/css/append/append_${platform}.css`)
             .then(() => {
-                logger.info(`${platform} 平台附加样式加载完成`)
-                console.log(`[Debug Style] Successfully loaded: ${cssPath}`)
+                logger.info('平台附加样式加载完成')
             })
-            .catch((err) => {
-                logger.info('未找到对应平台的附加样式：' + platform)
-                console.log(`[Debug Style] Failed to load: ${cssPath}, Error:`, err)
+            .catch(() => {
+                logger.info('未找到对应平台的附加样式')
             })
-    } else {
-        console.log('[Debug Style] No platform defined, skipping platform-specific CSS')
     }
 
     // 添加手机端样式
     const updateCss = (appendCss = '') => {
         const cssStype = document.getElementById('mobile-css')
 
-        const width = window.innerWidth
-        const mode = width > 750 ? 'Desktop/Tablet(Horizontal)' : 'Mobile/Tablet(Vertical)'
-        console.log(`[Debug Layout] Scope: updateCss, Window Width: ${width}, Platform: ${backend.platform}, Arch: ${backend.arch}, Current Mode: ${mode}`)
-
-        if(cssStype) {
+        if (cssStype) {
             // 基础集注入，由 CSS 文件内部的 Media Query 管理断点
-            console.log(`[Debug Style] Injecting CSS - horizontal length: ${horizontalCss?.length || 0}, vertical length: ${verticalCss?.length || 0}`)
             cssStype.innerHTML = horizontalCss + verticalCss + appendCss
-            console.log(`[Debug Style] CSS injected successfully. Total length: ${cssStype.innerHTML.length}`)
-        } else {
-            console.log('[Debug Style] mobile-css element not found!')
         }
-        
-        if(backend.isDesktop()) {
-            console.log('[Debug Style] Desktop detected, maximizing window...')
+
+        if (backend.isDesktop()) {
             backend.call(undefined, 'win:maximize', false)
             const topBar = document.getElementsByClassName('top-bar')[0] as HTMLElement
-            if(topBar) {
+            if (topBar) {
                 topBar.style.display = 'none'
-                console.log('[Debug Style] Top bar hidden')
             }
         }
     }
-    if(backend.isMobile()) {
-        console.log('[Debug Style] Mobile detected, creating mobile-css tag...')
+    if (backend.isMobile()) {
         const styleTag = document.createElement('style')
         styleTag.id = 'mobile-css'
         document.head.appendChild(styleTag)
-        console.log('[Debug Style] mobile-css tag created, calling updateCss...')
         updateCss()
         // 屏幕旋转事件处理
         window.addEventListener('resize', () => {
-            console.log('[Debug Layout] Window resize detected, calling updateCss...')
             updateCss()
         })
-    } else {
-        console.log(`[Debug Style] Not mobile (type: ${backend.type}), skipping mobile CSS`)
     }
 
     // UI 2.0 附加样式
@@ -1172,7 +1200,7 @@ export function checkNotice() {
                             if (info.html) {
                                 popInfo = {
                                     title: info.title,
-                                    html: info.html,
+                                    html: sanitizeNoticeHtml(info.html),
                                     button: button
                                 }
                             } else if(info.template) {
@@ -1232,7 +1260,7 @@ export function loadJsonMap(name: string) {
                 msgPath = (msgPathList[msgPathKey] as any).default
             }
             if(msgPath) {
-                logger.system('开发者，请稍等一下（翻找），正在为阁下加载 ' + msgPath.name + ' 的服务映射表。')
+                logger.system('正在加载服务映射表。')
                 if (msgPath.redirect) {
                     // eslint-disable-next-line
                     const newMsgPathKey = Object.keys(msgPathList).find((key) => {
@@ -1251,13 +1279,13 @@ export function loadJsonMap(name: string) {
                         }
                     })
                     msgPath = newMsgPath
-                    logger.system('非常抱歉开发者，已帮阁下将映射表重定向加载为 ：' + msgPath?.name + ' （慌张）')
+                    logger.system('服务映射表重定向加载完成。')
                 }
             }
             // 未识别的实现保留当前映射，避免联系人/消息处理访问 undefined。
             if (msgPath) runtimeData.jsonMap = msgPath
-        } catch (ex) {
-            logger.system('很抱歉开发者，映射表加载失败 ……' + ex)
+        } catch {
+            logger.system('映射表加载失败。')
         }
     }
     return msgPath

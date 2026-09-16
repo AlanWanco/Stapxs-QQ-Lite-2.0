@@ -33,13 +33,11 @@ impl WebSocketClient {
     {
         static INSTALL_ONCE: Once = Once::new();
         INSTALL_ONCE.call_once(|| {
-            if let Err(e) = rustls::crypto::ring::default_provider().install_default() {
-                eprintln!("warning: failed to install rustls ring default provider: {:?}", e);
+            if rustls::crypto::ring::default_provider().install_default().is_err() {
+                eprintln!("warning: failed to install rustls ring default provider");
             }
         });
         let timeout_duration = Duration::from_secs(5);
-
-        println!("{}", url.to_string());
 
         let on_open = Arc::new(Mutex::new(on_open));
         let on_message = Arc::new(Mutex::new(on_message));
@@ -119,8 +117,8 @@ impl WebSocketClient {
                         }
                         break;
                     }
-                    Err(e) => {
-                        eprintln!("WebSocket error: {:?}", e);
+                    Err(_) => {
+                        eprintln!("WebSocket error");
                         if is_active_recv.swap(false, Ordering::SeqCst) {
                             let mut cb = on_close_recv.lock().unwrap();
                             cb(CloseCode::Abnormal, Utf8Bytes::from("read error"));

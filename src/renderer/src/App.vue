@@ -189,7 +189,8 @@
                         <font-awesome-icon v-if="runtimeData.popBoxList[0].allowClose != false"
                             :icon="['fas', 'xmark']" @click="removePopBox" />
                     </header>
-                    <div v-if="runtimeData.popBoxList[0].html" v-html="runtimeData.popBoxList[0].html" />
+                    <div v-if="runtimeData.popBoxList[0].html"
+                        v-html="sanitizePopupHtml(runtimeData.popBoxList[0].html)" />
                     <component :is="runtimeData.popBoxList[0].template" v-else :data="runtimeData.popBoxList[0].data"
                         v-bind="runtimeData.popBoxList[0].templateValue" />
                     <div v-show="runtimeData.popBoxList[0].button" class="button">
@@ -224,6 +225,7 @@ import Option from '@renderer/function/option'
 import Umami from '@stapxs/umami-logger-typescript'
 import * as App from './function/utils/appUtil'
 import anime from 'animejs'
+import xss from 'xss'
 import packageInfo from '../../../package.json'
 
 import { defineComponent, defineAsyncComponent, useTemplateRef, provide } from 'vue'
@@ -234,7 +236,6 @@ import { BaseChatInfoElem } from '@renderer/function/elements/information'
 import { Notify } from './function/notify'
 import { updateBaseOnMsgList } from './function/utils/msgUtil'
 import { getDeviceType } from './function/utils/systemUtil'
-import { uptime } from '@renderer/main'
 
 import Options from '@renderer/pages/Options.vue'
 import Friends from '@renderer/pages/Friends.vue'
@@ -244,6 +245,41 @@ import FileManager, { panelVisible, closePanel, getDownloadTasks, getUploadTasks
 import GlobalSessionSearchBar from './components/GlobalSessionSearchBar.vue'
 import NtViewer from './components/ViewerCom.vue'
 import Tooltips from './components/tooltip/Tooltips.vue'
+
+function sanitizePopupHtml(value: unknown) {
+    return xss(String(value ?? ''), {
+        whiteList: {
+            a: ['class', 'data-link', 'href', 'target', 'title'],
+            b: [],
+            br: [],
+            code: ['class'],
+            div: ['class', 'data-id', 'data-type', 'data-url', 'data-urlopentype', 'id', 'style'],
+            em: [],
+            font: ['color', 'face', 'size'],
+            h1: [],
+            h2: [],
+            h3: [],
+            header: [],
+            hr: [],
+            i: [],
+            iframe: ['class', 'height', 'referrerpolicy', 'src', 'width'],
+            img: ['alt', 'class', 'height', 'loading', 'src', 'style', 'title', 'width'],
+            input: ['checked', 'class', 'id', 'max', 'min', 'name', 'placeholder', 'style', 'type', 'value'],
+            label: ['class', 'for'],
+            li: [],
+            ol: [],
+            p: [],
+            path: ['d', 'fill', 'fill-opacity', 'stroke-linejoin', 'stroke-width'],
+            pre: ['class', 'style'],
+            span: ['class', 'style'],
+            strong: [],
+            svg: ['baseprofile', 'class', 'enable-background', 'fill', 'height', 'style', 'version', 'viewbox', 'width', 'xml:space', 'xmlns', 'xmlns:xlink'],
+            textarea: ['class', 'id', 'placeholder', 'readonly', 'style'],
+            u: [],
+            ul: [],
+        },
+    })
+}
 
 // 注册组件实例
 const ntViewer = useTemplateRef<InstanceType<typeof NtViewer>>('nt-viewer')
@@ -488,13 +524,6 @@ export default defineComponent({
         window.onload = async () => {
             await backend.init() // Desktop：初始化客户端功能
 
-            if(import.meta.env.DEV) {
-                // eslint-disable-next-line
-                console.log('[ SSystem Bootloader Complete took ' + (new Date().getTime() - uptime) + 'ms, welcome to sar-dos on stapxs-qq-lite.su ]')
-            } else {
-                // eslint-disable-next-line
-                console.log('[ SSystem Bootloader Complete took ' + (new Date().getTime() - uptime) + 'ms, welcome to ssqq on stapxs-qq-lite.user ]')
-            }
             // 初始化波浪动画
             runtimeData.tags.loginWaveTimer = this.waveAnimation(
                 document.getElementById('login-wave'),
@@ -516,12 +545,14 @@ export default defineComponent({
             // 加载设置项
             runtimeData.sysConfig = await Option.load()
             if(this.dev) {
-                logger.debug('stapxs-qq-lite.su:$/mnt/boot/dawnHunt/bin/core --pour /mnt/app/bin/main', true)
+                logger.debug('开发模式已启用', true)
                 logger.system('[ dawnHuntCore Version: 1.0 Beta, dawnHuntDB: 2025-04-24 ]')
             } else {
-                logger.debug('stapxs-qq-lite.user:$/mnt/app/bin/main', true)
+                logger.debug('生产模式已启用', true)
             }
-            logger.add(LogType.DEBUG, '系统配置', runtimeData.sysConfig)
+            logger.add(LogType.DEBUG, '系统配置摘要', {
+                keyCount: Object.keys(runtimeData.sysConfig ?? {}).length,
+            })
             // PS：重新再应用部分需要加载完成后才能应用的设置
             Option.run('opt_dark', Option.get('opt_dark'))
             Option.run('opt_auto_dark', Option.get('opt_auto_dark'))
@@ -636,8 +667,8 @@ export default defineComponent({
                         } else {
                             logger.error(null, 'Napcat 快速连接失败，状态码：' + response.status)
                         }
-                    }).catch((error) => {
-                        logger.error(null, 'Napcat 快速连接请求失败：' + error)
+                    }).catch(() => {
+                        logger.error(null, 'Napcat 快速连接请求失败')
                     })
                     this.updateNapcatColor(token)
                     window.addEventListener('storage', (event) => {
@@ -810,8 +841,8 @@ export default defineComponent({
                 } else {
                     logger.error(null, 'Napcat 主题获取失败，状态码：' + response.status)
                 }
-            }).catch((error) => {
-                logger.error(null, 'Napcat 主题请求失败：' + error)
+            }).catch(() => {
+                logger.error(null, 'Napcat 主题请求失败')
             })
         },
 
@@ -983,8 +1014,8 @@ export default defineComponent({
                     void backend.call(undefined, 'sys:debugLog', false, {
                         tag: '独立窗口',
                         message: `点击已拆出聊天时聚焦失败 ${JSON.stringify({
-                            chatKey: `${data.type}:${data.id}`,
-                            error: e instanceof Error ? e.message : String(e),
+                            chatType: data.type,
+                            errorType: e instanceof Error ? e.name : typeof e,
                         })}`,
                     })
                 })
@@ -1045,9 +1076,13 @@ export default defineComponent({
             const previousShowChat = this.tags.showChat
             const debugWindow = (message: string, extra: Record<string, any> = {}) => {
                 if (!import.meta.env.DEV || backend.type !== 'tauri') return
+                const safeExtra: Record<string, any> = {}
+                if (extra.error !== undefined) {
+                    safeExtra.errorType = extra.error instanceof Error ? extra.error.name : typeof extra.error
+                }
                 void backend.call(undefined, 'sys:debugLog', false, {
                     tag: '独立窗口',
-                    message: `${message} ${JSON.stringify({ chatKey: key, ...extra })}`,
+                    message: `${message} ${JSON.stringify({ chatType: data.type, ...safeExtra })}`,
                 })
             }
             debugWindow('开始打开')

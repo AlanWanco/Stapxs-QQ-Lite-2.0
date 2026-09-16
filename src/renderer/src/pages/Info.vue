@@ -31,8 +31,7 @@
                     <header>
                         <span>{{ $t('介绍') }}</span>
                     </header>
-                    <span v-html=" chat.info.group_info.gIntro === undefined || chat.info.group_info.gIntro === '' ?
-                        $t('群主很懒，还没有群介绍哦～') : chat.info.group_info.gIntro" />
+                    <span v-html="safeGroupIntro()" />
                     <div class="tags">
                         <div v-for="item in chat.info.group_info.tags" :key="item.md">
                             {{ item.tag }}
@@ -103,7 +102,7 @@
                     <RecycleScroller
                         v-slot="{ item }"
                         class="member-scroller"
-                        :items="number_cache.length > 0 ? number_cache : chat.info.group_members"
+                        :items="number_cache.length > 0 ? number_cache : (Array.isArray(chat.info.group_members) ? chat.info.group_members : [])"
                         :item-size="60"
                         key-field="user_id">
                         <div v-menu.prevent="event => $emit('showMenu', event, {
@@ -251,6 +250,7 @@
     import { Connector } from '@renderer/function/connect'
     import { PopInfo, PopType } from '@renderer/function/base'
     import { defineComponent, toRaw } from 'vue'
+    import xss from 'xss'
     import { delay, getTrueLang } from '@renderer/function/utils/systemUtil'
     import { runtimeData } from '@renderer/function/msg'
     import { vMenu } from '@renderer/function/utils/appUtil'
@@ -283,13 +283,42 @@
             }
         },
         methods: {
+            safeGroupIntro() {
+                const intro = this.chat.info?.group_info?.gIntro
+                if (intro === undefined || intro === '') {
+                    return xss(this.$t('群主很懒，还没有群介绍哦～'))
+                }
+                return xss(String(intro), {
+                    whiteList: {
+                        a: ['href', 'target'],
+                        br: [],
+                        p: [],
+                        b: [],
+                        strong: [],
+                        em: [],
+                        i: [],
+                        u: [],
+                        span: [],
+                    },
+                })
+            },
+
+            escapeHtml(text: unknown) {
+                return String(text ?? '')
+                    .replaceAll('&', '&amp;')
+                    .replaceAll('<', '&lt;')
+                    .replaceAll('>', '&gt;')
+                    .replaceAll('"', '&quot;')
+                    .replaceAll('\'', '&#39;')
+            },
+
             /**
              * 移出群聊
              */
             removeUser(nickname: string, group_id: number, user_id: number) {
                 const popInfo = {
                     title: this.$t('提醒'),
-                    html: `<span>${this.$t('真的要将 {user} 移出群聊吗', { user: nickname })}</span>`,
+                    html: `<span>${this.$t('真的要将 {user} 移出群聊吗', { user: this.escapeHtml(nickname) })}</span>`,
                     button: [
                         {
                             text: app.config.globalProperties.$t('确定'),
@@ -535,7 +564,10 @@
             },
 
             openMoreConfig(id: number) {
-                const info = this.chat.info.group_members.find(
+                const groupMembers = Array.isArray(this.chat.info.group_members)
+                    ? this.chat.info.group_members
+                    : []
+                const info = groupMembers.find(
                     (item) => item.user_id === id,
                 )
                 if(info) this.moreConfig(info)
@@ -554,17 +586,19 @@
             searchList(event: Event) {
                 const value = (event.target as HTMLInputElement).value
                 if (value !== '') {
-                    this.number_cache = toRaw(this.chat.info.group_members)
+                    this.number_cache = Array.isArray(this.chat.info.group_members)
+                        ? toRaw(this.chat.info.group_members)
+                        : []
                     this.number_cache = this.number_cache.filter((item) => {
                         const name =
-                            item.card.toLowerCase() +
+                            String(item?.card ?? '').toLowerCase() +
                             '(' +
-                            item.nickname.toLowerCase() +
+                            String(item?.nickname ?? '').toLowerCase() +
                             ')'
-                        const id = item.user_id
+                        const id = String(item?.user_id ?? '')
                         return (
-                            name.indexOf(value.toLowerCase()) != -1 ||
-                            id.toString() === value
+                            name.includes(value.toLowerCase()) ||
+                            id === value
                         )
                     })
                 } else {

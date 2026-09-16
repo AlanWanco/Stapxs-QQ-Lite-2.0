@@ -94,7 +94,7 @@ async function callDb(
 
 function serializeMsgSegments(segments: any[] | undefined): string {
     try {
-        return JSON.stringify(segments ?? [])
+        return JSON.stringify(Array.isArray(segments) ? segments : [])
     } catch {
         return '[]'
     }
@@ -119,9 +119,22 @@ function sanitizeSegmentForPersistence(segment: any): any {
 
 export function sanitizeMsgForPersistence(msg: any): any {
     if (!msg || typeof msg !== 'object') return msg
-    const next = typeof structuredClone === 'function'
-        ? structuredClone(msg)
-        : JSON.parse(JSON.stringify(msg))
+
+    let next: any
+    try {
+        next = typeof structuredClone === 'function'
+            ? structuredClone(msg)
+            : JSON.parse(JSON.stringify(msg))
+    } catch {
+        // Vue 代理或带有不可克隆字段的消息仍应能保存基础记录；后续
+        // serializeMsgSegments 会再次兜底，避免本地历史保存链路抛出异常。
+        try {
+            next = JSON.parse(JSON.stringify(msg))
+        } catch {
+            next = { ...msg }
+        }
+    }
+
     delete next._from_local_db
     delete next.fake_msg
     delete next.fileView
@@ -134,7 +147,8 @@ export function sanitizeMsgForPersistence(msg: any): any {
 
 function deserializeMsgSegments(serialized: string): any[] {
     try {
-        return JSON.parse(serialized)
+        const parsed = JSON.parse(serialized)
+        return Array.isArray(parsed) ? parsed : []
     } catch {
         return []
     }
@@ -190,16 +204,17 @@ export function ensureChatIdOnMsgs(selfId: string | number, msgs: any[]): any[] 
 
 export function msgToRecord(msg: any): LocalMsgRecord | null {
     const sanitizedMsg = sanitizeMsgForPersistence(msg)
+    if (!sanitizedMsg || typeof sanitizedMsg !== 'object') return null
     const messageId = sanitizedMsg.message_id
     if (!messageId) return null
 
-        const chatId: number =
-            sanitizedMsg.infoList?.group_id ??
-            sanitizedMsg.group_id ??
-            sanitizedMsg.infoList?.target_id ??
-            sanitizedMsg.infoList?.private_id ??
-            sanitizedMsg.target_id ??
-            sanitizedMsg.private_id
+    const chatId: number =
+        sanitizedMsg.infoList?.group_id ??
+        sanitizedMsg.group_id ??
+        sanitizedMsg.infoList?.target_id ??
+        sanitizedMsg.infoList?.private_id ??
+        sanitizedMsg.target_id ??
+        sanitizedMsg.private_id
     if (chatId == null) return null
 
     const chatType: string =
@@ -261,15 +276,13 @@ export async function saveMessagesWithSideEffects(selfId: string | number, msgs:
     }
     void cacheImagesFromMsgs(selfId, persistableMsgs).then((imageResult) => {
         debugLocalHistory('saveMessagesWithSideEffects', {
-            selfId: String(selfId),
             savedMessages,
             ...imageResult,
         })
     }).catch((e) => {
         debugLocalHistory('saveMessagesWithSideEffects:error', {
-            selfId: String(selfId),
             savedMessages,
-            error: e instanceof Error ? e.message : String(e),
+            errorType: e instanceof Error ? e.name : typeof e,
         })
     })
     return {
@@ -495,7 +508,7 @@ async function cacheImagesFromMsgs(selfId: string | number, msgs: any[]): Promis
                 url: ref.url,
                 urlHash: ref.urlHash,
                 cacheStatus: 'failed',
-                lastError: e instanceof Error ? e.message : String(e),
+                lastError: 'cache-error',
             }])
         }
     }
@@ -560,10 +573,9 @@ async function downloadImageViaProxy(url: string): Promise<{ mimeType: string; b
     const resp = await fetch(fetchUrl)
     if (!resp.ok) {
         debugLocalHistory('cacheImage:downloadFailed', {
-            url,
-            fetchUrl,
+            urlLength: url.length,
+            viaProxy: fetchUrl !== url,
             status: resp.status,
-            statusText: resp.statusText,
         })
         return null
     }
@@ -584,9 +596,8 @@ async function cacheSingleImage(selfId: string | number, url: string): Promise<'
     const downloaded = await downloadImageViaProxy(url)
     if (!downloaded) {
         debugLocalHistory('cacheImage:miss', {
-            selfId: String(selfId),
-            url,
-            urlHash,
+            urlLength: url.length,
+            hasUrlHash: urlHash.length > 0,
         })
         return 'download-miss'
     }
