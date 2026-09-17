@@ -583,8 +583,14 @@ function getUserById(id: number): IUser | undefined {
             }
         },
         methods: {
+            getMessageSegments(message: any): any[] {
+                return Array.isArray(message?.message)
+                    ? message.message.filter((segment: any) => segment && typeof segment === 'object')
+                    : []
+            },
+
             refreshTextIndex() {
-                const messageSegments = getMessageSegments(this.data)
+                const messageSegments = this.getMessageSegments(this.data)
                 for (let i = 0; i < messageSegments.length; i++) {
                     const item = messageSegments[i]
                     if(item.type == 'text') {
@@ -693,7 +699,7 @@ function getUserById(id: number): IUser | undefined {
                     return
                 }
                 try {
-                    for (const seg of getMessageSegments(this.data)) {
+                    for (const seg of this.getMessageSegments(this.data)) {
                         if (seg?.type !== 'image' || !seg.url) continue
                         await this.loadCachedImage(seg.url)
                     }
@@ -1186,7 +1192,7 @@ function getUserById(id: number): IUser | undefined {
              * @param text 纯文本消息
              */
             async parseText(index: number) {
-                const segment = getMessageSegments(this.data)[index]
+                const segment = this.getMessageSegments(this.data)[index]
                 let text = String(segment?.text ?? '')
 
                 const logger = new Logger()
@@ -1385,7 +1391,7 @@ function getUserById(id: number): IUser | undefined {
                     return item.message_id == message_id
                 })
                 if (list.length === 1) {
-                    const messageSegments = getMessageSegments(list[0])
+                    const messageSegments = this.getMessageSegments(list[0])
                     if (messageSegments.length > 0) {
                         const name = list[0].sender?.card && list[0].sender.card !== '' ? list[0].sender.card : list[0].sender?.nickname ?? ''
                         return `<span class="reply-name">${name}</span>: ${getMsgRawTxt(list[0])}`
@@ -1398,7 +1404,7 @@ function getUserById(id: number): IUser | undefined {
             async loadReplyPreviewImages(message: any) {
                 const selfId = runtimeData.loginInfo?.uin
                 const canReadImageCache = runtimeData.sysConfig.disable_local_history_image_cache !== true && !!selfId
-                const imageUrls = getMessageSegments(message)
+                const imageUrls = this.getMessageSegments(message)
                     .filter((item: any) => item?.type === 'image' && item?.url)
                     .map((item: any) => String(item.url))
 
@@ -1422,7 +1428,7 @@ function getUserById(id: number): IUser | undefined {
             async loadReplyPreviews() {
                 if (!runtimeData.sysConfig.enable_local_history) return
                 const ids = new Set<string>()
-                for (const item of getMessageSegments(this.data)) {
+                for (const item of this.getMessageSegments(this.data)) {
                     if (item?.type === 'reply' && item.id != null) ids.add(String(item.id))
                 }
                 for (const messageId of ids) {
@@ -1434,7 +1440,7 @@ function getUserById(id: number): IUser | undefined {
                     )
                     if (!localMsg) continue
 
-                    const localSegments = getMessageSegments(localMsg)
+                    const localSegments = this.getMessageSegments(localMsg)
                     const imageSegments = localSegments
                         .filter((item: any) => item?.type === 'image')
                     const images = await this.loadReplyPreviewImages(localMsg)
@@ -1559,7 +1565,7 @@ function getUserById(id: number): IUser | undefined {
 
             hasCard() {
                 let hasCard = false
-                getMessageSegments(this.data).forEach((item: any) => {
+                this.getMessageSegments(this.data).forEach((item: any) => {
                     if (item.type === 'json' || item.type === 'xml') {
                         hasCard = true
                     }
@@ -1569,7 +1575,7 @@ function getUserById(id: number): IUser | undefined {
 
             hasMarkdown() {
                 let hasMarkdown = false
-                getMessageSegments(this.data).forEach((item: any) => {
+                this.getMessageSegments(this.data).forEach((item: any) => {
                     if (item.type === 'markdown') {
                         hasMarkdown = true
                     }
@@ -1610,7 +1616,7 @@ function getUserById(id: number): IUser | undefined {
 
             isSuperFaceMsg() {
                 if (runtimeData.sysConfig.use_super_face === false) return false
-                const messageSegments = getMessageSegments(this.data)
+                const messageSegments = this.getMessageSegments(this.data)
                 if (messageSegments.length !== 1) return false
                 const seg = messageSegments.at(0)
                 if (seg.type !== 'face') return
