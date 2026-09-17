@@ -150,7 +150,8 @@
                             @reload-local-message="reloadLocalMessage"
                             @right-move="replyMsg"
                             @send-poke="sendPoke"
-                            @toggle-reaction="toggleReaction" />
+                            @toggle-reaction="toggleReaction"
+                            @retry-send="retryFailedMessage" />
                         <!-- 其他通知消息 -->
                         <NoticeBody v-else-if="msgIndex.post_type === 'notice'"
                             :id="uuid()"
@@ -183,7 +184,8 @@
                             @scroll-to-msg="scrollToMsg"
                             @show-menu="showMsgMeun"
                             @image-loaded="imgLoadedScroll"
-                            @reload-local-message="reloadLocalMessage" />
+                            @reload-local-message="reloadLocalMessage"
+                            @retry-send="retryFailedMessage" />
                     </template>
                 </TransitionGroup>
             </template>
@@ -660,6 +662,9 @@ import {
     getMsgRawTxt,
     getMsgData,
     sendMsgRaw,
+    getOutgoingDraft,
+    getFailedOutgoingMessageId,
+    retryOutgoingMessage as retryPendingOutgoing,
     getShowName,
     isShowTime,
     isDeleteMsg,
@@ -860,6 +865,7 @@ import { Img } from '@renderer/function/model/img'
                 sentHistory: new Map<number, ComposerSnapshot[]>(),
                 historyDraft: null as ComposerSnapshot | null,
                 historyIndex: -1,
+                restoredOutgoingId: null as string | null,
                 lastUpKeyTime: 0,
                 backButtonHandle: null as { remove: () => void } | null,
                 historyLoadSummary: {
@@ -943,8 +949,13 @@ import { Img } from '@renderer/function/model/img'
                 this.initMenuDisplay()
                 this.$nextTick(() => {
                     const draft = runtimeData.composerDrafts.get(newChat?.show?.id)
+                    const failedOutgoingId = getFailedOutgoingMessageId(
+                        newChat?.show?.id,
+                        newChat?.show?.type,
+                    )
                     if (draft) {
-                        this.restoreComposerSnapshot(draft)
+                        this.restoreComposerSnapshot(draft, failedOutgoingId === undefined)
+                        this.restoredOutgoingId = failedOutgoingId ?? null
                     } else {
                         this.clearComposer()
                     }
@@ -960,6 +971,8 @@ import { Img } from '@renderer/function/model/img'
         },
         async mounted() {
             window.addEventListener('click', this.handleOutsideClick)
+            window.addEventListener('ssqq-outgoing-failed', this.handleOutgoingFailure)
+            window.addEventListener('ssqq-outgoing-succeeded', this.handleOutgoingSuccess)
             // 消息列表刷新
             this.updateList(this.list.length, 0)
             // PS：由于监听 list 本身返回的新旧值是一样，于是监听 length（反正也只要知道长度）
@@ -1003,6 +1016,8 @@ import { Img } from '@renderer/function/model/img'
         },
         beforeUnmount() {
             window.removeEventListener('click', this.handleOutsideClick)
+            window.removeEventListener('ssqq-outgoing-failed', this.handleOutgoingFailure)
+            window.removeEventListener('ssqq-outgoing-succeeded', this.handleOutgoingSuccess)
             if (this.historyLoadSummary.hideTimer) {
                 clearTimeout(this.historyLoadSummary.hideTimer)
                 this.historyLoadSummary.hideTimer = null
@@ -1019,6 +1034,30 @@ import { Img } from '@renderer/function/model/img'
                 const atTag = document.querySelector('.at-tag.show')
                 if (atTag && !atTag.contains(target)) {
                     this.choiceAt(undefined)
+                }
+            },
+            handleOutgoingFailure(event: Event) {
+                const detail = (event as CustomEvent<{ messageId?: string; chatId?: string | number; chatType?: string }>).detail
+                if (!detail?.messageId || String(detail.chatId) !== String(this.chat.show?.id) || detail.chatType !== this.chat.show?.type) {
+                    return
+                }
+                const draft = getOutgoingDraft(detail.messageId)
+                if (!draft || this.msg !== '' || this.composerTokens.length > 0) return
+                this.restoreComposerSnapshot(draft, false)
+                this.restoredOutgoingId = detail.messageId
+            },
+            handleOutgoingSuccess(event: Event) {
+                const detail = (event as CustomEvent<{ messageId?: string; chatId?: string | number; chatType?: string }>).detail
+                if (!detail?.messageId || detail.messageId !== this.restoredOutgoingId) return
+                if (String(detail.chatId) !== String(this.chat.show?.id) || detail.chatType !== this.chat.show?.type) return
+                this.clearComposer()
+                this.cancelReply()
+                this.restoredOutgoingId = null
+            },
+            retryFailedMessage(data: any) {
+                const messageId = String(data?.fake_message_id ?? data?.message_id ?? '')
+                if (!messageId || !retryPendingOutgoing(messageId)) {
+                    new PopInfo().add(PopType.ERR, this.$t('该消息已无法重试'))
                 }
             },
             resizeMainInput(target?: HTMLTextAreaElement | HTMLInputElement | null) {
@@ -3343,7 +3382,7 @@ import { Img } from '@renderer/function/model/img'
                 }
             },
 
-            restoreComposerSnapshot(snapshot: ComposerSnapshot) {
+            restoreComposerSnapshot(snapshot: ComposerSnapshot, persist = true) {
                 this.msg = snapshot.msg
                 this.oldMsg = snapshot.msg
                 this.sendCache = snapshot.sendCache.map((item: any) => {
@@ -3351,7 +3390,7 @@ import { Img } from '@renderer/function/model/img'
                 })
                 this.composerTokens = snapshot.composerTokens.map((token) => ({ ...token }))
                 this.imgCache = new Map(snapshot.imgCache)
-                this.updateComposerDraft()
+                if (persist) this.updateComposerDraft()
                 this.$nextTick(() => {
                     this.resizeMainInput()
                 })
@@ -3360,6 +3399,7 @@ import { Img } from '@renderer/function/model/img'
             clearComposer() {
                 this.msg = ''
                 this.oldMsg = ''
+                this.restoredOutgoingId = null
                 this.sendCache = []
                 this.composerTokens = []
                 this.imgCache.clear()
@@ -3883,30 +3923,33 @@ import { Img } from '@renderer/function/model/img'
                     this.sendCache,
                     [],
                 )
-                if (this.chat.show.temp) {
-                    sendMsgRaw(
+                const sendDraft = this.createComposerSnapshot()
+                const sent = this.chat.show.temp
+                    ? sendMsgRaw(
                         this.chat.show.id + '/' + this.chat.show.temp,
                         this.chat.show.type,
                         msg,
                         true,
                         echo,
+                        sendDraft,
                     )
-                } else {
-                    sendMsgRaw(
+                    : sendMsgRaw(
                         this.chat.show.id,
                         this.chat.show.type,
                         msg,
                         true,
                         echo,
+                        sendDraft,
                     )
-                }
+                if (!sent) return
+
                 // 发送后事务
                 this.tags.checkNewLineFlag = true
                 // 保存发送历史（opt_send_history 开启时，每个会话最多 50 条）
-                if (runtimeData.sysConfig.opt_send_history && this.msg.trim() !== '') {
+                if (runtimeData.sysConfig.opt_send_history && sendDraft.msg.trim() !== '') {
                     const chatId = this.chat.show.id
                     const history = this.sentHistory.get(chatId) ?? []
-                    history.push(this.createComposerSnapshot())
+                    history.push(sendDraft)
                     if (history.length > 50) history.shift()
                     this.sentHistory.set(chatId, history)
                     this.historyIndex = -1
@@ -4194,6 +4237,7 @@ import { Img } from '@renderer/function/model/img'
             },
 
             handleInput(event: Event) {
+                this.restoredOutgoingId = null
                 const input = event.target as HTMLInputElement
                 this.resizeMainInput(input)
                 this.$nextTick(() => {

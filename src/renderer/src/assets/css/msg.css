@@ -62,6 +62,15 @@
     color: var(--color-font-2);
     width: 0.8rem;
 }
+.message > div.sending.failed.me {
+    display: flex;
+    cursor: pointer;
+}
+.message > div.sending.failed.me > svg {
+    animation: none;
+    color: var(--color-danger, #d9534f);
+    width: 0.8rem;
+}
 
 .message-body {
     color: var(--color-font);

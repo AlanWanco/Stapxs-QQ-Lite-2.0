@@ -406,15 +406,14 @@
                 if (event.keyCode === 13 && this.msg != '') {
                     const msg = parseMsg(
                         this.msg, this.sendCache, this.imgCache)
-                    if (this.chat.show.temp) {
-                        sendMsgRaw(
+                    const sent = this.chat.show.temp
+                        ? sendMsgRaw(
                             this.chat.show.id + '/' + this.chat.show.temp,
                             this.chat.show.type,
                             msg,
                         )
-                    } else {
-                        sendMsgRaw(this.chat.show.id, this.chat.show.type, msg)
-                    }
+                        : sendMsgRaw(this.chat.show.id, this.chat.show.type, msg)
+                    if (!sent) return
                     // 发送后处理
                     this.sendCache = []
                     this.imgCache = []

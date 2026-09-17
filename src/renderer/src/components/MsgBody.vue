@@ -30,7 +30,13 @@
             :src="'https://q1.qlogo.cn/g?b=qq&s=0&nk=' + (data.sender?.user_id ?? '')"
             :alt="data.sender?.card ? data.sender.card : data.sender?.nickname"
             @dblclick="sendPoke">
-        <div v-if="data.fake_msg == true"
+        <div v-if="data.send_failed === true"
+            :class="'sending failed left' + (isMe ? ' me' : '')"
+            :title="$t('发送失败，点击重试')"
+            @click.stop="$emit('retrySend', data)">
+            <font-awesome-icon :icon="['fas', 'triangle-exclamation']" />
+        </div>
+        <div v-else-if="data.fake_msg == true"
             :class="'sending left' + (isMe ? ' me' : '')">
             <font-awesome-icon :icon="['fas', 'spinner']" />
         </div>
@@ -378,7 +384,13 @@
                 </div>
             </div>
         </div>
-        <div v-if="data.fake_msg == true"
+        <div v-if="data.send_failed === true"
+            :class="'sending failed right' + (isMe ? ' me' : '')"
+            :title="$t('发送失败，点击重试')"
+            @click.stop="$emit('retrySend', data)">
+            <font-awesome-icon :icon="['fas', 'triangle-exclamation']" />
+        </div>
+        <div v-else-if="data.fake_msg == true"
             :class="'sending right' + (isMe ? ' me' : '')">
             <font-awesome-icon :icon="['fas', 'spinner']" />
         </div>
@@ -462,6 +474,7 @@ const emit = defineEmits<{
     showMenu: [event: MenuEventData, msg: Msg]
     dblclick: [msg: Msg]
     reloadLocalMessage: [msg: Msg]
+    retrySend: [msg: Msg]
 }>()
 
 const msgMain = useTemplateRef<HTMLDivElement>('msgMain')
@@ -499,7 +512,7 @@ function getUserById(id: number): IUser | undefined {
         name: 'MsgBody',
         inject: ['viewer'],
         props: ['data', 'type', 'selected', 'imageListHeader', 'searchKeyword'],
-        emits: ['scrollToMsg', 'imageLoaded', 'sendPoke', 'showMenu', 'leftMove', 'rightMove', 'dblclick', 'reloadLocalMessage'],
+        emits: ['scrollToMsg', 'imageLoaded', 'sendPoke', 'showMenu', 'leftMove', 'rightMove', 'dblclick', 'reloadLocalMessage', 'retrySend'],
         data() {
             return {
                 Emoji,

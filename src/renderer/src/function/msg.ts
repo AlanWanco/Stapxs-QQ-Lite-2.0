@@ -25,6 +25,7 @@ import {
     getMsgRawTxt,
     updateLastestHistory,
     sendMsgAppendInfo,
+    handleOutgoingResponse,
 } from '@renderer/function/utils/msgUtil'
 import {
     delay,
@@ -753,7 +754,15 @@ const msgFunctions = {
         msg: { [key: string]: any },
         echoList: string[],
     ) => {
+        const outgoingId = echoList[1] == 'uuid' ? echoList[2] : undefined
         if (isFailedResponse(msg)) {
+            const responseState = outgoingId
+                ? handleOutgoingResponse(outgoingId, msg)
+                : 'none'
+            if (responseState === 'retrying') {
+                logger.debug('消息段校验失败，已使用纯文本兼容格式重试')
+                return
+            }
             logger.error(null, `发送消息 API 返回失败：${String(msg?.retcode ?? 'unknown')}`)
             return
         }
@@ -772,6 +781,7 @@ const msgFunctions = {
                 return
             }
             const messageId = echoList[2]
+            handleOutgoingResponse(messageId, msg)
             // 去消息列表里找到预发送消息；部分回显先于发送响应到达，
             // 此时需要同时使用 message_id 和 fake_message_id 匹配。
             const sentItem = runtimeData.messageList.find((item) => {
@@ -781,6 +791,7 @@ const msgFunctions = {
             if (sentItem) {
                 sentItem.message_id = msg.message_id
                 sentItem.fake_msg = false
+                sentItem.send_failed = false
             }
             // 请求消息内容
             // PS：其实有消息通知的情况下不需要再去主动获取了

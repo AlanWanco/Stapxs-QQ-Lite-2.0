@@ -38,6 +38,288 @@ function normalizeOutgoingSegment(segment: any): any | undefined {
     return normalized
 }
 
+interface PreparedOutgoingMessage {
+    preview: any[]
+    message: any[]
+    plainTextFallback?: string
+    error?: string
+}
+
+interface PendingOutgoingMessage {
+    id: string
+    chatId: string | number
+    chatType: string
+    echo: string
+    action: string
+    params: { [key: string]: any }
+    message: any[] | string
+    lastMessage: any[] | string
+    plainTextFallback?: string
+    fallbackUsed: boolean
+    failed: boolean
+    draft?: any
+}
+
+const pendingOutgoingMessages = new Map<string, PendingOutgoingMessage>()
+
+function isOutgoingObject(value: any): value is { [key: string]: any } {
+    return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function cloneOutgoingValue(value: any): any {
+    if (Array.isArray(value)) return value.map(cloneOutgoingValue)
+    if (isOutgoingObject(value)) {
+        const result: { [key: string]: any } = {}
+        Object.keys(value).forEach((key) => {
+            if (value[key] !== undefined) result[key] = cloneOutgoingValue(value[key])
+        })
+        return result
+    }
+    return value
+}
+
+function isOutgoingScalar(value: any): boolean {
+    return value === null || typeof value === 'string' ||
+        (typeof value === 'number' && Number.isFinite(value)) || typeof value === 'boolean'
+}
+
+function hasOutgoingValue(data: { [key: string]: any }, keys: string[]) {
+    return keys.some((key) => {
+        const value = data[key]
+        if (typeof value === 'string') return value.trim() !== ''
+        return typeof value === 'number' && Number.isFinite(value)
+    })
+}
+
+function validateOutgoingSegment(segment: any, index: number): string | undefined {
+    if (!isOutgoingObject(segment) || typeof segment.type !== 'string' || segment.type.trim() === '') {
+        return `segment-${index}-missing-type`
+    }
+    if (!isOutgoingObject(segment.data)) return `segment-${index}-invalid-data`
+
+    const type = segment.type.trim()
+    const data = segment.data
+    if (!['node', 'anonymous'].includes(type)) {
+        const hasNonScalarValue = Object.entries(data).some(([key, value]) => {
+            if (isOutgoingScalar(value)) return false
+            return type === 'json' && (key === 'data' || key === 'config') && isOutgoingObject(value)
+                ? false
+                : true
+        })
+        if (hasNonScalarValue) return `segment-${index}-non-scalar-data`
+    }
+    switch (type) {
+        case 'text':
+            if (typeof data.text !== 'string') return `segment-${index}-text-missing-text`
+            break
+        case 'face':
+            if (!hasOutgoingValue(data, ['id'])) return `segment-${index}-face-missing-id`
+            break
+        case 'at':
+            if (!hasOutgoingValue(data, ['qq'])) return `segment-${index}-at-missing-qq`
+            break
+        case 'reply':
+            if (!hasOutgoingValue(data, ['id'])) return `segment-${index}-reply-missing-id`
+            break
+        case 'image':
+        case 'record':
+        case 'video':
+        case 'file':
+            if (!hasOutgoingValue(data, ['file', 'url', 'path', 'base64', 'id', 'file_id'])) {
+                return `segment-${index}-${type}-missing-source`
+            }
+            break
+        case 'json':
+            if (!hasOutgoingValue(data, ['data']) && !isOutgoingObject(data.data)) {
+                return `segment-${index}-${type}-missing-data`
+            }
+            break
+        case 'xml':
+            if (!hasOutgoingValue(data, ['data'])) return `segment-${index}-${type}-missing-data`
+            break
+        default:
+            // 保留适配器自定义消息段，但仍要求其 data 是对象。
+            break
+    }
+    return undefined
+}
+
+function prepareOutgoingMessage(msg: string | any[]): PreparedOutgoingMessage {
+    const rawSegments = typeof msg === 'string' ? [msg] : msg
+    if (!Array.isArray(rawSegments)) {
+        return { preview: [], message: [], error: 'message-not-array' }
+    }
+
+    const preview: any[] = []
+    const message: any[] = []
+    for (let index = 0; index < rawSegments.length; index++) {
+        const normalized = normalizeOutgoingSegment(rawSegments[index])
+        if (!normalized || normalized.type === undefined) {
+            return { preview: [], message: [], error: `segment-${index}-invalid` }
+        }
+
+        const type = String(normalized.type).trim()
+        if (type === '') return { preview: [], message: [], error: `segment-${index}-missing-type` }
+        const rawData = normalized.data
+        const data = ['json', 'xml'].includes(type)
+            ? Object.keys(normalized).reduce((result: { [key: string]: any }, key) => {
+                if (key !== 'type' && key !== 'data' && normalized[key] !== undefined) {
+                    result[key] = cloneOutgoingValue(normalized[key])
+                }
+                return result
+            }, isOutgoingObject(rawData)
+                ? cloneOutgoingValue(rawData)
+                : { data: cloneOutgoingValue(rawData) })
+            : Object.keys(normalized).reduce((result: { [key: string]: any }, key) => {
+                if (key !== 'type' && key !== 'data' && normalized[key] !== undefined) {
+                    result[key] = cloneOutgoingValue(normalized[key])
+                }
+                return result
+            }, {})
+        const wireSegment = { type, data }
+        const validationError = validateOutgoingSegment(wireSegment, index)
+        if (validationError) return { preview: [], message: [], error: validationError }
+        if (type === 'text' && data.text === '') continue
+
+        message.push(wireSegment)
+        preview.push({ type, ...cloneOutgoingValue(data) })
+    }
+
+    if (message.length === 0) return { preview: [], message: [], error: 'message-empty' }
+    const first = message[0]
+    const plainTextFallback = message.length === 1 && first.type === 'text'
+        ? first.data.text
+        : undefined
+    return { preview, message, plainTextFallback }
+}
+
+function getOutgoingErrorText(response: any): string {
+    const values = [
+        response?.message,
+        response?.msg,
+        response?.wording,
+        response?.error,
+        response?.data?.message,
+        response?.data?.msg,
+        response?.data?.error,
+    ]
+    return values.filter((value) => typeof value === 'string').join(' ')
+}
+
+function isOutgoingValidationError(response: any): boolean {
+    return /MessageElementValidationError|message\s*element.*validation|message\s+segment.*(field|invalid|must\s+be)|消息段.*(校验|验证)/i.test(
+        getOutgoingErrorText(response),
+    )
+}
+
+function isOutgoingFailedResponse(response: any): boolean {
+    if (!response || typeof response !== 'object') return true
+    if (response.status === 'failed') return true
+    return response.retcode !== undefined && Number(response.retcode) !== 0
+}
+
+function findOutgoingMessage(messageId: string) {
+    return runtimeData.messageList.find((item: any) => {
+        return String(item?.fake_message_id ?? '') === messageId ||
+            String(item?.message_id ?? '') === messageId
+    })
+}
+
+function getComposerDraftKey(chatId: string | number): number | undefined {
+    const numericId = Number(chatId)
+    return Number.isSafeInteger(numericId) && numericId > 0 ? numericId : undefined
+}
+
+function dispatchOutgoingEvent(name: string, detail: { messageId: string; chatId: string | number; chatType: string }) {
+    if (typeof window === 'undefined') return
+    window.dispatchEvent(new CustomEvent(name, { detail }))
+}
+
+function markOutgoingFailed(pending: PendingOutgoingMessage) {
+    if (pending.failed) return
+    pending.failed = true
+    const failedMessage = findOutgoingMessage(pending.id)
+    if (failedMessage) {
+        failedMessage.fake_msg = false
+        failedMessage.revoke = false
+        failedMessage.send_failed = true
+    }
+    const draftKey = getComposerDraftKey(pending.chatId)
+    if (draftKey !== undefined && pending.draft) {
+        runtimeData.composerDrafts.set(draftKey, pending.draft)
+    }
+    dispatchOutgoingEvent('ssqq-outgoing-failed', {
+        messageId: pending.id,
+        chatId: pending.chatId,
+        chatType: pending.chatType,
+    })
+    new PopInfo().add(
+        PopType.ERR,
+        app.config.globalProperties.$t('消息发送失败，点击消息旁的警告图标重试'),
+    )
+}
+
+function sendPendingOutgoing(pending: PendingOutgoingMessage, message: any[] | string) {
+    pending.lastMessage = message
+    Connector.send(
+        pending.action,
+        { ...pending.params, message },
+        `${pending.echo}_uuid_${pending.id}`,
+    )
+}
+
+export function getOutgoingDraft(messageId: string) {
+    return pendingOutgoingMessages.get(messageId)?.draft
+}
+
+export function getFailedOutgoingMessageId(chatId: string | number, chatType: string): string | undefined {
+    for (const pending of pendingOutgoingMessages.values()) {
+        if (pending.failed && String(pending.chatId) === String(chatId) && pending.chatType === chatType) {
+            return pending.id
+        }
+    }
+    return undefined
+}
+
+export function retryOutgoingMessage(messageId: string): boolean {
+    const pending = pendingOutgoingMessages.get(messageId)
+    if (!pending || !pending.failed) return false
+    pending.failed = false
+    const failedMessage = findOutgoingMessage(messageId)
+    if (failedMessage) {
+        failedMessage.send_failed = false
+        failedMessage.fake_msg = true
+    }
+    sendPendingOutgoing(pending, pending.lastMessage)
+    return true
+}
+
+export function handleOutgoingResponse(messageId: string, response: any): 'none' | 'retrying' | 'failed' | 'success' {
+    const pending = pendingOutgoingMessages.get(messageId)
+    if (!pending) return 'none'
+    if (isOutgoingFailedResponse(response)) {
+        if (!pending.fallbackUsed && pending.plainTextFallback !== undefined && isOutgoingValidationError(response)) {
+            pending.fallbackUsed = true
+            sendPendingOutgoing(pending, pending.plainTextFallback)
+            return 'retrying'
+        }
+        markOutgoingFailed(pending)
+        return 'failed'
+    }
+
+    pendingOutgoingMessages.delete(messageId)
+    const draftKey = getComposerDraftKey(pending.chatId)
+    if (draftKey !== undefined && runtimeData.composerDrafts.get(draftKey) === pending.draft) {
+        runtimeData.composerDrafts.delete(draftKey)
+    }
+    dispatchOutgoingEvent('ssqq-outgoing-succeeded', {
+        messageId,
+        chatId: pending.chatId,
+        chatType: pending.chatType,
+    })
+    return 'success'
+}
+
 /**
  * 根据 JSON Path 映射数据返回需要的内容体
  * @param msg
@@ -472,6 +754,7 @@ export function parseCQ(data: any) {
 * @param msg 消息体
 * @param preShow 是否消息预显
 * @param echo 回显的事件名
+* @param draft 发送失败时恢复的输入草稿
 */
 export function sendMsgRaw(
     id: string,
@@ -479,20 +762,63 @@ export function sendMsgRaw(
     msg: string | any[] | undefined,
     preShow = false,
     echo = 'sendMsgBack',
-) {
+    draft?: any,
+): boolean {
     // 如果消息为空则不发送
     if (msg == undefined || msg == '' || (Array.isArray(msg) && msg.length == 0)) {
-        return
+        return false
     }
-    // 预发送消息
-    // 将消息构建为完整消息体先显示出去
+
+    const messageListMap = runtimeData.jsonMap?.message_list ?? {}
+    let action = ''
+    let params: { [key: string]: any } = {}
+    switch (type) {
+        case 'group':
+            action = messageListMap.name_group_send ?? 'send_msg'
+            params = { group_id: id }
+            break
+        case 'user':
+            if (String(id).indexOf('/') > 1) {
+                action = messageListMap.name_temp_send ?? 'send_temp_msg'
+                params = {
+                    user_id: id.split('/')[0],
+                    group_id: id.split('/')[1],
+                }
+            } else {
+                action = messageListMap.name_user_send ?? 'send_msg'
+                params = { user_id: id }
+            }
+            break
+        default:
+            logger.error(null, `不支持的消息目标类型：${type}`)
+            return false
+    }
+
+    const shouldNormalize = runtimeData.tags.msgType == BotMsgType.Array || Array.isArray(msg)
+    let outgoingMessage: any = msg
+    let previewMessage: any[] = typeof msg === 'string'
+        ? [{ type: 'text', text: msg }]
+        : []
+    let plainTextFallback: string | undefined
+    if (shouldNormalize) {
+        const prepared = prepareOutgoingMessage(msg)
+        if (prepared.error) {
+            logger.error(null, `发送消息参数校验失败：${prepared.error}`)
+            new PopInfo().add(
+                PopType.ERR,
+                app.config.globalProperties.$t('消息格式无效，已阻止发送'),
+            )
+            return false
+        }
+        outgoingMessage = prepared.message
+        previewMessage = prepared.preview
+        plainTextFallback = prepared.plainTextFallback
+    }
+
+    // 预发送消息：必须使用已经校验过的结构，避免显示一个实际不会发送的假消息。
     const msgUUID = uuid()
     if (preShow) {
-        const preShowMsg: any[] = Array.isArray(msg)
-            ? JSON.parse(JSON.stringify(msg))
-                .map(normalizeOutgoingSegment)
-                .filter((item): item is any => item !== undefined)
-            : [{ type: 'text', text: String(msg) }]
+        const preShowMsg: any[] = previewMessage.map((item) => cloneOutgoingValue(item))
         preShowMsg.forEach((item: any) => {
             // 对 base64 图片做特殊处理
             if (item?.type == 'image') {
@@ -528,61 +854,31 @@ export function sendMsgRaw(
         }
         runtimeData.messageList = runtimeData.messageList.concat([showMsg])
     }
-    // 检查消息体是否需要处理
-    if (runtimeData.tags.msgType == BotMsgType.Array) {
-        if (typeof msg === 'string') {
-            msg = [{ type: 'text', data: { text: msg } }]
-        } else if (msg) {
-            const newMsg = [] as any[]
-            msg.forEach((item) => {
-                const normalized = normalizeOutgoingSegment(item)
-                if (!normalized?.type) return
-                const { type, ...data } = normalized
-                newMsg.push({ type, data })
-            })
-            msg = newMsg
-        }
-    }
-    if (msg !== undefined && msg.length > 0) {
-        if (runtimeData.jsonMap.name === 'Lagrange.OneBot') {
-            lgrSendMsg(id, msg, type, echo + '_uuid_' + msgUUID)
-            sendStatEvent('send_msg', { type: type })
-            return
-        }
-        switch (type) {
-            case 'group':
-                Connector.send(
-                    runtimeData.jsonMap.message_list.name_group_send ??
-                    'send_msg',
-                    { group_id: id, message: msg },
-                    echo + '_uuid_' + msgUUID,
-                )
-                break
-            case 'user': {
-                if (String(id).indexOf('/') > 1) {
-                    Connector.send(
-                        runtimeData.jsonMap.message_list.name_temp_send ??
-                        'send_temp_msg',
-                        {
-                            user_id: id.split('/')[0],
-                            group_id: id.split('/')[1],
-                            message: msg,
-                        },
-                        echo + '_uuid_' + msgUUID,
-                    )
-                } else {
-                    Connector.send(
-                        runtimeData.jsonMap.message_list.name_user_send ??
-                        'send_msg',
-                        { user_id: id, message: msg },
-                        echo + '_uuid_' + msgUUID,
-                    )
-                }
-                break
-            }
-        }
+
+    if (runtimeData.jsonMap?.name === 'Lagrange.OneBot') {
+        lgrSendMsg(id, outgoingMessage, type, echo + '_uuid_' + msgUUID)
         sendStatEvent('send_msg', { type: type })
+        return true
     }
+
+    const pending: PendingOutgoingMessage = {
+        id: msgUUID,
+        chatId: runtimeData.chatInfo.show?.id ?? id,
+        chatType: type,
+        echo,
+        action,
+        params,
+        message: outgoingMessage,
+        lastMessage: outgoingMessage,
+        plainTextFallback,
+        fallbackUsed: false,
+        failed: false,
+        draft,
+    }
+    pendingOutgoingMessages.set(msgUUID, pending)
+    sendPendingOutgoing(pending, outgoingMessage)
+    sendStatEvent('send_msg', { type: type })
+    return true
 }
 
 export function updateLastestHistory(item: UserFriendElem & UserGroupElem) {
