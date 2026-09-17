@@ -65,6 +65,8 @@ message_info:
 # 获取消息体
 get_message: $.message
 message_value: # SnowLuma 消息段字段位于 data 对象中
+    text:
+        text: $.data.text
     image:
         file: $.data.file
         url: $.data.url

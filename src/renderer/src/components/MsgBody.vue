@@ -790,8 +790,15 @@ function getUserById(id: number): IUser | undefined {
                 return this.resolvedImages[url] ?? backend.proxyUrl(url)
             },
 
+            getRemoteSourceLabel() {
+                const name = runtimeData.jsonMap?.name
+                return typeof name === 'string' && name ? name : 'OneBot'
+            },
+
             getMsgSourceLabel() {
-                return this.data?._from_local_db ? this.$t('本地聊天记录缓存') : 'NapCat'
+                return this.data?._from_local_db
+                    ? this.$t('本地聊天记录缓存')
+                    : this.getRemoteSourceLabel()
             },
 
             formatSourceLabel(source: string | undefined) {
@@ -801,7 +808,7 @@ function getUserById(id: number): IUser | undefined {
             },
 
             getImageSourceLabel(item: any) {
-                if (this.data?._from_local_db !== true) return 'NapCat URL'
+                if (this.data?._from_local_db !== true) return `${this.getRemoteSourceLabel()} URL`
                 const url = this.getImageUrl(item)
                 if (url && this.resolvedImages[url]) {
                     return this.$t('本地图片缓存')
@@ -830,7 +837,7 @@ function getUserById(id: number): IUser | undefined {
                 if (status.state === 'empty-url') {
                     return this.$t('消息里的图片 URL 为空，无法查询本地图片缓存')
                 }
-                return this.$t('本地图片缓存未命中，当前不会再回退到旧的 NapCat URL')
+                return this.$t('本地图片缓存未命中，当前不会再回退到旧的服务器图片 URL')
             },
 
             isForwardContent(content: any): content is any[] {

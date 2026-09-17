@@ -17,6 +17,27 @@ import { backend } from '@renderer/runtime/backend'
 
 const logger = new Logger()
 
+// 历史消息可能保留 OneBot 原始 data 嵌套结构；发送前统一展开，
+// 避免文本被包装成 data: { data: { text: '...' } }。
+function normalizeOutgoingSegment(segment: any): any | undefined {
+    if (typeof segment === 'string') return { type: 'text', text: segment }
+    if (!segment || typeof segment !== 'object' || Array.isArray(segment)) return undefined
+
+    const nestedData = segment.data && typeof segment.data === 'object' && !Array.isArray(segment.data)
+        ? segment.data
+        : undefined
+    const type = segment.type ?? segment._type ?? nestedData?.type ?? nestedData?._type
+    const normalized = nestedData
+        && !['json', 'xml'].includes(String(type))
+        ? { ...nestedData, ...segment }
+        : { ...segment }
+
+    if (type !== undefined) normalized.type = type
+    if (nestedData && !['json', 'xml'].includes(String(type))) delete normalized.data
+    delete normalized._type
+    return normalized
+}
+
 /**
  * 根据 JSON Path 映射数据返回需要的内容体
  * @param msg
@@ -469,6 +490,8 @@ export function sendMsgRaw(
     if (preShow) {
         const preShowMsg: any[] = Array.isArray(msg)
             ? JSON.parse(JSON.stringify(msg))
+                .map(normalizeOutgoingSegment)
+                .filter((item): item is any => item !== undefined)
             : [{ type: 'text', text: String(msg) }]
         preShowMsg.forEach((item: any) => {
             // 对 base64 图片做特殊处理
@@ -507,19 +530,15 @@ export function sendMsgRaw(
     }
     // 检查消息体是否需要处理
     if (runtimeData.tags.msgType == BotMsgType.Array) {
-        if (msg && typeof msg != 'string') {
-            const newMsg = [] as any
+        if (typeof msg === 'string') {
+            msg = [{ type: 'text', data: { text: msg } }]
+        } else if (msg) {
+            const newMsg = [] as any[]
             msg.forEach((item) => {
-                const newResult = {} as { [key: string]: any }
-                newResult.type = item.type
-                newResult.data = item
-                delete newResult.data.type
-                // 特殊处理，如果 newResult.data 里有 _type 字段，给它改成 type
-                if (newResult.data._type != undefined) {
-                    newResult.data.type = newResult.data._type
-                    delete newResult.data._type
-                }
-                newMsg.push(newResult)
+                const normalized = normalizeOutgoingSegment(item)
+                if (!normalized?.type) return
+                const { type, ...data } = normalized
+                newMsg.push({ type, data })
             })
             msg = newMsg
         }

@@ -1335,8 +1335,11 @@ import { Img } from '@renderer/function/model/img'
                 if (!msg) return
                 this.closeMsgMenu()
 
+                const remoteSource = typeof runtimeData.jsonMap?.name === 'string' && runtimeData.jsonMap.name
+                    ? runtimeData.jsonMap.name
+                    : 'OneBot / Server'
                 const lines = [
-                    `${this.$t('消息对象来源')}：${msg?._from_local_db === true ? this.$t('本地聊天记录缓存') : 'NapCat / Server'}`,
+                    `${this.$t('消息对象来源')}：${msg?._from_local_db === true ? this.$t('本地聊天记录缓存') : remoteSource}`,
                     `${this.$t('消息类型')}：${String(msg.message_type ?? '')}`,
                     `${this.$t('时间')}：${String(msg.time ?? '')}`,
                     `${this.$t('消息段数')}：${Array.isArray(msg.message) ? msg.message.length : 0}`,
@@ -1353,7 +1356,7 @@ import { Img } from '@renderer/function/model/img'
                         const url = String(seg?.url ?? '')
                         const urlHash = url ? await hashUrl(url) : ''
                         const cached = urlHash ? await dbGetImage(runtimeData.loginInfo.uin, urlHash) : null
-                        lines.push(`#${index + 1} ${this.$t('图片来源判断')}：${cached ? this.$t('本地图片缓存') : 'NapCat URL'}`)
+                        lines.push(`#${index + 1} ${this.$t('图片来源判断')}：${cached ? this.$t('本地图片缓存') : remoteSource + ' URL'}`)
                         lines.push(`  cache: ${cached ? 'hit' : 'miss'}`)
                     }
                 }
@@ -1363,7 +1366,7 @@ import { Img } from '@renderer/function/model/img'
                     : null
                 if (forwardSeg) {
                     lines.push('')
-                    lines.push(`${this.$t('合并转发来源')}：${String(forwardSeg.forward_source ?? (msg?._from_local_db === true ? 'local-db' : 'NapCat'))}`)
+                    lines.push(`${this.$t('合并转发来源')}：${String(forwardSeg.forward_source ?? (msg?._from_local_db === true ? 'local-db' : remoteSource))}`)
                     lines.push(`${this.$t('合并转发错误')}：${String(forwardSeg.forward_error_code ?? 'none')}`)
                     lines.push(`${this.$t('合并转发内容条数')}：${Array.isArray(forwardSeg.content) ? forwardSeg.content.length : 0}`)
 
