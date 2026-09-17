@@ -2313,43 +2313,57 @@ function newMsg(_: string, data: any) {
                     new Notify().notify(msgInfo)
                 }
             }
-            // 如果发送者不在消息列表里，将它添加到消息列表里
-            if (get.length > 0) {
-                // 如果消息子类是 group，那么是临时消息，需要进行特殊处理
-                if (data.sub_type === 'group') {
-                    // 手动创建一个用户信息，因为临时消息的用户不在用户列表里
-                    const user = {
-                        user_id: sender,
-                        // 因为临时消息没有返回昵称
-                        nickname: app.config.globalProperties.$t('临时会话'),
-                        remark: data.sender.user_id,
-                        new_msg: true,
-                        message_id: data.message_id,
-                        raw_msg: data.raw_message,
-                        time: data.time,
-                        group_id: data.sender.group_id,
-                        group_name: '',
-                    } as UserFriendElem & UserGroupElem
-                    runtimeData.baseOnMsgList.set(Number(sender), user)
-                } else {
-                    const getList = runtimeData.userList.filter((item) => {
-                        return item.user_id === id || item.group_id === id
-                    })
-
-                    const showUser = getList[0]
-                    const formatted = formatMessageData(data, data.message_type === 'group')
-                    Object.assign(showUser, formatted)
-                    runtimeData.baseOnMsgList.set(Number(id), showUser)
-                }
+            // 如果发送者不在消息列表里，也要创建一个会话项。
+            // 旧逻辑只在 get.length > 0 时更新，导致新联系人能弹通知但不会出现在消息列表。
+            const conversationId = data.sub_type === 'group' ? sender : id
+            let conversation = runtimeData.baseOnMsgList.get(Number(conversationId))
+            if (data.sub_type === 'group') {
+                // 临时消息的用户通常不在好友列表里，手动创建联系人信息。
+                conversation = {
+                    user_id: sender,
+                    // 因为临时消息没有返回昵称
+                    nickname: app.config.globalProperties.$t('临时会话'),
+                    remark: data.sender.user_id,
+                    new_msg: true,
+                    message_id: data.message_id,
+                    raw_msg: data.raw_message,
+                    time: data.time,
+                    group_id: data.sender.group_id,
+                    group_name: '',
+                } as UserFriendElem & UserGroupElem
+            } else if (!conversation) {
+                const getList = runtimeData.userList.filter((item) => {
+                    return item.user_id === id || item.group_id === id
+                })
+                const name = data.message_type === 'group'
+                    ? data.group_name ?? data.sender?.group_name ?? String(id)
+                    : data.sender?.nickname ?? String(id)
+                const fallback = data.message_type === 'group'
+                    ? {
+                        group_id: id,
+                        group_name: String(name),
+                        remark: '',
+                    }
+                    : {
+                        user_id: id,
+                        nickname: String(name),
+                        remark: data.sender?.remark ?? '',
+                    }
+                conversation = getList[0] ?? fallback as UserFriendElem & UserGroupElem
             }
-            if (id !== showId) {
-                const user = runtimeData.baseOnMsgList.get(id)
+            if (conversation) {
+                const formatted = formatMessageData(data, data.message_type === 'group')
+                Object.assign(conversation, formatted)
+                runtimeData.baseOnMsgList.set(Number(conversationId), conversation)
+            }
+            if (Number(conversationId) !== Number(showId)) {
+                const user = runtimeData.baseOnMsgList.get(Number(conversationId))
                 if (user) {
                     if (!user.new_msg) {
                         user.new_msg = true
                         runtimeData.newMsgCount++
                     }
-                    runtimeData.baseOnMsgList.set(id, user)
+                    runtimeData.baseOnMsgList.set(Number(conversationId), user)
                 }
             }
         }
