@@ -670,7 +670,6 @@ import { Connector } from '@renderer/function/connect'
 import { runtimeData, getMessageList } from '@renderer/function/msg'
 import { addUploadTask, completeUploadTask, failUploadTask } from '@renderer/components/FileManager.vue'
 import {
-    BaseChatInfoElem,
     MsgItemElem,
     SQCodeElem,
     ComposerDraftElem,
@@ -1313,7 +1312,7 @@ import { Img } from '@renderer/function/model/img'
                             message_id: firstMsgId,
                             count: fullPage? runtimeData.messageList.length + 20: 20,
                         },
-                        'getChatHistory',
+                        'getChatHistory_' + historyLoadToken,
                     )
                 }
             },
@@ -3991,24 +3990,6 @@ import { Img } from '@renderer/function/model/img'
                             this.NewMsgNum = Math.abs(newLength - oldLength)
                         }
                     }
-                    // 清屏重新加载消息列表（超过 n 条消息、当前确实在底部）
-                    if (
-                        this.list.length > 200 &&
-                        !this.tags.nowGetHistroy &&
-                        wasAtBottom
-                    ) {
-                        runtimeData.messageList = []
-                        const info = {
-                            type: this.chat.show.type,
-                            id: this.chat.show.id,
-                            name: this.chat.show.name,
-                            avatar: this.chat.show.avatar,
-                            jump: this.chat.show.jump,
-                        } as BaseChatInfoElem
-                        loadHistoryFirst(info)
-                        this.tags.nowGetHistroy = true
-                    }
-
                     // =================== 渲染监听操作 ===================
 
                     // 渲染前的数据

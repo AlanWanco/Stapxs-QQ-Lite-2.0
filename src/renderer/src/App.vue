@@ -1044,6 +1044,8 @@ export default defineComponent({
             }
             runtimeData.tags.canLoadHistory = true // 重置终止加载标志
             runtimeData.tags.loadHistoryFail = false // 重置加载失败标志
+            runtimeData.tags.historyBeforeTime = undefined
+            runtimeData.tags.historyLoadToken = ''
             if (!this.isChatWindow) {
                 this.tags.showChat = !detachedWindow
             }

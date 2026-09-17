@@ -35,7 +35,6 @@ import {
 import {
     reloadUsers,
     reloadCookies,
-    downloadFile,
     updateMenu,
     loadJsonMap,
     sendIdentifyData,
@@ -84,6 +83,11 @@ function isFailedResponse(msg: any): boolean {
     if (!msg || typeof msg !== 'object') return true
     if (msg.status === 'failed') return true
     return msg.retcode !== undefined && Number(msg.retcode) !== 0
+}
+
+function isCurrentHistoryResponse(echoList?: string[]): boolean {
+    const token = echoList?.[1]
+    return !token || token === runtimeData.tags.historyLoadToken
 }
 
 export function dispatch(raw: string | { [k: string]: any }, echo?: string) {
@@ -661,7 +665,12 @@ const msgFunctions = {
     /**
      * 保存聊天记录
      */
-    getChatHistoryFist: (_: string, msg: { [key: string]: any }) => {
+    getChatHistoryFist: (
+        _: string,
+        msg: { [key: string]: any },
+        echoList?: string[],
+    ) => {
+        if (!isCurrentHistoryResponse(echoList)) return
         if (isFailedResponse(msg) || msg.data == null) {
             new PopInfo().add(
                 PopType.ERR,
@@ -675,7 +684,12 @@ const msgFunctions = {
             logger.error(error as Error, '历史消息解析失败')
         })
     },
-    getChatHistory: (_: string, msg: { [key: string]: any }) => {
+    getChatHistory: (
+        _: string,
+        msg: { [key: string]: any },
+        echoList?: string[],
+    ) => {
+        if (!isCurrentHistoryResponse(echoList)) return
         if (isFailedResponse(msg) || msg.data == null) {
             new PopInfo().add(
                 PopType.ERR,
@@ -758,14 +772,16 @@ const msgFunctions = {
                 return
             }
             const messageId = echoList[2]
-            // 去 messagelist 里找到这条消息
-            runtimeData.messageList.forEach((item) => {
-                if (item.message_id == messageId) {
-                    item.message_id = msg.message_id
-                    item.fake_msg = false
-                    return
-                }
+            // 去消息列表里找到预发送消息；部分回显先于发送响应到达，
+            // 此时需要同时使用 message_id 和 fake_message_id 匹配。
+            const sentItem = runtimeData.messageList.find((item) => {
+                return String(item?.message_id ?? '') === String(messageId) ||
+                    String(item?.fake_message_id ?? '') === String(messageId)
             })
+            if (sentItem) {
+                sentItem.message_id = msg.message_id
+                sentItem.fake_msg = false
+            }
             // 请求消息内容
             // PS：其实有消息通知的情况下不需要再去主动获取了
             // 但是为了兼容没有开启自身消息通知的情况，还是保留了这个功能
@@ -1095,11 +1111,14 @@ const msgFunctions = {
                     )
                 }, 5000)
             } else {
-                // 列表内最近的一条 fake_msg（倒序查找）
+                // 优先按真实 message_id 查找；回显先到时仍兼容 fake_msg。
                 let fakeMsg = null as any
-                for (let i = runtimeData.messageList.length - 1; i > 0; i--) {
+                for (let i = runtimeData.messageList.length - 1; i >= 0; i--) {
                     const msg = runtimeData.messageList[i]
-                    if (msg.fake_msg != undefined && info.sender == runtimeData.loginInfo.uin) {
+                    if (
+                        String(msg?.message_id ?? '') === String(info.message_id) ||
+                        (msg?.fake_msg != undefined && info.sender == runtimeData.loginInfo.uin)
+                    ) {
                         fakeMsg = msg
                         break
                     }
@@ -1114,8 +1133,9 @@ const msgFunctions = {
                     )
                     getMessageList(trueMsg).then((trueMsg) => {
                         if (trueMsg?.length == 1) {
-                            // 使用消息对象引用直接更新，避免索引问题
-                            fakeMsg.message = trueMsg[0].message
+                            // 使用消息对象引用直接更新，避免索引问题。若回包仍缺少图片 URL，
+                            // 保留预发送消息中的可显示图片。
+                            fakeMsg.message = mergeSentMessageSegments(fakeMsg.message, trueMsg[0].message)
                             fakeMsg.raw_message = trueMsg[0].raw_message
                             fakeMsg.time = trueMsg[0].time
                             fakeMsg.fake_msg = undefined
@@ -1653,6 +1673,32 @@ function normalizeMessageId(id: unknown): string {
     return String(id)
 }
 
+function getImageDisplayUrl(segment: any): string {
+    const directUrl = segment?.url ?? segment?.data?.url
+    if (typeof directUrl === 'string' && directUrl) return directUrl
+    const file = segment?.file ?? segment?.data?.file
+    if (typeof file === 'string' && (file.startsWith('data:') || /^https?:\/\//i.test(file))) return file
+    return ''
+}
+
+function mergeSentMessageSegments(previous: any, incoming: any): any[] {
+    if (!Array.isArray(incoming)) return Array.isArray(previous) ? previous : []
+    if (!Array.isArray(previous)) return incoming
+
+    return incoming.map((segment: any, index: number) => {
+        const oldSegment = previous[index]
+        if (segment?.type !== 'image' || oldSegment?.type !== 'image') return segment
+        if (getImageDisplayUrl(segment)) return segment
+        const oldUrl = getImageDisplayUrl(oldSegment)
+        if (!oldUrl) return segment
+        return {
+            ...oldSegment,
+            ...segment,
+            url: oldUrl,
+        }
+    })
+}
+
 function getMessageTimestamp(msg: any): number {
     const t = Number(msg?.time)
     return Number.isFinite(t) ? t : 0
@@ -1984,9 +2030,15 @@ function newMsg(_: string, data: any) {
         // 预发送消息填充 ============================================
         // 列表内最近的一条 fake_msg（倒序查找）
         let fakeMsg = null as any
-        for (let i = runtimeData.messageList.length - 1; i > 0; i--) {
+        for (let i = runtimeData.messageList.length - 1; i >= 0; i--) {
             const msg = runtimeData.messageList[i]
-            if (msg.fake_msg != undefined && sender == loginId) {
+            if (
+                sender == loginId &&
+                (msg.fake_msg != undefined || (
+                    info.message_id != null &&
+                    String(msg.message_id) === String(info.message_id)
+                ))
+            ) {
                 fakeMsg = msg
                 break
             }
@@ -2001,16 +2053,16 @@ function newMsg(_: string, data: any) {
             )
             getMessageList(trueMsg).then((trueMsg) => {
                 if (trueMsg?.length == 1) {
-                    // 使用消息对象引用直接更新，避免索引问题
-                    fakeMsg.message = trueMsg[0].message
+                    // 使用消息对象引用直接更新，避免索引问题。若回显缺少图片 URL，
+                    // 保留预发送消息中的可显示图片，等待 get_msg 完整回包。
+                    fakeMsg.message = mergeSentMessageSegments(fakeMsg.message, trueMsg[0].message)
                     fakeMsg.raw_message = trueMsg[0].raw_message
                     fakeMsg.time = trueMsg[0].time
                     fakeMsg.fake_msg = undefined
                     fakeMsg.revoke = false
                 }
             })
-            // 移除最顶端的一条消息以被动刷新整个列表
-            runtimeData.messageList.shift()
+            // fake 消息已经通过引用更新，不应删除列表顶部的历史消息。
             return
         }
 
@@ -2061,7 +2113,7 @@ function newMsg(_: string, data: any) {
         }
 
         // 对消息进行一次格式化处理
-        let list = normalizedIncoming
+        const list = normalizedIncoming
         if (list.length > 0) {
             data = list[0]
         } else {

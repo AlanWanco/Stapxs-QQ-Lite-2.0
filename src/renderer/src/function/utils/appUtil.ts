@@ -46,6 +46,7 @@ import { Notify } from '../notify'
 
 const popInfo = new PopInfo()
 const logger = new Logger()
+let historyRequestSerial = 0
 
 function escapeHtmlAttribute(value: unknown) {
     return String(value ?? '')
@@ -194,21 +195,43 @@ export function openLink(url: string, external = false) {
  * @param info 聊天基本信息
  */
 export async function loadHistory(info: BaseChatInfoElem) {
-    runtimeData.messageList = []
+    const historyToken = `initial-${++historyRequestSerial}`
+    runtimeData.tags.historyLoadToken = historyToken
+    runtimeData.tags.historyBeforeTime = undefined
+    runtimeData.tags.loadHistoryFail = false
+    runtimeData.messageList.splice(0, runtimeData.messageList.length)
+
+    let localMsgs: any[] = []
     if (
         runtimeData.sysConfig.enable_local_history &&
         runtimeData.sysConfig.mixed_load_messages !== false
     ) {
-        const localMsgs = await dbGetLatest(
+        localMsgs = await dbGetLatest(
             runtimeData.loginInfo.uin,
             info.id,
             20,
         )
-        if (localMsgs.length > 0) {
-            runtimeData.messageList = localMsgs
+    }
+
+    // 本地数据库查询期间可能已经切换了会话；旧查询不能覆盖新会话。
+    if (
+        runtimeData.tags.historyLoadToken !== historyToken ||
+        String(runtimeData.chatInfo.show.id) !== String(info.id) ||
+        runtimeData.chatInfo.show.type !== info.type
+    ) return
+
+    if (localMsgs.length > 0) {
+        const existingIds = new Set(runtimeData.messageList.map((item) => String(item?.message_id ?? '')))
+        const addList = localMsgs.filter((item) => {
+            const messageId = String(item?.message_id ?? '')
+            return messageId.length === 0 || !existingIds.has(messageId)
+        })
+        if (addList.length > 0) {
+            runtimeData.messageList.splice(0, 0, ...addList)
         }
     }
-    if (!loadHistoryMessage(info.id, info.type)) {
+
+    if (!loadHistoryMessage(info.id, info.type, 20, `getChatHistoryFist_${historyToken}`)) {
         new PopInfo().add(
             PopType.ERR,
             app.config.globalProperties.$t('加载历史消息失败'),

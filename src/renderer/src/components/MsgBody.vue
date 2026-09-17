@@ -99,20 +99,20 @@
                             @load="imageLoaded"
                             @error="imgLoadFail($event, item)">
                         <template v-else-if="item.type == 'image'">
-                            <span v-if="isLocalImagePending(item.url)" class="msg-text">
+                            <span v-if="isLocalImagePending(getImageUrl(item))" class="msg-text">
                                 {{ $t('正在查询本地图片缓存') }}
                             </span>
-                            <span v-else-if="isLocalImageMissing(item.url)" class="msg-text">
+                            <span v-else-if="isLocalImageMissing(getImageUrl(item))" class="msg-text">
                                 {{ getImageCacheErrorText(item) }}
                             </span>
                             <img v-else
                                 :title="(!item.summary || item.summary == '') ? $t('预览图片') : item.summary"
                                 :alt="$t('图片')"
                                 :class=" imgStyle(getMessageSegments(data).length, index, isFace(item))"
-                                :src="getImgSrc(item.url)"
+                                :src="getImgSrc(getImageUrl(item))"
                                 @load="imageLoaded"
                                 @error="imgLoadFail($event, item)"
-                                @click="imgClick(item.url)">
+                                @click="imgClick(getImageUrl(item))">
                         </template>
                         <template v-else-if="item.type == 'face'">
                             <EmojiFace :emoji="Emoji.get(Number(item.id))" class="msg-face" />
@@ -693,6 +693,10 @@ function getUserById(id: number): IUser | undefined {
             },
 
             async loadCachedImages() {
+                if (this.data?._from_local_db !== true) {
+                    this.imageCacheReady = true
+                    return
+                }
                 const selfId = runtimeData.loginInfo?.uin
                 if (!selfId) {
                     this.imageCacheReady = true
@@ -700,8 +704,10 @@ function getUserById(id: number): IUser | undefined {
                 }
                 try {
                     for (const seg of this.getMessageSegments(this.data)) {
-                        if (seg?.type !== 'image' || !seg.url) continue
-                        await this.loadCachedImage(seg.url)
+                        if (seg?.type !== 'image') continue
+                        const url = this.getImageUrl(seg)
+                        if (!url) continue
+                        await this.loadCachedImage(url)
                     }
                 } finally {
                     this.imageCacheReady = true
@@ -714,6 +720,35 @@ function getUserById(id: number): IUser | undefined {
 
             isLocalImageMissing(url: string) {
                 return this.data?._from_local_db === true && this.imageCacheReady && !this.resolvedImages[url]
+            },
+
+            getImageCandidates(item: any): string[] {
+                const candidates = [
+                    item?.url,
+                    item?.data?.url,
+                    item?.file,
+                    item?.data?.file,
+                ]
+                const result: string[] = []
+                for (const value of candidates) {
+                    if (typeof value !== 'string' || !value) continue
+                    const normalized = value.startsWith('base64://')
+                        ? `data:image/png;base64,${value.slice(9)}`
+                        : value
+                    if (
+                        (normalized.startsWith('data:') ||
+                            normalized.startsWith('file:') ||
+                            /^https?:\/\//i.test(normalized)) &&
+                        !result.includes(normalized)
+                    ) {
+                        result.push(normalized)
+                    }
+                }
+                return result
+            },
+
+            getImageUrl(item: any): string {
+                return this.getImageCandidates(item)[0] ?? ''
             },
 
             async loadCachedImage(url: string) {
@@ -766,14 +801,16 @@ function getUserById(id: number): IUser | undefined {
             },
 
             getImageSourceLabel(item: any) {
-                if (item?.url && this.resolvedImages[item.url]) {
+                if (this.data?._from_local_db !== true) return 'NapCat URL'
+                const url = this.getImageUrl(item)
+                if (url && this.resolvedImages[url]) {
                     return this.$t('本地图片缓存')
                 }
                 return this.$t('本地图片缓存未命中')
             },
 
             getImageCacheErrorText(item: any) {
-                const url = String(item?.url ?? '')
+                const url = this.getImageUrl(item)
                 const status = this.imageCacheStatus[url]
                 if (!this.data?._from_local_db) {
                     return this.$t('当前图片消息对象来自服务器，本地缓存诊断仅适用于本地聊天记录')
@@ -1107,6 +1144,15 @@ function getUserById(id: number): IUser | undefined {
              */
             imgLoadFail(event: Event, item?: any) {
                 const sender = event.currentTarget as HTMLImageElement
+                const fallback = this.getImageCandidates(item).slice(1).find((url) => {
+                    const resolvedUrl = backend.proxyUrl(url)
+                    return resolvedUrl !== sender.currentSrc && resolvedUrl !== sender.src
+                })
+                if (!sender.dataset.imageFallbackTried && fallback) {
+                    sender.dataset.imageFallbackTried = 'true'
+                    sender.src = backend.proxyUrl(fallback)
+                    return
+                }
                 const parent = sender.parentNode as HTMLDivElement
                 parent.style.display = 'flex'
                 parent.style.flexDirection = 'column'
@@ -1130,7 +1176,10 @@ function getUserById(id: number): IUser | undefined {
                 parent.appendChild(svg)
                 // 新建 span
                 const span = document.createElement('span')
-                span.innerText = `${this.$t('加载图片失败')} [local-image-cache-failed]`
+                const errorCode = this.data?._from_local_db === true
+                    ? 'local-image-cache-failed'
+                    : 'image-load-failed'
+                span.innerText = `${this.$t('加载图片失败')} [${errorCode}]`
                 span.style.marginTop = '10px'
                 span.style.fontSize = '0.8rem'
                 span.style.color = 'var(--color-font-2)'
@@ -1139,7 +1188,7 @@ function getUserById(id: number): IUser | undefined {
                 }
                 parent.appendChild(span)
                 const code = document.createElement('code')
-                const url = String(item?.url ?? '')
+                const url = this.getImageUrl(item)
                 const status = this.imageCacheStatus[url]
                 code.innerText = `${this.$t('消息来源')}：${this.getMsgSourceLabel()} | ${this.$t('图片来源')}：${this.getImageSourceLabel(item)} | ${this.$t('缓存诊断')}：${this.getImageCacheErrorText(item)}`
                 code.style.marginTop = '8px'
